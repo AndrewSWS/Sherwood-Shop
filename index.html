@@ -375,6 +375,7 @@ select{cursor:pointer}
       <button onclick="exportBackup()" title="Download a lightweight JSON backup of all your data" style="flex:1;padding:6px 4px;font-size:11px;font-weight:600;background:rgba(255,255,255,.08);color:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.15);border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px">💾 Backup</button>
       <button onclick="document.getElementById('restore-file-input').click()" title="Restore data from a JSON backup" style="flex:1;padding:6px 4px;font-size:11px;font-weight:600;background:rgba(255,255,255,.08);color:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.15);border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px">🔄 Restore</button>
       <input type="file" id="restore-file-input" accept=".json,application/json,text/plain" style="display:none" onchange="importBackup(this)">
+      <button onclick="syncFromCloud()" title="Pull latest backup from GitHub" style="flex:1;padding:6px 4px;font-size:11px;font-weight:600;background:rgba(255,255,255,.08);color:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.15);border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px">☁️ Sync</button>
     </div>
   </div>
 </div>
@@ -1133,6 +1134,55 @@ function importBackup(input){
     } catch(err){ toast('⚠ Restore failed: '+err.message); console.error('Restore error:', err); }
   };
   reader.readAsArrayBuffer(file);
+}
+
+const CLOUD_BACKUP_URL = 'https://andrewsws.github.io/Sherwood-Shop/backup.json';
+
+async function syncFromCloud(){
+  try {
+    toast('☁️ Fetching latest backup...');
+    const res = await fetch(CLOUD_BACKUP_URL + '?nocache=' + Date.now());
+    if(!res.ok) throw new Error('Could not reach backup file ('+res.status+')');
+    const data = await res.json();
+    if(!data.wos) throw new Error('Invalid backup — missing WO data');
+
+    const woCount = (data.wos||[]).length;
+    const metaCount = Object.keys(data.customerMeta||{}).length;
+    const currentWOs = state.wos||[];
+
+    const msg = 'Sync from cloud?\n\nCloud backup contains: '+woCount+' WOs, '+metaCount+' contacts\nCurrent session: '+currentWOs.length+' WOs\n\nThis will merge cloud data with your current session.\nProceed?';
+    if(!confirm(msg)) return;
+
+    const backupWOIds = new Set((data.wos||[]).map(w=>String(w.id)));
+    const mergedWOs = [
+      ...(data.wos||[]),
+      ...currentWOs.filter(w=>!backupWOIds.has(String(w.id)))
+    ];
+
+    const restored = {
+      wos: mergedWOs,
+      trucks: data.trucks||state.trucks||[],
+      adminConfig: data.adminConfig||state.adminConfig||{},
+      customerMeta: data.customerMeta||state.customerMeta||{},
+      deliveryGroups: data.deliveryGroups||state.deliveryGroups||[],
+      currentUser: state.currentUser||'',
+      activeView: 'dashboard',
+      liCounter: 0
+    };
+    localStorage.setItem('kzn_state', JSON.stringify(restored));
+    state.wos = restored.wos;
+    state.trucks = restored.trucks;
+    state.adminConfig = restored.adminConfig;
+    state.customerMeta = restored.customerMeta;
+    if(restored.deliveryGroups) state.deliveryGroups = restored.deliveryGroups;
+    toast('✓ Synced — '+mergedWOs.length+' WOs loaded from cloud!');
+    const dashNav = document.querySelector('.nav-item[onclick*="dashboard"]');
+    nav('dashboard', dashNav);
+    updateBadges();
+  } catch(err){
+    toast('⚠ Sync failed: '+err.message);
+    console.error('Sync error:', err);
+  }
 }
 
 // Auto-save every 30 seconds silently
@@ -5114,15 +5164,52 @@ function importSnapshot(input){
 // ══════════════════════════════════════════════════════
 // BOOT
 // ══════════════════════════════════════════════════════
-loadState();
-if(state.currentUser){
-  document.getElementById('global-user').value=state.currentUser;
-  setUser(state.currentUser);
+async function bootApp(){
+  // Always pull latest from cloud first (Option A — cloud always wins)
+  try {
+    const res = await fetch(CLOUD_BACKUP_URL + '?nocache=' + Date.now());
+    if(res.ok){
+      const data = await res.json();
+      if(data && data.wos){
+        // Cloud loaded — save to localStorage and apply to state
+        const currentUser = (() => { try { const s=JSON.parse(localStorage.getItem('kzn_state')||'{}'); return s.currentUser||''; } catch(e){ return ''; } })();
+        const restored = {
+          wos: data.wos||[],
+          trucks: data.trucks||state.trucks||[],
+          adminConfig: data.adminConfig||state.adminConfig||{},
+          customerMeta: data.customerMeta||state.customerMeta||{},
+          deliveryGroups: data.deliveryGroups||state.deliveryGroups||[],
+          currentUser: currentUser,
+          activeView: 'dashboard',
+          liCounter: 0
+        };
+        localStorage.setItem('kzn_state', JSON.stringify(restored));
+        state.wos = restored.wos;
+        state.trucks = restored.trucks;
+        state.adminConfig = restored.adminConfig;
+        state.customerMeta = restored.customerMeta;
+        if(restored.deliveryGroups) state.deliveryGroups = restored.deliveryGroups;
+        state.currentUser = currentUser;
+        console.log('✓ Loaded from cloud: ' + state.wos.length + ' WOs');
+      }
+    }
+  } catch(e){
+    // Cloud unavailable — fall back to localStorage silently
+    console.warn('Cloud sync failed, using local data:', e.message);
+    loadState();
+  }
+
+  // Boot UI
+  if(state.currentUser){
+    document.getElementById('global-user').value=state.currentUser;
+    setUser(state.currentUser);
+  }
+  const _bootView = 'dashboard';
+  const _bootNavEl = document.querySelector(`.nav-item[onclick*="${_bootView}"]`) || document.querySelector('.nav-item');
+  nav(_bootView, _bootNavEl);
+  updateSaveIndicator();
 }
-const _bootView = state.activeView || 'dashboard';
-const _bootNavEl = document.querySelector(`.nav-item[onclick*="${_bootView}"]`) || document.querySelector('.nav-item');
-nav(_bootView, _bootNavEl);
-updateSaveIndicator();
+bootApp();
 </script>
 <script>
 if("serviceWorker" in navigator){
