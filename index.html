@@ -2211,11 +2211,12 @@ function renderBoardView(){
     const renderStop = (wo)=>{
       const grp = getCustGroup(wo.customer);
       const color = grp?grp.color:'#444';
-      const done = woStatus(wo)==='Complete';
-      return '<div class="board-stop'+(done?' done':'')+'" style="border-left-color:'+color+'">'
-        +'<div class="board-stop-cust">'+(done?'✓ ':'')+wo.customer+'</div>'
+      const complete = woStatus(wo)==='Complete';
+      const delivered = wo.delivered||false;
+      return '<div class="board-stop'+(delivered?' done':'')+'" style="border-left-color:'+color+'">'
+        +'<div class="board-stop-cust">'+(delivered?'🚚 ':complete?'✓ ':'')+wo.customer+'</div>'
         +'<div class="board-stop-wo">WO #'+wo.woNum+(getWOWeight(wo.id)?' · '+getWOWeight(wo.id).toLocaleString()+' lbs':'')+'</div>'
-        +(done?'<div class="board-stop-done">✓ Delivered</div>':'')
+        +(delivered?'<div class="board-stop-done">🚚 Delivered</div>':complete?'<div class="board-stop-done" style="color:#f0a500">✓ Ready to Ship</div>':'')
         +'</div>';
     };
 
