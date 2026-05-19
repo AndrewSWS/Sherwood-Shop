@@ -1363,9 +1363,9 @@
           "step2CompletedBy": "",
           "notes": "Elgen:EJNB (Elgen J Nuts & Bolts 3/8' (100/bag)) | Elgen J Nuts & Bolts 3/8' (100/bag)",
           "assignee": "Andrew",
-          "status": "In Process",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "?",
+          "completedAt": "2026-05-19T18:46:45.841Z"
         }
       ],
       "created": "2026-05-13T17:00:23.992Z"
@@ -2182,7 +2182,7 @@
           "step2CompletedBy": "",
           "notes": "Blank:20748 (20 Ga. 7' x 48' Galv) | 20 Ga. 7' x 48' Galv Punched Flat",
           "assignee": "",
-          "status": "Pending",
+          "status": "In Process",
           "completedBy": "",
           "completedAt": ""
         },
@@ -2206,7 +2206,7 @@
           "step2CompletedBy": "",
           "notes": "Blank:20748 (20 Ga. 7' x 48' Galv) | 20 Ga. 7' x 48' Galv Punched Shroud",
           "assignee": "",
-          "status": "Pending",
+          "status": "In Process",
           "completedBy": "",
           "completedAt": ""
         }
@@ -3134,7 +3134,7 @@
       "zone": "NJ North",
       "date": "2026-05-20",
       "delivery": "2026-05-20",
-      "truck": "",
+      "truck": "1",
       "notes": "",
       "items": [
         {
@@ -3157,9 +3157,9 @@
           "step2CompletedBy": "",
           "notes": "Blank:206144 (20 Ga. 6' x 144' Galv) | 20 Ga. 6' x 144' Galv",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "?",
+          "completedAt": "2026-05-19T18:46:40.881Z"
         }
       ],
       "created": "2026-05-14T12:49:03.717Z",
@@ -4375,7 +4375,7 @@
           "step2CompletedBy": "",
           "notes": "Misc:G90misc (G-90) | 24 Ga. 48.25' x 60' G-90",
           "assignee": "",
-          "status": "Pending",
+          "status": "In Process",
           "completedBy": "",
           "completedAt": ""
         },
@@ -4399,7 +4399,7 @@
           "step2CompletedBy": "",
           "notes": "Misc:G90misc (G-90) | 24 Ga. 47.25' x 60' G-90",
           "assignee": "",
-          "status": "Pending",
+          "status": "In Process",
           "completedBy": "",
           "completedAt": ""
         },
@@ -4423,7 +4423,7 @@
           "step2CompletedBy": "",
           "notes": "Misc:G90misc (G-90) | 24 Ga. 43.25' x 60' G-90",
           "assignee": "",
-          "status": "Pending",
+          "status": "In Process",
           "completedBy": "",
           "completedAt": ""
         },
@@ -4447,7 +4447,7 @@
           "step2CompletedBy": "",
           "notes": "Misc:G90misc (G-90) | 24 Ga. 39.25' x 60' G-90",
           "assignee": "",
-          "status": "Pending",
+          "status": "In Process",
           "completedBy": "",
           "completedAt": ""
         },
@@ -4471,7 +4471,7 @@
           "step2CompletedBy": "",
           "notes": "Misc:G90misc (G-90) | 24 Ga. 35.25' x 60' G-90",
           "assignee": "",
-          "status": "Pending",
+          "status": "In Process",
           "completedBy": "",
           "completedAt": ""
         },
@@ -4495,7 +4495,7 @@
           "step2CompletedBy": "",
           "notes": "Misc:G90misc (G-90) | 26 Ga. 45.25' x 60' G-90",
           "assignee": "",
-          "status": "Pending",
+          "status": "In Process",
           "completedBy": "",
           "completedAt": ""
         },
@@ -4519,7 +4519,7 @@
           "step2CompletedBy": "",
           "notes": "Misc:G90misc (G-90) | 26 Ga. 41.25' x 60' G-90",
           "assignee": "",
-          "status": "Pending",
+          "status": "In Process",
           "completedBy": "",
           "completedAt": ""
         },
@@ -4543,7 +4543,7 @@
           "step2CompletedBy": "",
           "notes": "Misc:G90misc (G-90) | 26 Ga. 37.25' x 60' G-90",
           "assignee": "",
-          "status": "Pending",
+          "status": "In Process",
           "completedBy": "",
           "completedAt": ""
         },
@@ -4567,7 +4567,7 @@
           "step2CompletedBy": "",
           "notes": "Misc:G90misc (G-90) | 26 Ga. 29.25' x 60' G-90",
           "assignee": "",
-          "status": "Pending",
+          "status": "In Process",
           "completedBy": "",
           "completedAt": ""
         },
@@ -4591,7 +4591,7 @@
           "step2CompletedBy": "",
           "notes": "GlvSht:G902660120 (26 Ga. 60' x 120' G-90) | 26 Ga. 60' x 120' G-90",
           "assignee": "",
-          "status": "Pending",
+          "status": "In Process",
           "completedBy": "",
           "completedAt": ""
         },
@@ -4615,7 +4615,7 @@
           "step2CompletedBy": "",
           "notes": "GlvSht:G902460120 (24 Ga. 60' x 120' G-90) | 24 Ga. 60' x 120' G-90",
           "assignee": "",
-          "status": "Pending",
+          "status": "In Process",
           "completedBy": "",
           "completedAt": ""
         }
@@ -5945,6 +5945,16 @@
           "address": "621 Chapel Ave",
           "cityst": "Cherry Hill, NJ 08034",
           "zone": "NJ South",
+          "delivery": "2026-05-20",
+          "notes": ""
+        },
+        {
+          "woId": 1778762943717,
+          "woNum": "46322",
+          "customer": "Compass Wire Cloth Corp.",
+          "address": "1942 N Mill Road",
+          "cityst": "Vineland, NJ 08360",
+          "zone": "NJ North",
           "delivery": "2026-05-20",
           "notes": ""
         }
@@ -9783,6 +9793,6 @@
       "color": "#FF7043"
     }
   ],
-  "exportDate": "2026-05-19T18:43:17.396Z",
+  "exportDate": "2026-05-19T18:49:18.092Z",
   "version": "2.0"
 }
