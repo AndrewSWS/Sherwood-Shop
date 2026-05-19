@@ -2196,7 +2196,7 @@ function renderBoardView(){
   }));
   const todayISO = new Date().toISOString().split('T')[0];
   const subtitle = document.getElementById('board-subtitle');
-  if(subtitle) subtitle.textContent = 'Week of '+fmtDate(days[0].iso)+' — '+fmtDate(days[4].iso);
+  if(subtitle) subtitle.textContent = 'Today: '+fmtDate(days[0].iso)+' — '+fmtDate(days[4].iso);
 
   const grid = document.getElementById('board-grid');
   if(!grid) return;
@@ -3089,12 +3089,23 @@ let showAllQueue = false;  // same filter for Shop Queue
 let weekOffset = 0; // 0=current week, -1=last week, +1=next week, etc.
 
 function getWeekDays(offset){
-  if(offset===undefined)offset=weekOffset;
-  const now=new Date();
-  const dow=now.getDay();
-  const mon=new Date(now);
-  mon.setDate(now.getDate()-(dow===0?6:dow-1)+(offset*7));
-  return Array.from({length:5},(_,i)=>{const d=new Date(mon);d.setDate(mon.getDate()+i);return d});
+  // Always anchor to today, roll forward 5 business days skipping Sat/Sun
+  const days = [];
+  const start = new Date();
+  // If offset is used (prev/next week nav), shift start by offset weeks
+  if(offset===undefined) offset=weekOffset;
+  start.setDate(start.getDate() + (offset*7));
+  // If today is Sat/Sun, start from next Monday
+  const dow = start.getDay();
+  if(dow===6) start.setDate(start.getDate()+2);
+  else if(dow===0) start.setDate(start.getDate()+1);
+  let cursor = new Date(start);
+  while(days.length < 5){
+    const d = cursor.getDay();
+    if(d!==0 && d!==6) days.push(new Date(cursor));
+    cursor.setDate(cursor.getDate()+1);
+  }
+  return days;
 }
 
 function navWeek(dir){
@@ -3119,13 +3130,14 @@ function goToCurrentWeek(){
 
 function weekRangeLabel(offset){
   const days=getWeekDays(offset);
-  const mon=days[0];const fri=days[4];
-  const sameMonth=mon.getMonth()===fri.getMonth();
+  const start=days[0];const end=days[4];
   const fmt=(d,showYear)=>d.toLocaleDateString('en-US',{month:'short',day:'numeric',...(showYear?{year:'numeric'}:{})});
-  const label=sameMonth?`${fmt(mon)} – ${fmt(fri,true)}`:`${fmt(mon)} – ${fmt(fri,true)}`;
-  if(offset===0)return`This Week &nbsp;·&nbsp; ${label}`;
+  const label=`${fmt(start)} – ${fmt(end,true)}`;
+  if(offset===0)return`Today Forward &nbsp;·&nbsp; ${label}`;
   if(offset===-1)return`Last Week &nbsp;·&nbsp; ${label}`;
   if(offset===1)return`Next Week &nbsp;·&nbsp; ${label}`;
+  if(offset>1)return`+${offset} Weeks &nbsp;·&nbsp; ${label}`;
+  if(offset<-1)return`${offset} Weeks &nbsp;·&nbsp; ${label}`;
   return`${label}`;
 }
 
