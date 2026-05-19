@@ -2983,7 +2983,7 @@ function renderTruckCard(t, filterDay){
         </div>`;
       }
       const bc=grp?grp.color:'var(--border)';
-      const woDelivered = wo ? woStatus(wo)==='Complete' : (s.delivered||false);
+      const woDelivered = wo ? (wo.delivered||false) : (s.delivered||false);
       const stopBg = woDelivered ? 'background:#f0faf0;' : '';
       const stopOpacity = woDelivered ? 'opacity:0.75;' : '';
       return sep+`<div class="truck-stop" style="border-left:3px solid ${bc};padding-left:8px;${stopBg}${stopOpacity}">
@@ -3028,34 +3028,29 @@ const var_amber='#BA7517';
 
 function t_driver(tid,v){const t=state.trucks.find(x=>x.id===tid);if(t){t.driver=v;saveState()}}
 function markStopDelivered(tid, woId, delivered){
-  const t = state.trucks.find(t=>t.id===tid);
-  if(!t) return;
-  const stop = t.stops.find(s=>String(s.woId)===String(woId));
+  // Normalize types for comparison
+  const truck = state.trucks.find(tr=>String(tr.id)===String(tid));
+  if(!truck) return;
+  const stop = truck.stops.find(s=>String(s.woId)===String(woId));
   if(stop) stop.delivered = delivered;
-  // Also mark all WO items complete if delivered
+  // Store delivered flag on the WO itself so it persists permanently
   const wo = state.wos.find(w=>String(w.id)===String(woId));
-  if(wo && delivered){
-    wo.items.forEach(item=>{
-      if(item.status!=='Complete'){
-        item.status='Complete';
-        item.completedBy=state.currentUser||'Delivery';
-        item.completedAt=new Date().toISOString();
-      }
-    });
-  } else if(wo && !delivered){
-    // Unmark — revert completed-by-delivery items to Pending
-    wo.items.forEach(item=>{
-      if(item.completedBy==='Delivery'){
-        item.status='Pending';
-        item.completedBy='';
-        item.completedAt='';
-      }
-    });
+  if(wo){
+    wo.delivered = delivered;
+    if(delivered){
+      wo.deliveredAt = new Date().toISOString();
+      wo.deliveredBy = state.currentUser||'';
+    } else {
+      wo.deliveredAt = '';
+      wo.deliveredBy = '';
+    }
+    // NOTE: Do NOT change item statuses — Complete means shop done,
+    // Delivered means left the building. These are independent.
   }
   saveState();
   updateBadges();
-  renderTruckPlanner(document.getElementById('content'));
-  toast(delivered?'✓ WO #'+wo?.woNum+' marked delivered':'WO #'+wo?.woNum+' delivery unmarked');
+  renderTruck(document.getElementById('content'));
+  toast(delivered?'🚚 WO #'+wo?.woNum+' marked Delivered':'WO #'+wo?.woNum+' delivery unmarked');
 }
 
 function moveStop(tid,idx,dir){
