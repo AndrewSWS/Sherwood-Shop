@@ -1299,8 +1299,8 @@
       "cityst": "Vineland, NJ 08360",
       "zone": "NJ North",
       "date": "2026-05-19",
-      "delivery": "",
-      "truck": "",
+      "delivery": "2026-05-20",
+      "truck": "1",
       "notes": "",
       "items": [
         {
@@ -1323,9 +1323,9 @@
           "step2CompletedBy": "",
           "notes": "Elgen:EJNB (Elgen J Nuts & Bolts 3/8' (100/bag)) | Elgen J Nuts & Bolts 3/8' (100/bag)",
           "assignee": "Andrew",
-          "status": "In Process",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "Delivery",
+          "completedAt": "2026-05-19T18:38:45.752Z"
         }
       ],
       "created": "2026-05-13T17:00:07.912Z"
@@ -2814,12 +2814,12 @@
       "cityst": "Vineland, NJ 08360",
       "zone": "NJ North",
       "date": "2026-05-29",
-      "delivery": "",
+      "delivery": "2026-05-26",
       "truck": "",
       "notes": "",
       "items": [
         {
-          "id": 1778762848614.7397,
+          "id": 1779216011097.753,
           "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "18",
@@ -2843,7 +2843,8 @@
           "completedAt": ""
         }
       ],
-      "created": "2026-05-14T12:47:28.614Z"
+      "created": "2026-05-14T12:47:28.614Z",
+      "isPickup": false
     },
     {
       "id": 1778762859909,
@@ -3132,12 +3133,12 @@
       "cityst": "Vineland, NJ 08360",
       "zone": "NJ North",
       "date": "2026-05-20",
-      "delivery": "",
+      "delivery": "2026-05-20",
       "truck": "",
       "notes": "",
       "items": [
         {
-          "id": 1778762943717.6492,
+          "id": 1779216042777.5142,
           "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "20",
@@ -3161,7 +3162,8 @@
           "completedAt": ""
         }
       ],
-      "created": "2026-05-14T12:49:03.717Z"
+      "created": "2026-05-14T12:49:03.717Z",
+      "isPickup": false
     },
     {
       "id": 1778766327579,
@@ -4348,7 +4350,7 @@
       "cityst": "Bensalem, PA 19020",
       "zone": "SE Pennsylvania",
       "date": "2026-05-20",
-      "delivery": "",
+      "delivery": "2026-05-21",
       "isPickup": false,
       "truck": "",
       "notes": "",
@@ -4631,7 +4633,7 @@
       "date": "2026-05-22",
       "delivery": "2026-05-20",
       "isPickup": false,
-      "truck": "2",
+      "truck": "1",
       "notes": "",
       "items": [
         {
@@ -4654,9 +4656,9 @@
           "step2CompletedBy": "",
           "notes": "Elgen:EJNB (Elgen J Nuts & Bolts 3/8' (100/bag)) | Elgen J Nuts & Bolts 3/8' (100/bag)",
           "assignee": "",
-          "status": "In Process",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "Delivery",
+          "completedAt": "2026-05-19T18:38:58.136Z"
         }
       ],
       "created": "2026-05-18T13:36:02.494Z"
@@ -5318,7 +5320,7 @@
       "cityst": "Westville, NJ 08093",
       "zone": "NJ South",
       "date": "2026-05-18",
-      "delivery": "",
+      "delivery": "2026-05-26",
       "isPickup": false,
       "truck": "",
       "notes": "",
@@ -5538,7 +5540,7 @@
       "cityst": "Philadelphia, PA 19136",
       "zone": "SE Pennsylvania",
       "date": "2026-05-21",
-      "delivery": "",
+      "delivery": "2026-05-26",
       "isPickup": false,
       "truck": "",
       "notes": "",
@@ -5925,6 +5927,26 @@
           "zone": "NJ South",
           "delivery": "2026-05-20",
           "notes": ""
+        },
+        {
+          "woId": 1778691607912,
+          "woNum": "46244",
+          "customer": "STS Sheet Metal Inc",
+          "address": "2569 N. Delsea Drive",
+          "cityst": "Vineland, NJ 08360",
+          "zone": "NJ North",
+          "delivery": "2026-05-20",
+          "notes": ""
+        },
+        {
+          "woId": 1779111362494,
+          "woNum": "46339",
+          "customer": "Hutchinson Plumbing",
+          "address": "621 Chapel Ave",
+          "cityst": "Cherry Hill, NJ 08034",
+          "zone": "NJ South",
+          "delivery": "2026-05-20",
+          "notes": ""
         }
       ],
       "shipDate": ""
@@ -6109,16 +6131,6 @@
           "address": "2520 Wyandotte Road",
           "cityst": "Willow Grove, PA 19090",
           "zone": "SE Pennsylvania",
-          "delivery": "2026-05-20",
-          "notes": ""
-        },
-        {
-          "woId": 1779111362494,
-          "woNum": "46339",
-          "customer": "Hutchinson Plumbing",
-          "address": "621 Chapel Ave",
-          "cityst": "Cherry Hill, NJ 08034",
-          "zone": "NJ South",
           "delivery": "2026-05-20",
           "notes": ""
         },
@@ -9771,6 +9783,6 @@
       "color": "#FF7043"
     }
   ],
-  "exportDate": "2026-05-19T17:30:43.208Z",
+  "exportDate": "2026-05-19T18:43:17.396Z",
   "version": "2.0"
 }
