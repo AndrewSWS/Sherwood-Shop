@@ -257,7 +257,10 @@
         }
       ],
       "created": "2026-05-13T16:05:48.112Z",
-      "isPickup": false
+      "isPickup": false,
+      "delivered": true,
+      "deliveredAt": "2026-05-19T17:30:16.635Z",
+      "deliveredBy": ""
     },
     {
       "id": 1778688993044,
@@ -1242,7 +1245,10 @@
         }
       ],
       "created": "2026-05-13T16:59:40.521Z",
-      "isPickup": false
+      "isPickup": false,
+      "delivered": true,
+      "deliveredAt": "2026-05-19T17:29:44.923Z",
+      "deliveredBy": ""
     },
     {
       "id": 1778691597008,
@@ -1507,7 +1513,10 @@
         }
       ],
       "created": "2026-05-13T17:03:20.938Z",
-      "isPickup": false
+      "isPickup": false,
+      "delivered": true,
+      "deliveredAt": "2026-05-19T17:29:46.499Z",
+      "deliveredBy": ""
     },
     {
       "id": 1778691812336,
@@ -1771,7 +1780,10 @@
           "completedAt": "2026-05-15T19:46:01.167Z"
         }
       ],
-      "created": "2026-05-13T17:05:02.200Z"
+      "created": "2026-05-13T17:05:02.200Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-19T17:29:49.883Z",
+      "deliveredBy": ""
     },
     {
       "id": 1778691916177,
@@ -3063,7 +3075,10 @@
           "completedAt": "2026-05-15T19:46:05.023Z"
         }
       ],
-      "created": "2026-05-14T12:48:32.653Z"
+      "created": "2026-05-14T12:48:32.653Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-19T17:29:47.451Z",
+      "deliveredBy": ""
     },
     {
       "id": 1778762925509,
@@ -3103,7 +3118,10 @@
           "completedAt": "2026-05-18T16:22:01.944Z"
         }
       ],
-      "created": "2026-05-14T12:48:45.509Z"
+      "created": "2026-05-14T12:48:45.509Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-19T17:30:17.459Z",
+      "deliveredBy": ""
     },
     {
       "id": 1778762943717,
@@ -3274,7 +3292,10 @@
           "completedAt": "2026-05-15T19:55:43.206Z"
         }
       ],
-      "created": "2026-05-14T17:44:31.107Z"
+      "created": "2026-05-14T17:44:31.107Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-19T17:29:48.011Z",
+      "deliveredBy": ""
     },
     {
       "id": 1778780937266,
@@ -3483,7 +3504,10 @@
           "completedAt": "2026-05-15T19:45:16.511Z"
         }
       ],
-      "created": "2026-05-14T17:48:57.266Z"
+      "created": "2026-05-14T17:48:57.266Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-19T17:29:42.699Z",
+      "deliveredBy": ""
     },
     {
       "id": 1778780979235,
@@ -3524,7 +3548,10 @@
           "completedAt": "2026-05-15T19:45:20.150Z"
         }
       ],
-      "created": "2026-05-14T17:49:39.235Z"
+      "created": "2026-05-14T17:49:39.235Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-19T17:29:43.796Z",
+      "deliveredBy": ""
     },
     {
       "id": 1778781036170,
@@ -3589,7 +3616,10 @@
           "completedAt": "2026-05-15T19:45:42.959Z"
         }
       ],
-      "created": "2026-05-14T17:50:36.170Z"
+      "created": "2026-05-14T17:50:36.170Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-19T17:29:44.435Z",
+      "deliveredBy": ""
     },
     {
       "id": 1778787536870,
@@ -3702,7 +3732,10 @@
           "completedAt": "2026-05-15T19:46:29.909Z"
         }
       ],
-      "created": "2026-05-14T19:38:56.870Z"
+      "created": "2026-05-14T19:38:56.870Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-19T17:29:49.388Z",
+      "deliveredBy": ""
     },
     {
       "id": 1778862321933,
@@ -3825,7 +3858,10 @@
           "completedAt": "2026-05-15T19:47:03.681Z"
         }
       ],
-      "created": "2026-05-15T16:26:25.549Z"
+      "created": "2026-05-15T16:26:25.549Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-19T17:30:18.172Z",
+      "deliveredBy": ""
     },
     {
       "id": 1778862412654,
@@ -3986,7 +4022,10 @@
           "completedAt": "2026-05-18T16:24:14.744Z"
         }
       ],
-      "created": "2026-05-15T16:26:52.654Z"
+      "created": "2026-05-15T16:26:52.654Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-19T17:30:18.707Z",
+      "deliveredBy": ""
     },
     {
       "id": 1778862434893,
@@ -4295,7 +4334,10 @@
           "completedAt": "2026-05-18T16:24:52.840Z"
         }
       ],
-      "created": "2026-05-15T16:28:42.901Z"
+      "created": "2026-05-15T16:28:42.901Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-19T17:30:20.068Z",
+      "deliveredBy": ""
     },
     {
       "id": 1779111347510,
@@ -4630,7 +4672,7 @@
       "date": "2026-05-18",
       "delivery": "2026-05-18",
       "isPickup": false,
-      "truck": "",
+      "truck": "2",
       "notes": "",
       "items": [
         {
@@ -4682,7 +4724,10 @@
           "completedAt": "2026-05-18T19:21:23.674Z"
         }
       ],
-      "created": "2026-05-18T13:36:14.968Z"
+      "created": "2026-05-18T13:36:14.968Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-19T17:29:55.283Z",
+      "deliveredBy": ""
     },
     {
       "id": 1779111393079,
@@ -5640,7 +5685,8 @@
           "cityst": "Pottstown, PA 19464",
           "zone": "PA Other",
           "delivery": "2026-05-19",
-          "notes": ""
+          "notes": "",
+          "delivered": true
         },
         {
           "woId": 1778688993044,
@@ -5770,7 +5816,8 @@
           "cityst": "Lansdale, PA 19446",
           "zone": "PA Other",
           "delivery": "2026-05-19",
-          "notes": ""
+          "notes": "",
+          "delivered": true
         },
         {
           "woId": 1778780937266,
@@ -5780,7 +5827,8 @@
           "cityst": "Telford, PA 18969",
           "zone": "Bucks / Montgomery",
           "delivery": "2026-05-18",
-          "notes": ""
+          "notes": "",
+          "delivered": true
         },
         {
           "woId": 1778780979235,
@@ -5790,7 +5838,8 @@
           "cityst": "Warminster, PA 18974",
           "zone": "Bucks / Montgomery",
           "delivery": "2026-05-18",
-          "notes": ""
+          "notes": "",
+          "delivered": true
         },
         {
           "woId": 1778781036170,
@@ -5800,7 +5849,8 @@
           "cityst": "Huntingdon Valley, PA 19006",
           "zone": "SE Pennsylvania",
           "delivery": "2026-05-18",
-          "notes": ""
+          "notes": "",
+          "delivered": true
         },
         {
           "woId": 1778862464765,
@@ -5830,7 +5880,8 @@
           "cityst": "Allentown, PA 18109-9547",
           "zone": "Lehigh Valley",
           "delivery": "2026-05-19",
-          "notes": ""
+          "notes": "",
+          "delivered": true
         },
         {
           "woId": 1778862412654,
@@ -5840,7 +5891,8 @@
           "cityst": "Douglassville, PA 19518",
           "zone": "PA Other",
           "delivery": "2026-05-19",
-          "notes": ""
+          "notes": "",
+          "delivered": true
         },
         {
           "woId": 1778862522901,
@@ -5850,7 +5902,8 @@
           "cityst": "Phoenixville, PA 19460",
           "zone": "PA Other",
           "delivery": "2026-05-19",
-          "notes": ""
+          "notes": "",
+          "delivered": true
         },
         {
           "woId": 1778691580521,
@@ -5860,7 +5913,8 @@
           "cityst": "Horsham, PA 19044",
           "zone": "SE Pennsylvania",
           "delivery": "2026-05-18",
-          "notes": ""
+          "notes": "",
+          "delivered": true
         },
         {
           "woId": 1779132945776,
@@ -5949,7 +6003,8 @@
           "cityst": "Cape May Ct. House, NJ 08210",
           "zone": "NJ Central",
           "delivery": "2026-05-18",
-          "notes": ""
+          "notes": "",
+          "delivered": true
         },
         {
           "woId": 1778762912653,
@@ -5959,7 +6014,8 @@
           "cityst": "Westville, NJ 08093",
           "zone": "NJ South",
           "delivery": "2026-05-18",
-          "notes": ""
+          "notes": "",
+          "delivered": true
         },
         {
           "woId": 1778780671106,
@@ -5969,7 +6025,8 @@
           "cityst": "Cherry Hill, NJ 08034",
           "zone": "NJ South",
           "delivery": "2026-05-18",
-          "notes": ""
+          "notes": "",
+          "delivered": true
         },
         {
           "woId": 1778787536870,
@@ -5979,7 +6036,8 @@
           "cityst": "Pittsgrove, NJ 08318",
           "zone": "NJ North",
           "delivery": "2026-05-18",
-          "notes": ""
+          "notes": "",
+          "delivered": true
         },
         {
           "woId": 1778691902200,
@@ -5989,7 +6047,8 @@
           "cityst": "Cherry Hill, NJ 08034",
           "zone": "NJ South",
           "delivery": "2026-05-18",
-          "notes": ""
+          "notes": "",
+          "delivered": true
         },
         {
           "woId": 1778862434893,
@@ -6072,6 +6131,17 @@
           "zone": "SE Pennsylvania",
           "delivery": "2026-05-20",
           "notes": ""
+        },
+        {
+          "woId": 1779111374967,
+          "woNum": "46341",
+          "customer": "South Philly Custom Sheet Metal",
+          "address": "1030 Delsea Drive",
+          "cityst": "Westville, NJ 08093",
+          "zone": "NJ South",
+          "delivery": "2026-05-18",
+          "notes": "",
+          "delivered": true
         }
       ],
       "shipDate": ""
@@ -9701,6 +9771,6 @@
       "color": "#FF7043"
     }
   ],
-  "exportDate": "2026-05-19T17:23:37.037Z",
+  "exportDate": "2026-05-19T17:30:43.208Z",
   "version": "2.0"
 }
