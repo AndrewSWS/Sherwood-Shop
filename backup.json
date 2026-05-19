@@ -3713,13 +3713,13 @@
       "cityst": "langhorne, PA 19047",
       "zone": "SE Pennsylvania",
       "date": "2026-05-18",
-      "delivery": "",
-      "isPickup": true,
-      "truck": "",
+      "delivery": "2026-05-20",
+      "isPickup": false,
+      "truck": "2",
       "notes": "",
       "items": [
         {
-          "id": 1778862321933.6997,
+          "id": 1779211382260.6602,
           "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "26",
@@ -3738,9 +3738,9 @@
           "step2CompletedBy": "",
           "notes": "GlvSht:264896 (26 Ga. 48' x 96' Galv) | 26 Ga. 48' x 96' Galv",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "Delivery",
+          "completedAt": "2026-05-19T17:23:17.299Z"
         }
       ],
       "created": "2026-05-15T16:25:21.933Z"
@@ -6060,6 +6060,16 @@
           "address": "621 Chapel Ave",
           "cityst": "Cherry Hill, NJ 08034",
           "zone": "NJ South",
+          "delivery": "2026-05-20",
+          "notes": ""
+        },
+        {
+          "woId": 1778862321933,
+          "woNum": "46330",
+          "customer": "Good Air Conditioning",
+          "address": "1956 Maple Ave",
+          "cityst": "langhorne, PA 19047",
+          "zone": "SE Pennsylvania",
           "delivery": "2026-05-20",
           "notes": ""
         }
@@ -9691,6 +9701,6 @@
       "color": "#FF7043"
     }
   ],
-  "exportDate": "2026-05-19T17:20:19.022Z",
+  "exportDate": "2026-05-19T17:23:37.037Z",
   "version": "2.0"
 }
