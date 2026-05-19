@@ -1334,7 +1334,7 @@
       "zone": "SE Pennsylvania",
       "date": "2026-05-18",
       "delivery": "2026-05-20",
-      "truck": "",
+      "truck": "2",
       "notes": "",
       "items": [
         {
@@ -1851,7 +1851,10 @@
           "completedAt": "2026-05-15T19:47:34.407Z"
         }
       ],
-      "created": "2026-05-13T17:06:11.656Z"
+      "created": "2026-05-13T17:06:11.656Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-19T17:18:19.164Z",
+      "deliveredBy": ""
     },
     {
       "id": 1778691985264,
@@ -4586,7 +4589,7 @@
       "date": "2026-05-22",
       "delivery": "2026-05-20",
       "isPickup": false,
-      "truck": "",
+      "truck": "2",
       "notes": "",
       "items": [
         {
@@ -4609,7 +4612,7 @@
           "step2CompletedBy": "",
           "notes": "Elgen:EJNB (Elgen J Nuts & Bolts 3/8' (100/bag)) | Elgen J Nuts & Bolts 3/8' (100/bag)",
           "assignee": "",
-          "status": "Pending",
+          "status": "In Process",
           "completedBy": "",
           "completedAt": ""
         }
@@ -4924,7 +4927,10 @@
           "completedAt": "2026-05-18T19:36:45.320Z"
         }
       ],
-      "created": "2026-05-18T19:35:13.377Z"
+      "created": "2026-05-18T19:35:13.377Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-19T17:18:20.100Z",
+      "deliveredBy": ""
     },
     {
       "id": 1779132945776,
@@ -5049,9 +5055,9 @@
           "step2CompletedBy": "",
           "notes": "HVACAcsry:26120Slip (26 Ga. 10' Slip Galv) | 26 Ga. 10' Slip Galv",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "?",
+          "completedAt": "2026-05-19T17:18:49.684Z"
         },
         {
           "id": 1779190148082.9407,
@@ -5073,9 +5079,9 @@
           "step2CompletedBy": "",
           "notes": "HVACAcsry:241201Stand (24 Ga. 10' - 1' Standing-S Slip Galv) | 24 Ga. 10' - 1' Standing-S Slip Galv",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "?",
+          "completedAt": "2026-05-19T17:18:51.580Z"
         },
         {
           "id": 1779190148083.7854,
@@ -5097,9 +5103,9 @@
           "step2CompletedBy": "",
           "notes": "GlvSht:264896 (26 Ga. 48' x 96' Galv) | 26 Ga. 48' x 96' Galv",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "?",
+          "completedAt": "2026-05-19T17:18:52.900Z"
         }
       ],
       "created": "2026-05-19T11:29:08.081Z"
@@ -5138,9 +5144,9 @@
           "step2CompletedBy": "",
           "notes": "HVACAcsry:26120Drive (26 Ga. 10' Drive Galv) | 26 Ga. 10' Drive Galv",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "?",
+          "completedAt": "2026-05-19T17:18:57.780Z"
         },
         {
           "id": 1779190232667.3594,
@@ -5162,9 +5168,9 @@
           "step2CompletedBy": "",
           "notes": "HVACAcsry:261201Stand (26 Ga. 10' - 1' Standing-S Slip Galv) | 26 Ga. 10' - 1' Standing-S Slip Galv",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "?",
+          "completedAt": "2026-05-19T17:18:58.572Z"
         },
         {
           "id": 1779190232668.7454,
@@ -5186,9 +5192,9 @@
           "step2CompletedBy": "",
           "notes": "HVACAcsry:241120 (24 Ga. 1' x 120' Galv) | 24 Ga. 1' x 120' Galv",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "?",
+          "completedAt": "2026-05-19T17:19:03.924Z"
         },
         {
           "id": 1779190232669.6655,
@@ -5210,9 +5216,9 @@
           "step2CompletedBy": "",
           "notes": "HVACAcsry:26120RAF (26 Ga. 10' Return Air Frame Galv) | 26 Ga. 10' Return Air Frame Galv",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "?",
+          "completedAt": "2026-05-19T17:19:21.756Z"
         }
       ],
       "created": "2026-05-19T11:30:32.666Z"
@@ -6003,7 +6009,8 @@
           "cityst": "Newark, DE 19702",
           "zone": "Delaware",
           "delivery": "2026-05-19",
-          "notes": ""
+          "notes": "",
+          "delivered": true
         },
         {
           "woId": 1779190148081,
@@ -6033,6 +6040,27 @@
           "cityst": "Levittown, PA 19057",
           "zone": "SE Pennsylvania",
           "delivery": "2026-05-19",
+          "notes": "",
+          "delivered": true
+        },
+        {
+          "woId": 1778691623992,
+          "woNum": "46245",
+          "customer": "Huntingdon Mechanical",
+          "address": "2520 Wyandotte Road",
+          "cityst": "Willow Grove, PA 19090",
+          "zone": "SE Pennsylvania",
+          "delivery": "2026-05-20",
+          "notes": ""
+        },
+        {
+          "woId": 1779111362494,
+          "woNum": "46339",
+          "customer": "Hutchinson Plumbing",
+          "address": "621 Chapel Ave",
+          "cityst": "Cherry Hill, NJ 08034",
+          "zone": "NJ South",
+          "delivery": "2026-05-20",
           "notes": ""
         }
       ],
@@ -9663,6 +9691,6 @@
       "color": "#FF7043"
     }
   ],
-  "exportDate": "2026-05-19T16:35:28.616Z",
+  "exportDate": "2026-05-19T17:20:19.022Z",
   "version": "2.0"
 }
