@@ -6174,9 +6174,9 @@
           "step2CompletedBy": "",
           "notes": "GlvSht:G902460120 (24 Ga. 60' x 120' G-90) | 24 Ga. 60' x 120' G-90",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "Delivery",
+          "completedAt": "2026-05-20T19:53:00.050Z"
         },
         {
           "id": 1779283512293.8928,
@@ -6198,9 +6198,9 @@
           "step2CompletedBy": "",
           "notes": "GlvSht:G902060120 (20 Ga. 60' x 120' G-90) | 20 Ga. 60' x 120' G-90",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "Delivery",
+          "completedAt": "2026-05-20T19:53:00.050Z"
         },
         {
           "id": 1779283512294.7947,
@@ -6222,9 +6222,9 @@
           "step2CompletedBy": "",
           "notes": "NonGlvSht:Perf2260120 (22 Ga. 60' x 120' Perforated Galv) | 22 Ga. 60' x 120' Perforated Galv",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "Delivery",
+          "completedAt": "2026-05-20T19:53:00.050Z"
         },
         {
           "id": 1779283512295.921,
@@ -6246,9 +6246,9 @@
           "step2CompletedBy": "",
           "notes": "GlvCoil:G902060coil (20 Ga. 60' x Coil G-90) | 20 Ga. 60' x Coil G-90",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "Delivery",
+          "completedAt": "2026-05-20T19:53:00.050Z"
         }
       ],
       "created": "2026-05-20T13:25:12.292Z"
@@ -9454,7 +9454,10 @@
       "Galvanized",
       "Galvaneel",
       "Aluminum"
-    ]
+    ],
+    "wrapOverrides": {
+      "2026-05-26": true
+    }
   },
   "customerMeta": {
     "A & H Metals": {
@@ -10886,6 +10889,6 @@
       "color": "#FF7043"
     }
   ],
-  "exportDate": "2026-05-20T19:19:29.676Z",
+  "exportDate": "2026-05-20T19:57:30.577Z",
   "version": "2.0"
 }
