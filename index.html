@@ -456,6 +456,18 @@ select{cursor:pointer}
       
     </div>
     <span style="font-size:12px;color:var(--text2)">Click any day to see WO details</span>
+    <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2)">
+      <span>🌧 Rain alert at</span>
+      <input type="number" min="10" max="100" step="5"
+        value="${parseInt(state.adminConfig?.rainThreshold)||40}"
+        style="width:52px;padding:3px 6px;border:1px solid var(--border);border-radius:var(--rad);font-size:12px;font-weight:600;text-align:center"
+        onchange="state.adminConfig=state.adminConfig||{};state.adminConfig.rainThreshold=this.value;saveState();fetchWeather().then(()=>renderDashboard())" >%
+      <span>Zip:</span>
+      <input type="text" maxlength="5"
+        value="${state.adminConfig?.weatherZip||'19020'}"
+        style="width:60px;padding:3px 6px;border:1px solid var(--border);border-radius:var(--rad);font-size:12px;font-weight:600;text-align:center"
+        onchange="state.adminConfig=state.adminConfig||{};state.adminConfig.weatherZip=this.value;saveState();fetchWeather().then(()=>renderDashboard())">
+    </div>
   </div>
   <div class="week-grid mb8"><div class="day-col" ondragover="calDragOver(event,'2026-05-04')" ondragleave="calDragLeave(event)" ondrop="calDrop(event,'2026-05-04')" onclick="toggleDayDetail('2026-05-04')">
       <div class="day-header">
@@ -2289,7 +2301,7 @@ function renderBoardView(){
       +'<div class="board-day-header" style="'+(isToday?'background:#1C2E1C;color:#A8D5A8;border-bottom-color:#2D6A2D;':'')+'">'
       +'<span class="bd-count">'+doneCount+'/'+dayWOs.length+'</span>'
       +day.label.toUpperCase()
-      +'<div class="bd-date">'+fmtDate(day.iso)+(totalLbs?' · '+totalLbs.toLocaleString()+' lbs':'')+'</div>'
+      +'<div class="bd-date">'+fmtDate(day.iso)+(totalLbs?' · '+totalLbs.toLocaleString()+' lbs':'')+getBoardWeatherBadge(day.iso)+'</div>'
       +'</div>'
       +(dayWOs.length
         ? truckSection('🚚 TRUCK 1','#4AA8D8',t1WOs)
@@ -2825,6 +2837,74 @@ function printQueueSlip(woId,itemId){
 // ══════════════════════════════════════════════════════
 // MY VIEW
 // ══════════════════════════════════════════════════════
+function printTaskList(operator){
+  const tasks = [];
+  state.wos.forEach(wo=>{
+    wo.items.forEach(item=>{
+      if(item.assignee===operator && item.status!=='Complete'){
+        tasks.push({...item, woNum:wo.woNum, woId:wo.id, customer:wo.customer, delivery:wo.delivery});
+      }
+    });
+  });
+
+  const today = new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  const rows = tasks.map(item=>`
+    <div class="task-row">
+      <div class="task-header">
+        <span class="wo-num">WO #${item.woNum}</span>
+        <span class="customer">${item.customer}</span>
+        ${item.delivery?`<span class="delivery">📅 ${fmtDate(item.delivery)}</span>`:''}
+        <span class="station">${item.station||'—'}</span>
+      </div>
+      <div class="task-fields">
+        <div class="field-group"><span class="flabel">Product</span><span class="fval">${item.productCat||item.type||'—'}</span></div>
+        <div class="field-group"><span class="flabel">Gauge · Size</span><span class="fval">${item.gauge||'—'} · ${item.size||'—'}</span></div>
+        <div class="field-group"><span class="flabel">Qty</span><span class="fval">${item.qty||'—'}</span></div>
+        <div class="field-group"><span class="flabel">Wt/pc</span><span class="fval">${item.wtUnit?item.wtUnit+' lbs':'—'}</span></div>
+      </div>
+      ${item.notes?`<div class="task-notes">📝 ${item.notes}</div>`:''}
+      <div class="task-footer">
+        <span>Bundle / Skid #: _______________________</span>
+        <span>Initials: ___________</span>
+        <span>☐ Complete</span>
+      </div>
+    </div>
+  `).join('');
+
+  const win = window.open('','_blank','width=800,height=600');
+  win.document.write(`<!DOCTYPE html>
+<html>
+<head>
+<title>${operator} Task List — ${today}</title>
+<style>
+  body { font-family: Arial, sans-serif; font-size: 12px; margin: 24px; color: #111; }
+  h1 { font-size: 18px; margin: 0 0 2px 0; }
+  .subtitle { font-size: 12px; color: #666; margin-bottom: 16px; }
+  .task-row { border: 1px solid #ccc; border-radius: 6px; padding: 10px 12px; margin-bottom: 10px; page-break-inside: avoid; }
+  .task-header { display: flex; gap: 12px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+  .wo-num { font-weight: 700; font-size: 13px; }
+  .customer { font-weight: 600; color: #1a5c8a; font-size: 13px; flex: 1; }
+  .delivery { background: #fff3cd; padding: 2px 6px; border-radius: 4px; font-size: 11px; }
+  .station { background: #e9ecef; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+  .task-fields { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 8px; }
+  .field-group { display: flex; flex-direction: column; }
+  .flabel { font-size: 9px; text-transform: uppercase; letter-spacing: .05em; color: #888; font-weight: 700; }
+  .fval { font-size: 13px; font-weight: 600; }
+  .task-notes { background: #fff8e6; border-left: 3px solid #f0a500; padding: 5px 8px; font-size: 11px; margin-bottom: 8px; border-radius: 0 4px 4px 0; }
+  .task-footer { display: flex; gap: 24px; align-items: center; border-top: 1px dashed #ddd; padding-top: 8px; margin-top: 4px; font-size: 11px; color: #444; }
+  @media print { body { margin: 12px; } }
+</style>
+</head>
+<body>
+<h1>🗂 ${operator}'s Task List</h1>
+<div class="subtitle">Printed: ${today} &nbsp;·&nbsp; ${tasks.length} open task${tasks.length!==1?'s':''}</div>
+${rows||'<p style="color:#888">No open tasks.</p>'}
+<script>window.onload=()=>window.print();<\/script>
+</body>
+</html>`);
+  win.document.close();
+}
+
 function renderMyView(c){
   if(!c)c=document.getElementById('content');
   const me=state.currentUser;
@@ -2851,6 +2931,7 @@ function renderMyView(c){
     <div class="flex gap8">
       <span class="pill pill-inprocess">${active.length} active</span>
       <span class="pill pill-complete">${done.length} done</span>
+      <button onclick="printTaskList('${me}')" class="btn btn-sm" style="margin-left:8px">🖨 Print Task List</button>
     </div>
   </div>
   ${active.length?active.map(item=>renderMyTask(item)).join(''):'<div style="text-align:center;padding:40px;color:var(--text3);background:var(--green-l);border-radius:var(--rad2);margin-bottom:16px"><div style="font-size:32px;margin-bottom:8px">✓</div><div style="font-weight:600;color:var(--green)">All caught up! No active tasks.</div></div>'}
@@ -3311,6 +3392,117 @@ function unschDrop(e){
   renderDashboard(document.getElementById('content'));
 }
 
+
+// ── WEATHER ─────────────────────────────────────────────────────────────
+// Uses Open-Meteo (free, no API key needed)
+let _weatherCache = {}; // { date: { precip_prob, description } }
+let _weatherFetched = false;
+
+function getWeatherZip(){ return state.adminConfig?.weatherZip || '19020'; } // Default: Bensalem PA
+function getRainThreshold(){ return parseInt(state.adminConfig?.rainThreshold || 40); }
+
+async function fetchWeather(){
+  try {
+    const zip = getWeatherZip();
+    // Geocode zip to lat/lon using nominatim
+    const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?postalcode=${zip}&country=US&format=json&limit=1`);
+    const geoData = await geoRes.json();
+    if(!geoData.length) return;
+    const lat = parseFloat(geoData[0].lat);
+    const lon = parseFloat(geoData[0].lon);
+    // Fetch 7-day hourly forecast from Open-Meteo (4am-5pm window)
+    const wxRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=precipitation_probability&daily=weathercode&timezone=America%2FNew_York&forecast_days=7`);
+    const wx = await wxRes.json();
+    if(!wx.hourly) return;
+    _weatherCache = {};
+    // Group hourly data by date, filter to 4am-5pm EST (hours 4-17)
+    const times = wx.hourly.time;
+    const probs = wx.hourly.precipitation_probability;
+    const byDate = {};
+    times.forEach((t, i)=>{
+      const [date, timeStr] = t.split('T');
+      const hour = parseInt(timeStr.split(':')[0]);
+      if(hour >= 4 && hour <= 17){
+        if(!byDate[date]) byDate[date] = [];
+        byDate[date].push(probs[i]);
+      }
+    });
+    Object.keys(byDate).forEach(date=>{
+      const dayProbs = byDate[date];
+      const maxProb = dayProbs.length ? Math.max(...dayProbs) : 0;
+      _weatherCache[date] = { precipProb: maxProb };
+    });
+    _weatherFetched = true;
+  } catch(e){
+    console.warn('Weather fetch failed:', e);
+  }
+}
+
+function isMonday(iso){
+  return new Date(iso+'T12:00:00').getDay() === 1;
+}
+
+function getWrapOverride(iso){
+  // Returns true=force on, false=force off, null=use auto
+  return (state.adminConfig?.wrapOverrides||{})[iso] ?? null;
+}
+
+function setWrapOverride(iso, val){
+  if(!state.adminConfig) state.adminConfig = {};
+  if(!state.adminConfig.wrapOverrides) state.adminConfig.wrapOverrides = {};
+  if(val === null) delete state.adminConfig.wrapOverrides[iso];
+  else state.adminConfig.wrapOverrides[iso] = val;
+  saveState();
+  renderDashboard();
+}
+
+function shouldWrap(iso){
+  const override = getWrapOverride(iso);
+  if(override === true) return {wrap:true, reason:'manual', prob:null};
+  if(override === false) return {wrap:false, reason:'manual', prob:null};
+  const monday = isMonday(iso);
+  const threshold = getRainThreshold();
+  const wx = _weatherCache[iso];
+  const prob = wx ? wx.precipProb : null;
+  if(monday) return {wrap:true, reason:'monday', prob};
+  if(_weatherFetched && prob !== null && prob >= threshold) return {wrap:true, reason:'weather', prob};
+  return {wrap:false, reason:'none', prob};
+}
+
+function getWeatherBadge(iso){
+  const {wrap, reason, prob} = shouldWrap(iso);
+  if(!wrap) return '';
+  let icon = '🌂', msg = '';
+  if(reason==='monday') msg = prob !== null ? `${prob}% rain — wrap orders (Mon default)` : 'wrap orders (Mon default)';
+  else if(reason==='weather'){ icon = prob>=80?'🌧':prob>=60?'🌦':'🌂'; msg = `${prob}% rain (4am–5pm) — wrap orders`; }
+  else if(reason==='manual') msg = 'wrap orders (manual)';
+  const offBtn = `<span onclick="event.stopPropagation();setWrapOverride('${iso}',false)" style="margin-left:6px;cursor:pointer;opacity:0.6;font-size:10px" title="Turn off wrap for this day">✕</span>`;
+  return `<div style="margin-top:4px;display:inline-flex;align-items:center;gap:4px;background:#e8f4fd;border:1px solid #90caf9;border-radius:4px;padding:2px 7px;font-size:11px;font-weight:700;color:#1565c0">
+    ${icon} ${msg}${offBtn}
+  </div>`;
+}
+
+function getBoardWeatherBadge(iso){
+  const {wrap, reason, prob} = shouldWrap(iso);
+  if(!wrap) return '';
+  let icon = '🌂', suffix = '';
+  if(reason==='weather'){ icon = prob>=80?'🌧':prob>=60?'🌦':'🌂'; suffix=` ${prob}%`; }
+  else if(reason==='monday' && prob !== null) suffix = ` ${prob}%`;
+  return `<span style="margin-left:8px;background:#1565c0;color:#fff;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:700">${icon}${suffix} wrap</span>`;
+}
+
+function getWrapToggleBtn(iso){
+  const {wrap} = shouldWrap(iso);
+  const override = getWrapOverride(iso);
+  if(wrap){
+    return `<span onclick="setWrapOverride('${iso}', false)" title="Turn off wrap for this day"
+      style="margin-left:4px;cursor:pointer;font-size:10px;padding:1px 5px;background:#fff;border:1px solid #90caf9;border-radius:3px;color:#1565c0;font-weight:700">Off</span>`;
+  } else {
+    return `<span onclick="setWrapOverride('${iso}', true)" title="Force wrap for this day"
+      style="margin-left:4px;cursor:pointer;font-size:10px;padding:1px 5px;background:#e8f4fd;border:1px solid #90caf9;border-radius:3px;color:#1565c0;font-weight:700">🌂 Wrap</span>`;
+  }
+}
+
 function renderDashboard(c){
   if(!c)c=document.getElementById('content');
   const todayStr=new Date().toISOString().split('T')[0];
@@ -3362,6 +3554,8 @@ function renderDashboard(c){
       <div class="day-header${isToday?' today-label':''}">
         ${d.toLocaleDateString('en-US',{weekday:'short'})}<br>
         <span style="font-weight:400;font-size:11px">${d.toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>
+        ${getWeatherBadge(iso)}
+        <div style="margin-top:3px">${getWrapToggleBtn(iso)}</div>
       </div>
       ${dayWOs.length?`<div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:6px">${dayWOs.length} WO · ${dayW.toLocaleString()} lbs</div>`:''}
       ${dayWOs.length?(()=>{
@@ -3459,6 +3653,18 @@ function renderDashboard(c){
       ${weekOffset!==0?`<button class="btn btn-sm btn-primary" onclick="goToCurrentWeek()">Today</button>`:''}
     </div>
     <span style="font-size:12px;color:var(--text2)">Click any day to see WO details</span>
+    <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2)">
+      <span>🌧 Rain alert at</span>
+      <input type="number" min="10" max="100" step="5"
+        value="${parseInt(state.adminConfig?.rainThreshold)||40}"
+        style="width:52px;padding:3px 6px;border:1px solid var(--border);border-radius:var(--rad);font-size:12px;font-weight:600;text-align:center"
+        onchange="state.adminConfig=state.adminConfig||{};state.adminConfig.rainThreshold=this.value;saveState();fetchWeather().then(()=>renderDashboard())" >%
+      <span>Zip:</span>
+      <input type="text" maxlength="5"
+        value="${state.adminConfig?.weatherZip||'19020'}"
+        style="width:60px;padding:3px 6px;border:1px solid var(--border);border-radius:var(--rad);font-size:12px;font-weight:600;text-align:center"
+        onchange="state.adminConfig=state.adminConfig||{};state.adminConfig.weatherZip=this.value;saveState();fetchWeather().then(()=>renderDashboard())">
+    </div>
   </div>
   <div class="week-grid mb8">${weekCols}</div>
   <div id="day-detail-panel" style="margin-bottom:20px"></div>
@@ -5261,6 +5467,8 @@ function importSnapshot(input){
 // BOOT
 // ══════════════════════════════════════════════════════
 async function bootApp(){
+  // Fetch weather in background
+  fetchWeather();
   // Always pull latest from cloud first (Option A — cloud always wins)
   try {
     const res = await fetch(CLOUD_BACKUP_URL + '?nocache=' + Date.now());
