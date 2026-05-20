@@ -5938,9 +5938,9 @@
           "step2CompletedBy": "",
           "notes": "GlvSht:244896 (24 Ga. 48' x 96' Galv) | 24 Ga. 48' x 96' Galv",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "Delivery",
+          "completedAt": "2026-05-20T19:19:21.312Z"
         },
         {
           "id": 1779283393390.2012,
@@ -5962,9 +5962,9 @@
           "step2CompletedBy": "",
           "notes": "GlvSht:263696 (26 Ga. 36' x 96' Galv) | 26 Ga. 36' x 96' Galv",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "Delivery",
+          "completedAt": "2026-05-20T19:19:21.312Z"
         },
         {
           "id": 1779283393391.7512,
@@ -5986,9 +5986,9 @@
           "step2CompletedBy": "",
           "notes": "GlvSht:263096 (26 Ga. 30' x 96' Galv) | 26 Ga. 30' x 96' Galv",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "Delivery",
+          "completedAt": "2026-05-20T19:19:21.312Z"
         }
       ],
       "created": "2026-05-20T13:23:13.389Z"
@@ -10886,6 +10886,6 @@
       "color": "#FF7043"
     }
   ],
-  "exportDate": "2026-05-20T18:58:58.130Z",
+  "exportDate": "2026-05-20T19:19:29.676Z",
   "version": "2.0"
 }
