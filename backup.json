@@ -5670,13 +5670,13 @@
       "cityst": "Bristol, PA 19007",
       "zone": "SE Pennsylvania",
       "date": "2026-05-26",
-      "delivery": "2026-05-26",
+      "delivery": "2026-05-27",
       "isPickup": false,
       "truck": "",
       "notes": "",
       "items": [
         {
-          "id": 1779283294061.3513,
+          "id": 1779303459091.0564,
           "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "26",
@@ -5700,7 +5700,7 @@
           "completedAt": ""
         },
         {
-          "id": 1779283294063.6125,
+          "id": 1779303459092.524,
           "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "24",
@@ -6352,13 +6352,13 @@
       "cityst": "Bensalem, PA 19020",
       "zone": "SE Pennsylvania",
       "date": "2026-05-26",
-      "delivery": "2026-05-26",
+      "delivery": "2026-05-27",
       "isPickup": false,
       "truck": "",
       "notes": "",
       "items": [
         {
-          "id": 1779300283202.3015,
+          "id": 1779303483883.3186,
           "productCat": "Coil Stock (1x120)",
           "type": "Galvanized",
           "gauge": "16",
@@ -6393,13 +6393,13 @@
       "cityst": "Edison, NJ 08817",
       "zone": "NJ North",
       "date": "2026-05-26",
-      "delivery": "2026-05-26",
+      "delivery": "2026-05-27",
       "isPickup": false,
       "truck": "",
       "notes": "",
       "items": [
         {
-          "id": 1779300350951.8162,
+          "id": 1779303499032.197,
           "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "",
@@ -6423,7 +6423,7 @@
           "completedAt": ""
         },
         {
-          "id": 1779300350952.341,
+          "id": 1779303499033.085,
           "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "",
@@ -6565,12 +6565,13 @@
           "step2CompletedBy": "",
           "notes": "GlvSht:264896 (26 Ga. 48' x 96' Galv) | 26 Ga. 48' x 96' Galv",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "Pick Up",
+          "completedAt": "2026-05-20T18:56:57.955Z"
         }
       ],
-      "created": "2026-05-20T18:06:54.340Z"
+      "created": "2026-05-20T18:06:54.340Z",
+      "pickupDate": "2026-05-20"
     },
     {
       "id": 1779302614649,
@@ -10885,6 +10886,6 @@
       "color": "#FF7043"
     }
   ],
-  "exportDate": "2026-05-20T18:44:02.726Z",
+  "exportDate": "2026-05-20T18:58:58.130Z",
   "version": "2.0"
 }
