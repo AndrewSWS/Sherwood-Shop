@@ -4352,7 +4352,7 @@
       "date": "2026-05-20",
       "delivery": "2026-05-22",
       "isPickup": false,
-      "truck": "1",
+      "truck": "2",
       "notes": "",
       "items": [
         {
@@ -6110,7 +6110,7 @@
       "date": "2026-05-22",
       "delivery": "2026-05-22",
       "isPickup": false,
-      "truck": "1",
+      "truck": "2",
       "notes": "",
       "items": [
         {
@@ -6571,6 +6571,47 @@
         }
       ],
       "created": "2026-05-20T18:06:54.340Z"
+    },
+    {
+      "id": 1779302614649,
+      "woNum": "46367",
+      "po": "",
+      "customer": "Aella Industries",
+      "address": "1602 Manning Blvd",
+      "cityst": "Levittown, PA 19057",
+      "zone": "SE Pennsylvania",
+      "date": "2026-05-20",
+      "delivery": "2026-05-22",
+      "isPickup": false,
+      "truck": "2",
+      "notes": "",
+      "items": [
+        {
+          "id": 1779302614649.1606,
+          "productCat": "Flat Sheet",
+          "type": "Galvanized",
+          "gauge": "24",
+          "size": "60x120",
+          "qty": "80",
+          "wtUnit": 50.5859,
+          "bundle": "",
+          "weight": 4046.87,
+          "station": "IOWA",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": ""
+        }
+      ],
+      "created": "2026-05-20T18:43:34.649Z"
     }
   ],
   "trucks": [
@@ -6880,26 +6921,6 @@
           "notes": ""
         },
         {
-          "woId": 1779111347510,
-          "woNum": "46338",
-          "customer": "Hunter Mechanical, Inc.",
-          "address": "2261 New York Avenue",
-          "cityst": "Bensalem, PA 19020",
-          "zone": "SE Pennsylvania",
-          "delivery": "2026-05-22",
-          "notes": ""
-        },
-        {
-          "woId": 1779283452425,
-          "woNum": "46359",
-          "customer": "Hunter Mechanical, Inc.",
-          "address": "2261 New York Avenue",
-          "cityst": "Bensalem, PA 19020",
-          "zone": "SE Pennsylvania",
-          "delivery": "2026-05-22",
-          "notes": ""
-        },
-        {
           "woId": 1779190312096,
           "woNum": "46348",
           "customer": "D.J Wagner Heating & A/C",
@@ -7204,6 +7225,36 @@
           "cityst": "York, PA 724-0006",
           "zone": "PA Other",
           "delivery": "2026-05-21",
+          "notes": ""
+        },
+        {
+          "woId": 1779302614649,
+          "woNum": "46367",
+          "customer": "Aella Industries",
+          "address": "1602 Manning Blvd",
+          "cityst": "Levittown, PA 19057",
+          "zone": "SE Pennsylvania",
+          "delivery": "2026-05-22",
+          "notes": ""
+        },
+        {
+          "woId": 1779283452425,
+          "woNum": "46359",
+          "customer": "Hunter Mechanical, Inc.",
+          "address": "2261 New York Avenue",
+          "cityst": "Bensalem, PA 19020",
+          "zone": "SE Pennsylvania",
+          "delivery": "2026-05-22",
+          "notes": ""
+        },
+        {
+          "woId": 1779111347510,
+          "woNum": "46338",
+          "customer": "Hunter Mechanical, Inc.",
+          "address": "2261 New York Avenue",
+          "cityst": "Bensalem, PA 19020",
+          "zone": "SE Pennsylvania",
+          "delivery": "2026-05-22",
           "notes": ""
         }
       ],
@@ -10834,6 +10885,6 @@
       "color": "#FF7043"
     }
   ],
-  "exportDate": "2026-05-20T18:38:37.688Z",
+  "exportDate": "2026-05-20T18:44:02.726Z",
   "version": "2.0"
 }
