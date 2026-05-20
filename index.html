@@ -262,7 +262,7 @@ select{cursor:pointer}
   background:#111;color:#fff;flex-direction:column;
   font-family:inherit;
 }
-#board-overlay.active{display:flex;}
+#board-overlay.active{display:flex;flex-direction:column;}
 .board-header{
   background:#1C2E1C;padding:12px 24px;
   display:flex;align-items:center;justify-content:space-between;
@@ -2346,6 +2346,51 @@ function renderBoardView(){
       }
     });
   });
+  // Render pickup bar
+  renderBoardPickups();
+}
+
+// Populate pickup bar in board view
+function renderBoardPickups(){
+  const bar = document.getElementById('board-pickup-items');
+  if(!bar) return;
+
+  const pickups = state.wos.filter(w=>{
+    if(!w.isPickup) return false;
+    // pickupDate = actual pickup timestamp, so if populated they already picked up
+    if(w.pickupDate) return false;
+    // Exclude if delivered
+    if(w.delivered) return false;
+    return true;
+  });
+
+  if(!pickups.length){
+    bar.innerHTML = '<span style="font-size:11px;color:#555;font-style:italic">No open pick up orders</span>';
+    return;
+  }
+
+  bar.innerHTML = pickups.map(wo=>{
+    const status = woStatus(wo);
+    const grp = getCustGroup(wo.customer);
+    const color = grp ? grp.color : '#888';
+    const statusColor = status==='Complete' ? '#4CAF7D' : status==='In Process' ? '#f0a500' : '#888';
+    const statusLabel = status==='Complete' ? '✓ Ready' : status==='In Process' ? '⚡ In Process' : '⏳ Pending';
+    const pickupDate = wo.pickupDate ? fmtDate(wo.pickupDate) : '';
+    return `<div style="
+      background:#222;
+      border:1px solid ${color};
+      border-left:3px solid ${color};
+      border-radius:4px;
+      padding:4px 10px;
+      white-space:nowrap;
+      flex-shrink:0;
+    ">
+      <span style="font-size:12px;font-weight:700;color:#fff">${wo.customer}</span>
+      <span style="font-size:10px;color:#888;margin-left:6px">WO #${wo.woNum}</span>
+      ${pickupDate ? `<span style="font-size:10px;color:#aaa;margin-left:6px">📅 ${pickupDate}</span>` : ''}
+      <span style="font-size:10px;font-weight:700;color:${statusColor};margin-left:8px">${statusLabel}</span>
+    </div>`;
+  }).join('');
 }
 
 // Exit board view on Escape key
@@ -3028,7 +3073,7 @@ function renderTruck(c){
     const t2w=state.trucks[1].stops.filter(s=>s.delivery===iso).reduce((s,st)=>s+getWOWeight(st.woId),0);
     const totalW=t1w+t2w;
     return`<div onclick="switchTruckDay('${iso}')" style="flex:1;padding:10px 8px;text-align:center;cursor:pointer;border-bottom:3px solid ${isSelected?'var(--blue)':'transparent'};background:${isSelected?'var(--blue-l)':isToday?'#f8fbff':'var(--surface)'};border-radius:var(--rad) var(--rad) 0 0;transition:all .15s;min-width:80px">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:${isSelected?'var(--blue)':isToday?'var(--blue)':'var(--text2)'}">${['Mon','Tue','Wed','Thu','Fri'][days.indexOf(d)]}</div>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:${isSelected?'var(--blue)':isToday?'var(--blue)':'var(--text2)'}">${d.toLocaleDateString('en-US',{weekday:'short'})}</div>
       <div style="font-size:12px;color:${isSelected?'var(--blue)':'var(--text2)'};">${d.toLocaleDateString('en-US',{month:'short',day:'numeric'})}</div>
       ${isToday?'<div style="font-size:9px;color:var(--blue);font-weight:700;letter-spacing:.05em">TODAY</div>':''}
       ${totalW?`<div style="font-size:11px;font-weight:600;color:${isSelected?'var(--blue)':'var(--text3)'};margin-top:2px">${totalW.toLocaleString()} lbs</div>`:''}
@@ -5540,6 +5585,22 @@ if("serviceWorker" in navigator){
     </div>
   </div>
   <div class="board-grid" id="board-grid"></div>
+  <div id="board-pickup-bar" style="
+    background:#1a1a2e;
+    border-top:2px solid #f0a500;
+    padding:8px 16px;
+    flex-shrink:0;
+    display:flex;
+    align-items:center;
+    gap:12px;
+    overflow-x:auto;
+    min-height:44px;
+  ">
+    <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#f0a500;white-space:nowrap;flex-shrink:0">
+      📦 Pick Ups
+    </div>
+    <div id="board-pickup-items" style="display:flex;gap:8px;flex-wrap:nowrap;align-items:center"></div>
+  </div>
 </div>
 </body>
 </html>
