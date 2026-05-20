@@ -5281,7 +5281,7 @@
       "date": "2026-05-18",
       "delivery": "2026-05-21",
       "isPickup": false,
-      "truck": "",
+      "truck": "1",
       "notes": "",
       "items": [
         {
@@ -5737,7 +5737,7 @@
       "date": "2026-05-21",
       "delivery": "2026-05-21",
       "isPickup": false,
-      "truck": "",
+      "truck": "2",
       "notes": "",
       "items": [
         {
@@ -5915,7 +5915,7 @@
       "date": "2026-05-21",
       "delivery": "2026-05-21",
       "isPickup": false,
-      "truck": "",
+      "truck": "2",
       "notes": "",
       "items": [
         {
@@ -6004,7 +6004,7 @@
       "date": "2026-05-26",
       "delivery": "2026-05-21",
       "isPickup": false,
-      "truck": "",
+      "truck": "2",
       "notes": "",
       "items": [
         {
@@ -6151,7 +6151,7 @@
       "date": "2026-05-21",
       "delivery": "2026-05-21",
       "isPickup": false,
-      "truck": "",
+      "truck": "2",
       "notes": "",
       "items": [
         {
@@ -6708,6 +6708,16 @@
           "zone": "PA Other",
           "delivery": "2026-05-22",
           "notes": ""
+        },
+        {
+          "woId": 1779190262136,
+          "woNum": "46347",
+          "customer": "United Supply Company — Elmsford NY",
+          "address": "300 Executive Boulevard",
+          "cityst": "Elmsford, NY 10523",
+          "zone": "New York",
+          "delivery": "2026-05-21",
+          "notes": ""
         }
       ],
       "shipDate": ""
@@ -6924,6 +6934,46 @@
           "cityst": "Plymouth Meeting, PA 19462",
           "zone": "PA Other",
           "delivery": "2026-05-26",
+          "notes": ""
+        },
+        {
+          "woId": 1779283309500,
+          "woNum": "46354",
+          "customer": "Specialty Fabricators LLC",
+          "address": "118 Meany Rd.",
+          "cityst": "Wrightstown, NJ 08562",
+          "zone": "NJ North",
+          "delivery": "2026-05-21",
+          "notes": ""
+        },
+        {
+          "woId": 1779283393389,
+          "woNum": "46356",
+          "customer": "Four Quarters Plumbing Htg & A/C",
+          "address": "2601 River Road",
+          "cityst": "Cinnaminson, NJ 08077",
+          "zone": "NJ South",
+          "delivery": "2026-05-21",
+          "notes": ""
+        },
+        {
+          "woId": 1779283414344,
+          "woNum": "46357",
+          "customer": "Four Quarters Plumbing Htg & A/C",
+          "address": "2601 River Road",
+          "cityst": "Cinnaminson, NJ 08077",
+          "zone": "NJ South",
+          "delivery": "2026-05-21",
+          "notes": ""
+        },
+        {
+          "woId": 1779283512292,
+          "woNum": "46360",
+          "customer": "Thermal Piping",
+          "address": "493 Sykesville Rd",
+          "cityst": "York, PA 724-0006",
+          "zone": "PA Other",
+          "delivery": "2026-05-21",
           "notes": ""
         }
       ],
@@ -10554,6 +10604,6 @@
       "color": "#FF7043"
     }
   ],
-  "exportDate": "2026-05-20T13:40:05.878Z",
+  "exportDate": "2026-05-20T13:46:22.597Z",
   "version": "2.0"
 }
