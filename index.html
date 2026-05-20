@@ -2180,11 +2180,62 @@ function enterBoardView(){
   document.getElementById('board-clock').textContent = new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
 }
 
+// ── WAKE LOCK (Keep screen awake in board view) ──────────────────────────
+let _wakeLock = null;
+
+async function toggleWakeLock(){
+  const btn = document.getElementById('kiosk-btn');
+  if(_wakeLock){
+    // Turn off
+    await _wakeLock.release();
+    _wakeLock = null;
+    if(btn){
+      btn.textContent = '☀ Keep Awake';
+      btn.style.color = '#A8D5A8';
+      btn.style.borderColor = '#A8D5A8';
+      btn.style.background = '#333';
+    }
+    toast('Screen sleep re-enabled');
+  } else {
+    // Turn on
+    try {
+      _wakeLock = await navigator.wakeLock.request('screen');
+      if(btn){
+        btn.textContent = '✓ Screen Awake';
+        btn.style.color = '#1C2E1C';
+        btn.style.borderColor = '#A8D5A8';
+        btn.style.background = '#A8D5A8';
+      }
+      toast('✓ Screen will stay on');
+      // Re-acquire if page visibility changes (e.g. tab switch and back)
+      _wakeLock.addEventListener('release', ()=>{
+        if(btn && _wakeLock){
+          btn.textContent = '☀ Keep Awake';
+          btn.style.color = '#A8D5A8';
+          btn.style.borderColor = '#A8D5A8';
+          btn.style.background = '#333';
+          _wakeLock = null;
+        }
+      });
+      document.addEventListener('visibilitychange', async ()=>{
+        if(_wakeLock && document.visibilityState==='visible'){
+          _wakeLock = await navigator.wakeLock.request('screen');
+        }
+      });
+    } catch(err){
+      toast('⚠ Wake Lock not supported on this browser/device');
+      console.warn('Wake Lock error:', err);
+    }
+  }
+}
+
 function exitBoardView(){
   document.getElementById('board-overlay').classList.remove('active');
   if(document.exitFullscreen) document.exitFullscreen().catch(()=>{});
   clearInterval(_boardTimer);
   clearInterval(_boardClockTimer);
+  // Release wake lock when exiting board view
+  if(_wakeLock){ _wakeLock.release(); _wakeLock = null; }
 }
 
 function renderBoardView(){
@@ -5239,6 +5290,7 @@ if("serviceWorker" in navigator){
     </div>
     <div style="display:flex;align-items:center;gap:16px">
       <div id="board-clock" style="font-size:20px;font-weight:700;color:#A8D5A8;font-variant-numeric:tabular-nums"></div>
+      <button id="kiosk-btn" onclick="toggleWakeLock()" style="background:#333;color:#A8D5A8;border:1px solid #A8D5A8;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px">☀ Keep Awake</button>
       <button onclick="exitBoardView()" style="background:#333;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px">✕ Exit</button>
     </div>
   </div>
