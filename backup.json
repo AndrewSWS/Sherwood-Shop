@@ -5077,13 +5077,13 @@
       "cityst": "Douglassville, PA 19518",
       "zone": "PA Other",
       "date": "2026-05-18",
-      "delivery": "2026-05-20",
+      "delivery": "2026-05-22",
       "isPickup": false,
-      "truck": "2",
+      "truck": "1",
       "notes": "",
       "items": [
         {
-          "id": 1779190148081.566,
+          "id": 1779284337172.3203,
           "productCat": "Slip",
           "type": "Galvanized",
           "gauge": "26",
@@ -5102,12 +5102,12 @@
           "step2CompletedBy": "",
           "notes": "HVACAcsry:26120Slip (26 Ga. 10' Slip Galv) | 26 Ga. 10' Slip Galv",
           "assignee": "",
-          "status": "Complete",
-          "completedBy": "?",
-          "completedAt": "2026-05-19T17:18:49.684Z"
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": ""
         },
         {
-          "id": 1779190148082.9407,
+          "id": 1779284337173.2104,
           "productCat": "Standing S",
           "type": "Galvanized",
           "gauge": "26",
@@ -5126,12 +5126,12 @@
           "step2CompletedBy": "",
           "notes": "HVACAcsry:241201Stand (24 Ga. 10' - 1' Standing-S Slip Galv) | 24 Ga. 10' - 1' Standing-S Slip Galv",
           "assignee": "",
-          "status": "Complete",
-          "completedBy": "?",
-          "completedAt": "2026-05-19T17:18:51.580Z"
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": ""
         },
         {
-          "id": 1779190148083.7854,
+          "id": 1779284337174.2104,
           "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "26",
@@ -5150,9 +5150,9 @@
           "step2CompletedBy": "",
           "notes": "GlvSht:264896 (26 Ga. 48' x 96' Galv) | 26 Ga. 48' x 96' Galv",
           "assignee": "",
-          "status": "Complete",
-          "completedBy": "?",
-          "completedAt": "2026-05-19T17:18:52.900Z"
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": ""
         }
       ],
       "created": "2026-05-19T11:29:08.081Z"
@@ -5191,9 +5191,9 @@
           "step2CompletedBy": "",
           "notes": "HVACAcsry:26120Drive (26 Ga. 10' Drive Galv) | 26 Ga. 10' Drive Galv",
           "assignee": "",
-          "status": "Complete",
-          "completedBy": "?",
-          "completedAt": "2026-05-19T17:18:57.780Z"
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": ""
         },
         {
           "id": 1779190232667.3594,
@@ -5215,9 +5215,9 @@
           "step2CompletedBy": "",
           "notes": "HVACAcsry:261201Stand (26 Ga. 10' - 1' Standing-S Slip Galv) | 26 Ga. 10' - 1' Standing-S Slip Galv",
           "assignee": "",
-          "status": "Complete",
-          "completedBy": "?",
-          "completedAt": "2026-05-19T17:18:58.572Z"
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": ""
         },
         {
           "id": 1779190232668.7454,
@@ -5239,9 +5239,9 @@
           "step2CompletedBy": "",
           "notes": "HVACAcsry:241120 (24 Ga. 1' x 120' Galv) | 24 Ga. 1' x 120' Galv",
           "assignee": "",
-          "status": "Complete",
-          "completedBy": "?",
-          "completedAt": "2026-05-19T17:19:03.924Z"
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": ""
         },
         {
           "id": 1779190232669.6655,
@@ -5263,9 +5263,9 @@
           "step2CompletedBy": "",
           "notes": "HVACAcsry:26120RAF (26 Ga. 10' Return Air Frame Galv) | 26 Ga. 10' Return Air Frame Galv",
           "assignee": "",
-          "status": "Complete",
-          "completedBy": "?",
-          "completedAt": "2026-05-19T17:19:21.756Z"
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": ""
         }
       ],
       "created": "2026-05-19T11:30:32.666Z"
@@ -5771,18 +5771,18 @@
       "id": 1779283364357,
       "woNum": "46355",
       "po": "",
-      "customer": "Riley Sales, Inc. — Douglassville PA",
-      "address": "1712 Benjamin Franklin Hwy",
-      "cityst": "Douglassville, PA 19518",
+      "customer": "Riley Sales, Inc. — Plymouth Meeting PA",
+      "address": "1719 Romano Drive",
+      "cityst": "Plymouth Meeting, PA 19462",
       "zone": "PA Other",
       "date": "2026-05-26",
-      "delivery": "2026-05-22",
+      "delivery": "2026-05-26",
       "isPickup": false,
-      "truck": "1",
+      "truck": "2",
       "notes": "",
       "items": [
         {
-          "id": 1779283364357.2175,
+          "id": 1779284277932.5945,
           "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "26",
@@ -5806,7 +5806,7 @@
           "completedAt": ""
         },
         {
-          "id": 1779283364358.355,
+          "id": 1779284277933.2537,
           "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "24",
@@ -5830,7 +5830,7 @@
           "completedAt": ""
         },
         {
-          "id": 1779283364359.4688,
+          "id": 1779284277934.619,
           "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "22",
@@ -5854,7 +5854,7 @@
           "completedAt": ""
         },
         {
-          "id": 1779283364360.024,
+          "id": 1779284277935.7551,
           "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "24",
@@ -5878,7 +5878,7 @@
           "completedAt": ""
         },
         {
-          "id": 1779283364361.5972,
+          "id": 1779284277936.6636,
           "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "22",
@@ -6660,16 +6660,6 @@
           "notes": ""
         },
         {
-          "woId": 1779283364357,
-          "woNum": "46355",
-          "customer": "Riley Sales, Inc. — Douglassville PA",
-          "address": "1712 Benjamin Franklin Hwy",
-          "cityst": "Douglassville, PA 19518",
-          "zone": "PA Other",
-          "delivery": "2026-05-22",
-          "notes": ""
-        },
-        {
           "woId": 1779283452425,
           "woNum": "46359",
           "customer": "Hunter Mechanical, Inc.",
@@ -6707,6 +6697,16 @@
           "cityst": "Vineland, NJ 08360",
           "zone": "NJ North",
           "delivery": "2026-05-26",
+          "notes": ""
+        },
+        {
+          "woId": 1779190148081,
+          "woNum": "46345",
+          "customer": "Riley Sales, Inc. — Douglassville PA",
+          "address": "1712 Benjamin Franklin Hwy",
+          "cityst": "Douglassville, PA 19518",
+          "zone": "PA Other",
+          "delivery": "2026-05-22",
           "notes": ""
         }
       ],
@@ -6855,16 +6855,6 @@
           "delivered": true
         },
         {
-          "woId": 1779190148081,
-          "woNum": "46345",
-          "customer": "Riley Sales, Inc. — Douglassville PA",
-          "address": "1712 Benjamin Franklin Hwy",
-          "cityst": "Douglassville, PA 19518",
-          "zone": "PA Other",
-          "delivery": "2026-05-20",
-          "notes": ""
-        },
-        {
           "woId": 1779190232666,
           "woNum": "46346",
           "customer": "Riley Sales, Inc. — Plymouth Meeting PA",
@@ -6922,6 +6912,16 @@
           "customer": "Carter Mechanical, Inc.",
           "address": "176 Pennsylvania Ave",
           "cityst": "Malvern, PA 19355",
+          "zone": "PA Other",
+          "delivery": "2026-05-26",
+          "notes": ""
+        },
+        {
+          "woId": 1779283364357,
+          "woNum": "46355",
+          "customer": "Riley Sales, Inc. — Plymouth Meeting PA",
+          "address": "1719 Romano Drive",
+          "cityst": "Plymouth Meeting, PA 19462",
           "zone": "PA Other",
           "delivery": "2026-05-26",
           "notes": ""
@@ -10554,6 +10554,6 @@
       "color": "#FF7043"
     }
   ],
-  "exportDate": "2026-05-20T13:28:55.107Z",
+  "exportDate": "2026-05-20T13:40:05.878Z",
   "version": "2.0"
 }
