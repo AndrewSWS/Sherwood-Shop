@@ -5102,9 +5102,9 @@
           "step2CompletedBy": "",
           "notes": "HVACAcsry:26120Slip (26 Ga. 10' Slip Galv) | 26 Ga. 10' Slip Galv",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "Delivery",
+          "completedAt": "2026-05-20T18:37:13.283Z"
         },
         {
           "id": 1779284337173.2104,
@@ -5126,9 +5126,9 @@
           "step2CompletedBy": "",
           "notes": "HVACAcsry:241201Stand (24 Ga. 10' - 1' Standing-S Slip Galv) | 24 Ga. 10' - 1' Standing-S Slip Galv",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "Delivery",
+          "completedAt": "2026-05-20T18:37:13.283Z"
         },
         {
           "id": 1779284337174.2104,
@@ -5150,9 +5150,9 @@
           "step2CompletedBy": "",
           "notes": "GlvSht:264896 (26 Ga. 48' x 96' Galv) | 26 Ga. 48' x 96' Galv",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "Delivery",
+          "completedAt": "2026-05-20T18:37:13.284Z"
         }
       ],
       "created": "2026-05-19T11:29:08.081Z"
@@ -5304,9 +5304,9 @@
           "step2CompletedBy": "",
           "notes": "GlvSht:264896 (26 Ga. 48' x 96' Galv) | 26 Ga. 48' x 96' Galv",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "Delivery",
+          "completedAt": "2026-05-20T18:37:05.409Z"
         }
       ],
       "created": "2026-05-19T11:31:02.136Z"
@@ -5760,9 +5760,9 @@
           "step2CompletedBy": "",
           "notes": "GlvSht:1448120 (14 Ga. 48' x 120' Galv) | 14 Ga. 48' x 120' G-90",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "Delivery",
+          "completedAt": "2026-05-20T18:37:06.697Z"
         }
       ],
       "created": "2026-05-20T13:21:49.500Z"
@@ -10834,6 +10834,6 @@
       "color": "#FF7043"
     }
   ],
-  "exportDate": "2026-05-20T18:15:45.698Z",
+  "exportDate": "2026-05-20T18:38:37.688Z",
   "version": "2.0"
 }
