@@ -272,10 +272,11 @@ select{cursor:pointer}
 .board-subtitle{font-size:13px;color:#A8D5A8;margin-top:2px}
 .board-grid{
   display:grid;grid-template-columns:repeat(5,1fr);gap:2px;
-  flex:1;overflow:hidden;padding:2px;
+  overflow:hidden;padding:2px;padding-left:48px;
+  align-items:start;
 }
 .board-day{
-  background:#1a1a1a;border-radius:6px;overflow-y:auto;
+  background:#1a1a1a;border-radius:6px;overflow:hidden;
   display:flex;flex-direction:column;
 }
 .board-day-header{
@@ -2298,29 +2299,40 @@ function renderBoardView(){
       +'</div>';
   }).join('');
 
-  // Auto-scale: shrink content to fit without scrolling
+  // Auto-scale: scale each column independently to fit without scrolling
   requestAnimationFrame(()=>{
     const overlay = document.getElementById('board-overlay');
     const header = overlay ? overlay.querySelector('.board-header') : null;
     if(!grid || !overlay) return;
-    // Reset any previous scale
-    grid.style.transform = '';
-    grid.style.transformOrigin = '';
-    grid.style.overflow = 'hidden';
-    // Find the tallest column
-    const cols = grid.querySelectorAll('.board-day');
-    if(!cols.length) return;
-    let maxH = 0;
-    cols.forEach(col=>{ maxH = Math.max(maxH, col.scrollHeight); });
+
     const headerH = header ? header.offsetHeight : 60;
-    const availH = overlay.offsetHeight - headerH - 8;
-    if(maxH > availH){
-      const scale = Math.max(0.4, availH / maxH);
-      grid.style.transform = `scale(${scale})`;
-      grid.style.transformOrigin = 'top left';
-      grid.style.width = `${100/scale}%`;
-      grid.style.height = `${availH/scale}px`;
-    }
+    const availH = overlay.offsetHeight - headerH - 12;
+
+    // Set grid to fill available height, no overflow
+    grid.style.height = availH + 'px';
+    grid.style.overflow = 'hidden';
+
+    // Scale each column independently
+    const cols = grid.querySelectorAll('.board-day');
+    cols.forEach(col=>{
+      // Reset first
+      col.style.transform = '';
+      col.style.transformOrigin = '';
+      col.style.overflow = 'hidden';
+      col.style.height = availH + 'px';
+
+      const contentH = col.scrollHeight;
+      if(contentH > availH){
+        const scale = Math.max(0.35, availH / contentH);
+        col.style.transform = `scaleY(${scale})`;
+        col.style.transformOrigin = 'top center';
+        // Compensate width so text doesn't stretch horizontally
+        col.style.transform = `scale(${scale})`;
+        col.style.transformOrigin = 'top left';
+        col.style.width = `${100/scale}%`;
+        col.style.marginRight = `-${(100/scale - 100)}%`;
+      }
+    });
   });
 }
 
