@@ -1264,10 +1264,10 @@
       "notes": "",
       "items": [
         {
-          "id": 1778758629809.8806,
-          "productCat": "Coil Stock (1x120)",
+          "id": 1779385227545.5461,
+          "productCat": "Other / Hardware",
           "type": "Galvanized",
-          "gauge": "22",
+          "gauge": "",
           "size": "",
           "qty": "9000",
           "wtUnit": 0,
@@ -1288,7 +1288,8 @@
           "completedAt": ""
         }
       ],
-      "created": "2026-05-13T16:59:57.008Z"
+      "created": "2026-05-13T16:59:57.008Z",
+      "isPickup": false
     },
     {
       "id": 1778691607912,
@@ -5476,9 +5477,9 @@
           "step2CompletedBy": "",
           "notes": "GlvSht:264896 (26 Ga. 48' x 96' Galv) | 26 Ga. 48' x 96' Galv ($24.00/ea.)",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "?",
+          "completedAt": "2026-05-21T17:34:14.377Z"
         },
         {
           "id": 1779275381406.8193,
@@ -5500,9 +5501,9 @@
           "step2CompletedBy": "",
           "notes": "HVACAcsry:2896Drive (28 Ga. 8' Drive Galv) | 28 Ga. 8' Drive Galv ($1.80/ea.)",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "?",
+          "completedAt": "2026-05-21T17:34:16.547Z"
         },
         {
           "id": 1779275381407.4087,
@@ -5524,9 +5525,9 @@
           "step2CompletedBy": "",
           "notes": "HVACAcsry:2896Slip (28 Ga. 8' Slip Galv) | 28 Ga. 8' Slip Galv ($3.00/ea.)",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "?",
+          "completedAt": "2026-05-21T17:34:18.080Z"
         }
       ],
       "created": "2026-05-19T16:33:05.070Z"
@@ -6484,9 +6485,9 @@
           "step2CompletedBy": "",
           "notes": "Misc:G90misc (G-90) | 20 Ga. 72' x 120' G-90",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "?",
+          "completedAt": "2026-05-21T17:43:23.084Z"
         }
       ],
       "created": "2026-05-20T18:06:21.630Z"
@@ -6780,12 +6781,13 @@
           "step2CompletedBy": "",
           "notes": "NonGlvSht:SS1848120 (18 Ga. 48' x 120' Stainless Steel 304 2B Mill Finish) | 18 Ga. 48' x 120' Stainless Steel 304 2B Mill Finish",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "Pick Up",
+          "completedAt": "2026-05-21T17:45:34.924Z"
         }
       ],
-      "created": "2026-05-21T17:27:54.508Z"
+      "created": "2026-05-21T17:27:54.508Z",
+      "pickupDate": "2026-05-21"
     },
     {
       "id": 1779384518508,
@@ -6802,7 +6804,7 @@
       "notes": "",
       "items": [
         {
-          "id": 1779384518508.9893,
+          "id": 1779385461816.5164,
           "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "28",
@@ -6811,7 +6813,7 @@
           "wtUnit": 16.4063,
           "bundle": "",
           "weight": 4101.58,
-          "station": "SHEAR",
+          "station": "PICK / PULL",
           "isDual": false,
           "step1Op": "",
           "step1Status": "Pending",
@@ -6826,7 +6828,7 @@
           "completedAt": ""
         },
         {
-          "id": 1779384518509.4314,
+          "id": 1779385461817.9922,
           "productCat": "Drive",
           "type": "Galvanized",
           "gauge": "28",
@@ -6850,7 +6852,7 @@
           "completedAt": ""
         },
         {
-          "id": 1779384518510.9739,
+          "id": 1779385461818.6018,
           "productCat": "Slip",
           "type": "Galvanized",
           "gauge": "28",
@@ -6891,7 +6893,7 @@
       "notes": "",
       "items": [
         {
-          "id": 1779384536861.0571,
+          "id": 1779385485656.0967,
           "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "26",
@@ -6900,7 +6902,7 @@
           "wtUnit": 39.6484,
           "bundle": "",
           "weight": 2973.63,
-          "station": "SHEAR",
+          "station": "PICK / PULL",
           "isDual": false,
           "step1Op": "",
           "step1Status": "Pending",
@@ -11218,6 +11220,6 @@
       "color": "#FF7043"
     }
   ],
-  "exportDate": "2026-05-21T17:29:34.786Z",
+  "exportDate": "2026-05-21T17:45:39.953Z",
   "version": "2.0"
 }
