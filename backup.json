@@ -1260,7 +1260,7 @@
       "zone": "PA Other",
       "date": "2026-05-15",
       "delivery": "2026-05-26",
-      "truck": "2",
+      "truck": "1",
       "notes": "",
       "items": [
         {
@@ -2815,7 +2815,7 @@
       "zone": "NJ North",
       "date": "2026-05-29",
       "delivery": "2026-05-26",
-      "truck": "1",
+      "truck": "2",
       "notes": "",
       "items": [
         {
@@ -4352,12 +4352,12 @@
       "date": "2026-05-20",
       "delivery": "2026-05-22",
       "isPickup": false,
-      "truck": "2",
+      "truck": "1",
       "notes": "",
       "items": [
         {
-          "id": 1779275278276.772,
-          "productCat": "Other / Hardware",
+          "id": 1779360119075.2834,
+          "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "",
           "size": "",
@@ -4365,7 +4365,7 @@
           "wtUnit": 0,
           "bundle": "",
           "weight": 0,
-          "station": "PICK / PULL",
+          "station": "IOWA",
           "isDual": false,
           "step1Op": "",
           "step1Status": "Pending",
@@ -4380,8 +4380,8 @@
           "completedAt": ""
         },
         {
-          "id": 1779275278277.1074,
-          "productCat": "Other / Hardware",
+          "id": 1779360119076.3672,
+          "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "",
           "size": "",
@@ -4389,7 +4389,7 @@
           "wtUnit": 0,
           "bundle": "",
           "weight": 0,
-          "station": "PICK / PULL",
+          "station": "IOWA",
           "isDual": false,
           "step1Op": "",
           "step1Status": "Pending",
@@ -4404,8 +4404,8 @@
           "completedAt": ""
         },
         {
-          "id": 1779275278278.644,
-          "productCat": "Other / Hardware",
+          "id": 1779360119077.6245,
+          "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "",
           "size": "",
@@ -4413,7 +4413,7 @@
           "wtUnit": 0,
           "bundle": "",
           "weight": 0,
-          "station": "PICK / PULL",
+          "station": "IOWA",
           "isDual": false,
           "step1Op": "",
           "step1Status": "Pending",
@@ -4428,8 +4428,8 @@
           "completedAt": ""
         },
         {
-          "id": 1779275278279.723,
-          "productCat": "Other / Hardware",
+          "id": 1779360119078.3357,
+          "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "",
           "size": "",
@@ -4437,7 +4437,7 @@
           "wtUnit": 0,
           "bundle": "",
           "weight": 0,
-          "station": "PICK / PULL",
+          "station": "IOWA",
           "isDual": false,
           "step1Op": "",
           "step1Status": "Pending",
@@ -4452,8 +4452,8 @@
           "completedAt": ""
         },
         {
-          "id": 1779275278280.385,
-          "productCat": "Other / Hardware",
+          "id": 1779360119079.148,
+          "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "",
           "size": "",
@@ -4461,7 +4461,7 @@
           "wtUnit": 0,
           "bundle": "",
           "weight": 0,
-          "station": "PICK / PULL",
+          "station": "IOWA",
           "isDual": false,
           "step1Op": "",
           "step1Status": "Pending",
@@ -4476,8 +4476,8 @@
           "completedAt": ""
         },
         {
-          "id": 1779275278281.8545,
-          "productCat": "Other / Hardware",
+          "id": 1779360119080.0342,
+          "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "",
           "size": "",
@@ -4485,7 +4485,7 @@
           "wtUnit": 0,
           "bundle": "",
           "weight": 0,
-          "station": "PICK / PULL",
+          "station": "IOWA",
           "isDual": false,
           "step1Op": "",
           "step1Status": "Pending",
@@ -4500,8 +4500,8 @@
           "completedAt": ""
         },
         {
-          "id": 1779275278282.9326,
-          "productCat": "Other / Hardware",
+          "id": 1779360119081.96,
+          "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "",
           "size": "",
@@ -4509,7 +4509,7 @@
           "wtUnit": 0,
           "bundle": "",
           "weight": 0,
-          "station": "PICK / PULL",
+          "station": "IOWA",
           "isDual": false,
           "step1Op": "",
           "step1Status": "Pending",
@@ -4524,8 +4524,8 @@
           "completedAt": ""
         },
         {
-          "id": 1779275278283.5308,
-          "productCat": "Other / Hardware",
+          "id": 1779360119082.3394,
+          "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "",
           "size": "",
@@ -4533,7 +4533,7 @@
           "wtUnit": 0,
           "bundle": "",
           "weight": 0,
-          "station": "PICK / PULL",
+          "station": "IOWA",
           "isDual": false,
           "step1Op": "",
           "step1Status": "Pending",
@@ -4548,8 +4548,8 @@
           "completedAt": ""
         },
         {
-          "id": 1779275278284.4226,
-          "productCat": "Other / Hardware",
+          "id": 1779360119083.5193,
+          "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "",
           "size": "",
@@ -4557,7 +4557,7 @@
           "wtUnit": 0,
           "bundle": "",
           "weight": 0,
-          "station": "PICK / PULL",
+          "station": "IOWA",
           "isDual": false,
           "step1Op": "",
           "step1Status": "Pending",
@@ -4572,7 +4572,7 @@
           "completedAt": ""
         },
         {
-          "id": 1779275278285.4067,
+          "id": 1779360119084.9106,
           "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "26",
@@ -4596,7 +4596,7 @@
           "completedAt": ""
         },
         {
-          "id": 1779275278286.8804,
+          "id": 1779360119085.5896,
           "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "24",
@@ -4605,7 +4605,7 @@
           "wtUnit": 50.5859,
           "bundle": "",
           "weight": 3035.15,
-          "station": "PICK / PULL",
+          "station": "IOWA",
           "isDual": false,
           "step1Op": "",
           "step1Status": "Pending",
@@ -5079,7 +5079,7 @@
       "date": "2026-05-18",
       "delivery": "2026-05-22",
       "isPickup": false,
-      "truck": "1",
+      "truck": "2",
       "notes": "",
       "items": [
         {
@@ -5281,7 +5281,7 @@
       "date": "2026-05-18",
       "delivery": "2026-05-21",
       "isPickup": false,
-      "truck": "1",
+      "truck": "2",
       "notes": "",
       "items": [
         {
@@ -5322,7 +5322,7 @@
       "date": "2026-05-18",
       "delivery": "2026-05-26",
       "isPickup": false,
-      "truck": "1",
+      "truck": "2",
       "notes": "",
       "items": [
         {
@@ -5429,7 +5429,7 @@
       "date": "2026-05-21",
       "delivery": "2026-05-22",
       "isPickup": false,
-      "truck": "1",
+      "truck": "2",
       "notes": "",
       "items": [
         {
@@ -5542,7 +5542,7 @@
       "date": "2026-05-21",
       "delivery": "2026-05-26",
       "isPickup": false,
-      "truck": "1",
+      "truck": "2",
       "notes": "",
       "items": [
         {
@@ -5676,7 +5676,7 @@
       "notes": "",
       "items": [
         {
-          "id": 1779303459091.0564,
+          "id": 1779359968113.257,
           "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "26",
@@ -5685,7 +5685,7 @@
           "wtUnit": 39.6484,
           "bundle": "",
           "weight": 3171.87,
-          "station": "SHEAR",
+          "station": "PICK / PULL",
           "isDual": false,
           "step1Op": "",
           "step1Status": "Pending",
@@ -5700,7 +5700,7 @@
           "completedAt": ""
         },
         {
-          "id": 1779303459092.524,
+          "id": 1779359968114.2466,
           "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "24",
@@ -5709,7 +5709,7 @@
           "wtUnit": 50.5859,
           "bundle": "",
           "weight": 7082.03,
-          "station": "SHEAR",
+          "station": "IOWA",
           "isDual": false,
           "step1Op": "",
           "step1Status": "Pending",
@@ -5737,7 +5737,7 @@
       "date": "2026-05-21",
       "delivery": "2026-05-21",
       "isPickup": false,
-      "truck": "2",
+      "truck": "1",
       "notes": "",
       "items": [
         {
@@ -5778,7 +5778,7 @@
       "date": "2026-05-26",
       "delivery": "2026-05-26",
       "isPickup": false,
-      "truck": "2",
+      "truck": "1",
       "notes": "",
       "items": [
         {
@@ -5915,7 +5915,7 @@
       "date": "2026-05-21",
       "delivery": "2026-05-21",
       "isPickup": false,
-      "truck": "2",
+      "truck": "1",
       "notes": "",
       "items": [
         {
@@ -6004,7 +6004,7 @@
       "date": "2026-05-26",
       "delivery": "2026-05-26",
       "isPickup": false,
-      "truck": "2",
+      "truck": "1",
       "notes": "",
       "items": [
         {
@@ -6068,9 +6068,9 @@
           "step2CompletedBy": "",
           "notes": "GlvSht:264896 (26 Ga. 48' x 96' Galv) | 26 Ga. 48' x 96' Galv",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "Pick Up",
+          "completedAt": "2026-05-21T16:24:44.602Z"
         },
         {
           "id": 1779283429713.8826,
@@ -6092,12 +6092,13 @@
           "step2CompletedBy": "",
           "notes": "GlvSht:263696 (26 Ga. 36' x 96' Galv) | 26 Ga. 36' x 96' Galv",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "Pick Up",
+          "completedAt": "2026-05-21T16:24:44.602Z"
         }
       ],
-      "created": "2026-05-20T13:23:49.712Z"
+      "created": "2026-05-20T13:23:49.712Z",
+      "pickupDate": "2026-05-21"
     },
     {
       "id": 1779283452425,
@@ -6110,11 +6111,11 @@
       "date": "2026-05-22",
       "delivery": "2026-05-22",
       "isPickup": false,
-      "truck": "2",
+      "truck": "1",
       "notes": "",
       "items": [
         {
-          "id": 1779283452425.9011,
+          "id": 1779359998165.629,
           "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "24",
@@ -6123,7 +6124,7 @@
           "wtUnit": 50.5859,
           "bundle": "",
           "weight": 3035.15,
-          "station": "PICK / PULL",
+          "station": "IOWA",
           "isDual": false,
           "step1Op": "",
           "step1Status": "Pending",
@@ -6151,7 +6152,7 @@
       "date": "2026-05-21",
       "delivery": "2026-05-21",
       "isPickup": false,
-      "truck": "2",
+      "truck": "1",
       "notes": "",
       "items": [
         {
@@ -6524,12 +6525,13 @@
           "step2CompletedBy": "",
           "notes": "NonGlvSht:Alum03248120 (.032 48' x 120' Aluminum 3003 H-14) | .032 48' x 120' Aluminum 3003 H-14",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "Pick Up",
+          "completedAt": "2026-05-21T16:24:42.355Z"
         }
       ],
-      "created": "2026-05-20T18:06:45.277Z"
+      "created": "2026-05-20T18:06:45.277Z",
+      "pickupDate": "2026-05-21"
     },
     {
       "id": 1779300414340,
@@ -6584,7 +6586,7 @@
       "date": "2026-05-20",
       "delivery": "2026-05-22",
       "isPickup": false,
-      "truck": "2",
+      "truck": "1",
       "notes": "",
       "items": [
         {
@@ -6912,63 +6914,93 @@
           "notes": ""
         },
         {
-          "woId": 1779208385070,
-          "woNum": "46350",
-          "customer": "I T Landes & Son's, Inc.",
-          "address": "247 Main Street",
-          "cityst": "Harleysville, PA 19438",
+          "woId": 1779283309500,
+          "woNum": "46354",
+          "customer": "Specialty Fabricators LLC",
+          "address": "118 Meany Rd.",
+          "cityst": "Wrightstown, NJ 08562",
+          "zone": "NJ North",
+          "delivery": "2026-05-21",
+          "notes": ""
+        },
+        {
+          "woId": 1779283393389,
+          "woNum": "46356",
+          "customer": "Four Quarters Plumbing Htg & A/C",
+          "address": "2601 River Road",
+          "cityst": "Cinnaminson, NJ 08077",
+          "zone": "NJ South",
+          "delivery": "2026-05-21",
+          "notes": ""
+        },
+        {
+          "woId": 1779283512292,
+          "woNum": "46360",
+          "customer": "Thermal Piping",
+          "address": "493 Sykesville Rd",
+          "cityst": "York, PA 724-0006",
           "zone": "PA Other",
+          "delivery": "2026-05-21",
+          "notes": ""
+        },
+        {
+          "woId": 1779111347510,
+          "woNum": "46338",
+          "customer": "Hunter Mechanical, Inc.",
+          "address": "2261 New York Avenue",
+          "cityst": "Bensalem, PA 19020",
+          "zone": "SE Pennsylvania",
           "delivery": "2026-05-22",
           "notes": ""
         },
         {
-          "woId": 1779190312096,
-          "woNum": "46348",
-          "customer": "D.J Wagner Heating & A/C",
-          "address": "30 Cutler Ave",
-          "cityst": "Westville, NJ 08093",
+          "woId": 1779302614649,
+          "woNum": "46367",
+          "customer": "Aella Industries",
+          "address": "1602 Manning Blvd",
+          "cityst": "Levittown, PA 19057",
+          "zone": "SE Pennsylvania",
+          "delivery": "2026-05-22",
+          "notes": ""
+        },
+        {
+          "woId": 1779283452425,
+          "woNum": "46359",
+          "customer": "Hunter Mechanical, Inc.",
+          "address": "2261 New York Avenue",
+          "cityst": "Bensalem, PA 19020",
+          "zone": "SE Pennsylvania",
+          "delivery": "2026-05-22",
+          "notes": ""
+        },
+        {
+          "woId": 1778691597008,
+          "woNum": "46243",
+          "customer": "Carter Mechanical, Inc.",
+          "address": "176 Pennsylvania Ave",
+          "cityst": "Malvern, PA 19355",
+          "zone": "PA Other",
+          "delivery": "2026-05-26",
+          "notes": ""
+        },
+        {
+          "woId": 1779283364357,
+          "woNum": "46355",
+          "customer": "Riley Sales, Inc. — Plymouth Meeting PA",
+          "address": "1719 Romano Drive",
+          "cityst": "Plymouth Meeting, PA 19462",
+          "zone": "PA Other",
+          "delivery": "2026-05-26",
+          "notes": ""
+        },
+        {
+          "woId": 1779283414344,
+          "woNum": "46357",
+          "customer": "Four Quarters Plumbing Htg & A/C",
+          "address": "2601 River Road",
+          "cityst": "Cinnaminson, NJ 08077",
           "zone": "NJ South",
           "delivery": "2026-05-26",
-          "notes": ""
-        },
-        {
-          "woId": 1779208421565,
-          "woNum": "46351",
-          "customer": "W.F. Smith Inc.",
-          "address": "7310 State Road",
-          "cityst": "Philadelphia, PA 19136",
-          "zone": "SE Pennsylvania",
-          "delivery": "2026-05-26",
-          "notes": ""
-        },
-        {
-          "woId": 1778762848614,
-          "woNum": "46289",
-          "customer": "Compass Wire Cloth Corp.",
-          "address": "1942 N Mill Road",
-          "cityst": "Vineland, NJ 08360",
-          "zone": "NJ North",
-          "delivery": "2026-05-26",
-          "notes": ""
-        },
-        {
-          "woId": 1779190148081,
-          "woNum": "46345",
-          "customer": "Riley Sales, Inc. — Douglassville PA",
-          "address": "1712 Benjamin Franklin Hwy",
-          "cityst": "Douglassville, PA 19518",
-          "zone": "PA Other",
-          "delivery": "2026-05-22",
-          "notes": ""
-        },
-        {
-          "woId": 1779190262136,
-          "woNum": "46347",
-          "customer": "United Supply Company — Elmsford NY",
-          "address": "300 Executive Boulevard",
-          "cityst": "Elmsford, NY 10523",
-          "zone": "New York",
-          "delivery": "2026-05-21",
           "notes": ""
         }
       ],
@@ -7169,93 +7201,63 @@
           "delivered": true
         },
         {
-          "woId": 1778691597008,
-          "woNum": "46243",
-          "customer": "Carter Mechanical, Inc.",
-          "address": "176 Pennsylvania Ave",
-          "cityst": "Malvern, PA 19355",
-          "zone": "PA Other",
-          "delivery": "2026-05-26",
+          "woId": 1779190262136,
+          "woNum": "46347",
+          "customer": "United Supply Company — Elmsford NY",
+          "address": "300 Executive Boulevard",
+          "cityst": "Elmsford, NY 10523",
+          "zone": "New York",
+          "delivery": "2026-05-21",
           "notes": ""
         },
         {
-          "woId": 1779283364357,
-          "woNum": "46355",
-          "customer": "Riley Sales, Inc. — Plymouth Meeting PA",
-          "address": "1719 Romano Drive",
-          "cityst": "Plymouth Meeting, PA 19462",
+          "woId": 1779190148081,
+          "woNum": "46345",
+          "customer": "Riley Sales, Inc. — Douglassville PA",
+          "address": "1712 Benjamin Franklin Hwy",
+          "cityst": "Douglassville, PA 19518",
           "zone": "PA Other",
-          "delivery": "2026-05-26",
+          "delivery": "2026-05-22",
           "notes": ""
         },
         {
-          "woId": 1779283309500,
-          "woNum": "46354",
-          "customer": "Specialty Fabricators LLC",
-          "address": "118 Meany Rd.",
-          "cityst": "Wrightstown, NJ 08562",
+          "woId": 1779208385070,
+          "woNum": "46350",
+          "customer": "I T Landes & Son's, Inc.",
+          "address": "247 Main Street",
+          "cityst": "Harleysville, PA 19438",
+          "zone": "PA Other",
+          "delivery": "2026-05-22",
+          "notes": ""
+        },
+        {
+          "woId": 1778762848614,
+          "woNum": "46289",
+          "customer": "Compass Wire Cloth Corp.",
+          "address": "1942 N Mill Road",
+          "cityst": "Vineland, NJ 08360",
           "zone": "NJ North",
-          "delivery": "2026-05-21",
+          "delivery": "2026-05-26",
           "notes": ""
         },
         {
-          "woId": 1779283393389,
-          "woNum": "46356",
-          "customer": "Four Quarters Plumbing Htg & A/C",
-          "address": "2601 River Road",
-          "cityst": "Cinnaminson, NJ 08077",
-          "zone": "NJ South",
-          "delivery": "2026-05-21",
-          "notes": ""
-        },
-        {
-          "woId": 1779283414344,
-          "woNum": "46357",
-          "customer": "Four Quarters Plumbing Htg & A/C",
-          "address": "2601 River Road",
-          "cityst": "Cinnaminson, NJ 08077",
+          "woId": 1779190312096,
+          "woNum": "46348",
+          "customer": "D.J Wagner Heating & A/C",
+          "address": "30 Cutler Ave",
+          "cityst": "Westville, NJ 08093",
           "zone": "NJ South",
           "delivery": "2026-05-26",
           "notes": ""
         },
         {
-          "woId": 1779283512292,
-          "woNum": "46360",
-          "customer": "Thermal Piping",
-          "address": "493 Sykesville Rd",
-          "cityst": "York, PA 724-0006",
-          "zone": "PA Other",
-          "delivery": "2026-05-21",
-          "notes": ""
-        },
-        {
-          "woId": 1779302614649,
-          "woNum": "46367",
-          "customer": "Aella Industries",
-          "address": "1602 Manning Blvd",
-          "cityst": "Levittown, PA 19057",
+          "woId": 1779208421565,
+          "woNum": "46351",
+          "customer": "W.F. Smith Inc.",
+          "address": "7310 State Road",
+          "cityst": "Philadelphia, PA 19136",
           "zone": "SE Pennsylvania",
-          "delivery": "2026-05-22",
-          "notes": ""
-        },
-        {
-          "woId": 1779283452425,
-          "woNum": "46359",
-          "customer": "Hunter Mechanical, Inc.",
-          "address": "2261 New York Avenue",
-          "cityst": "Bensalem, PA 19020",
-          "zone": "SE Pennsylvania",
-          "delivery": "2026-05-22",
-          "notes": ""
-        },
-        {
-          "woId": 1779111347510,
-          "woNum": "46338",
-          "customer": "Hunter Mechanical, Inc.",
-          "address": "2261 New York Avenue",
-          "cityst": "Bensalem, PA 19020",
-          "zone": "SE Pennsylvania",
-          "delivery": "2026-05-22",
+          "delivery": "2026-05-26",
           "notes": ""
         }
       ],
@@ -10889,6 +10891,6 @@
       "color": "#FF7043"
     }
   ],
-  "exportDate": "2026-05-20T19:57:30.577Z",
+  "exportDate": "2026-05-21T16:24:47.497Z",
   "version": "2.0"
 }
