@@ -5310,7 +5310,10 @@
           "completedAt": "2026-05-20T18:37:05.409Z"
         }
       ],
-      "created": "2026-05-19T11:31:02.136Z"
+      "created": "2026-05-19T11:31:02.136Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-21T19:29:20.746Z",
+      "deliveredBy": ""
     },
     {
       "id": 1779190312096,
@@ -5766,7 +5769,10 @@
           "completedAt": "2026-05-20T18:37:06.697Z"
         }
       ],
-      "created": "2026-05-20T13:21:49.500Z"
+      "created": "2026-05-20T13:21:49.500Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-21T19:29:16.448Z",
+      "deliveredBy": ""
     },
     {
       "id": 1779283364357,
@@ -5992,7 +5998,10 @@
           "completedAt": "2026-05-20T19:19:21.312Z"
         }
       ],
-      "created": "2026-05-20T13:23:13.389Z"
+      "created": "2026-05-20T13:23:13.389Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-21T19:29:17.738Z",
+      "deliveredBy": ""
     },
     {
       "id": 1779283414344,
@@ -6253,7 +6262,10 @@
           "completedAt": "2026-05-20T19:53:00.050Z"
         }
       ],
-      "created": "2026-05-20T13:25:12.292Z"
+      "created": "2026-05-20T13:25:12.292Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-21T19:29:18.534Z",
+      "deliveredBy": ""
     },
     {
       "id": 1779283543937,
@@ -7306,7 +7318,8 @@
           "cityst": "Wrightstown, NJ 08562",
           "zone": "NJ North",
           "delivery": "2026-05-21",
-          "notes": ""
+          "notes": "",
+          "delivered": true
         },
         {
           "woId": 1779283393389,
@@ -7316,7 +7329,8 @@
           "cityst": "Cinnaminson, NJ 08077",
           "zone": "NJ South",
           "delivery": "2026-05-21",
-          "notes": ""
+          "notes": "",
+          "delivered": true
         },
         {
           "woId": 1779283512292,
@@ -7326,7 +7340,8 @@
           "cityst": "York, PA 724-0006",
           "zone": "PA Other",
           "delivery": "2026-05-21",
-          "notes": ""
+          "notes": "",
+          "delivered": true
         },
         {
           "woId": 1779111347510,
@@ -7643,7 +7658,8 @@
           "cityst": "Elmsford, NY 10523",
           "zone": "New York",
           "delivery": "2026-05-21",
-          "notes": ""
+          "notes": "",
+          "delivered": true
         },
         {
           "woId": 1779190148081,
@@ -11372,6 +11388,6 @@
       "color": "#FF7043"
     }
   ],
-  "exportDate": "2026-05-21T19:25:41.919Z",
+  "exportDate": "2026-05-21T19:29:25.748Z",
   "version": "2.0"
 }
