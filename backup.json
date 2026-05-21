@@ -4496,9 +4496,9 @@
           "step2CompletedBy": "",
           "notes": "Misc:G90misc (G-90) | 26 Ga. 45.25' x 60' G-90",
           "assignee": "",
-          "status": "In Process",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "?",
+          "completedAt": "2026-05-21T19:37:29.730Z"
         },
         {
           "id": 1779360119081.96,
@@ -4520,9 +4520,9 @@
           "step2CompletedBy": "",
           "notes": "Misc:G90misc (G-90) | 26 Ga. 41.25' x 60' G-90",
           "assignee": "",
-          "status": "In Process",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "?",
+          "completedAt": "2026-05-21T19:37:30.985Z"
         },
         {
           "id": 1779360119082.3394,
@@ -4544,9 +4544,9 @@
           "step2CompletedBy": "",
           "notes": "Misc:G90misc (G-90) | 26 Ga. 37.25' x 60' G-90",
           "assignee": "",
-          "status": "In Process",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "?",
+          "completedAt": "2026-05-21T19:37:32.877Z"
         },
         {
           "id": 1779360119083.5193,
@@ -4568,9 +4568,9 @@
           "step2CompletedBy": "",
           "notes": "Misc:G90misc (G-90) | 26 Ga. 29.25' x 60' G-90",
           "assignee": "",
-          "status": "In Process",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "?",
+          "completedAt": "2026-05-21T19:37:33.798Z"
         },
         {
           "id": 1779360119084.9106,
@@ -4592,9 +4592,9 @@
           "step2CompletedBy": "",
           "notes": "GlvSht:G902660120 (26 Ga. 60' x 120' G-90) | 26 Ga. 60' x 120' G-90",
           "assignee": "",
-          "status": "In Process",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "?",
+          "completedAt": "2026-05-21T19:37:35.415Z"
         },
         {
           "id": 1779360119085.5896,
@@ -11388,6 +11388,6 @@
       "color": "#FF7043"
     }
   ],
-  "exportDate": "2026-05-21T19:32:59.432Z",
+  "exportDate": "2026-05-21T19:37:43.880Z",
   "version": "2.0"
 }
