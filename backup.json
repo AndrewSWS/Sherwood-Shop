@@ -4375,9 +4375,9 @@
           "step2CompletedBy": "",
           "notes": "Misc:G90misc (G-90) | 24 Ga. 48.25' x 60' G-90",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "?",
+          "completedAt": "2026-05-21T16:55:15.469Z"
         },
         {
           "id": 1779360119076.3672,
@@ -4399,9 +4399,9 @@
           "step2CompletedBy": "",
           "notes": "Misc:G90misc (G-90) | 24 Ga. 47.25' x 60' G-90",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "?",
+          "completedAt": "2026-05-21T16:55:16.755Z"
         },
         {
           "id": 1779360119077.6245,
@@ -4423,9 +4423,9 @@
           "step2CompletedBy": "",
           "notes": "Misc:G90misc (G-90) | 24 Ga. 43.25' x 60' G-90",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "?",
+          "completedAt": "2026-05-21T16:55:19.273Z"
         },
         {
           "id": 1779360119078.3357,
@@ -4447,9 +4447,9 @@
           "step2CompletedBy": "",
           "notes": "Misc:G90misc (G-90) | 24 Ga. 39.25' x 60' G-90",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "?",
+          "completedAt": "2026-05-21T16:55:21.202Z"
         },
         {
           "id": 1779360119079.148,
@@ -4471,9 +4471,9 @@
           "step2CompletedBy": "",
           "notes": "Misc:G90misc (G-90) | 24 Ga. 35.25' x 60' G-90",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "?",
+          "completedAt": "2026-05-21T16:55:23.928Z"
         },
         {
           "id": 1779360119080.0342,
@@ -4495,7 +4495,7 @@
           "step2CompletedBy": "",
           "notes": "Misc:G90misc (G-90) | 26 Ga. 45.25' x 60' G-90",
           "assignee": "",
-          "status": "Pending",
+          "status": "In Process",
           "completedBy": "",
           "completedAt": ""
         },
@@ -4519,7 +4519,7 @@
           "step2CompletedBy": "",
           "notes": "Misc:G90misc (G-90) | 26 Ga. 41.25' x 60' G-90",
           "assignee": "",
-          "status": "Pending",
+          "status": "In Process",
           "completedBy": "",
           "completedAt": ""
         },
@@ -4543,7 +4543,7 @@
           "step2CompletedBy": "",
           "notes": "Misc:G90misc (G-90) | 26 Ga. 37.25' x 60' G-90",
           "assignee": "",
-          "status": "Pending",
+          "status": "In Process",
           "completedBy": "",
           "completedAt": ""
         },
@@ -4567,7 +4567,7 @@
           "step2CompletedBy": "",
           "notes": "Misc:G90misc (G-90) | 26 Ga. 29.25' x 60' G-90",
           "assignee": "",
-          "status": "Pending",
+          "status": "In Process",
           "completedBy": "",
           "completedAt": ""
         },
@@ -4591,7 +4591,7 @@
           "step2CompletedBy": "",
           "notes": "GlvSht:G902660120 (26 Ga. 60' x 120' G-90) | 26 Ga. 60' x 120' G-90",
           "assignee": "",
-          "status": "Pending",
+          "status": "In Process",
           "completedBy": "",
           "completedAt": ""
         },
@@ -4615,9 +4615,9 @@
           "step2CompletedBy": "",
           "notes": "GlvSht:G902460120 (24 Ga. 60' x 120' G-90) | 24 Ga. 60' x 120' G-90",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "?",
+          "completedAt": "2026-05-21T16:55:40.673Z"
         }
       ],
       "created": "2026-05-18T13:35:47.510Z"
@@ -6134,9 +6134,9 @@
           "step2CompletedBy": "",
           "notes": "GlvSht:G902460120 (24 Ga. 60' x 120' G-90) | 24 Ga. 60' x 120' G-90",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "?",
+          "completedAt": "2026-05-21T16:55:07.493Z"
         }
       ],
       "created": "2026-05-20T13:24:12.425Z"
@@ -6353,9 +6353,9 @@
       "cityst": "Bensalem, PA 19020",
       "zone": "SE Pennsylvania",
       "date": "2026-05-26",
-      "delivery": "2026-05-27",
+      "delivery": "2026-05-22",
       "isPickup": false,
-      "truck": "",
+      "truck": "1",
       "notes": "",
       "items": [
         {
@@ -6378,9 +6378,9 @@
           "step2CompletedBy": "",
           "notes": "HVACAcsry:161120 (16 Ga. 1' x 120' Galv) | 16 Ga. 1' x 120' Galv",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "?",
+          "completedAt": "2026-05-21T16:54:49.026Z"
         }
       ],
       "created": "2026-05-20T18:04:43.202Z"
@@ -6459,7 +6459,7 @@
       "cityst": "",
       "zone": "",
       "date": "2026-05-29",
-      "delivery": "",
+      "delivery": "2026-05-27",
       "isPickup": false,
       "truck": "",
       "notes": "",
@@ -6615,6 +6615,307 @@
         }
       ],
       "created": "2026-05-20T18:43:34.649Z"
+    },
+    {
+      "id": 1779381231521,
+      "woNum": "46369",
+      "po": "",
+      "customer": "Compass Wire Cloth Corp.",
+      "address": "1942 N Mill Road",
+      "cityst": "Vineland, NJ 08360",
+      "zone": "NJ North",
+      "date": "2026-05-26",
+      "delivery": "",
+      "isPickup": false,
+      "truck": "",
+      "notes": "",
+      "items": [
+        {
+          "id": 1779381231521.9768,
+          "productCat": "Flat Sheet",
+          "type": "Stainless",
+          "gauge": "16",
+          "size": "48x120",
+          "qty": "5",
+          "wtUnit": 92.9688,
+          "bundle": "",
+          "weight": 464.84,
+          "station": "PICK / PULL",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "NonGlvSht:CR1648120 (16 Ga. 48' x 120' CR) | 16 Ga. 48' x 120' CR",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": ""
+        },
+        {
+          "id": 1779381231522.332,
+          "productCat": "Flat Sheet",
+          "type": "Galvanized",
+          "gauge": "16",
+          "size": "",
+          "qty": "300",
+          "wtUnit": 0,
+          "bundle": "",
+          "weight": 0,
+          "station": "IOWA",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "Blank:CR16648 (16 Ga. 6' x 48' CR) | 16 Ga. 6' x 48' CR Shroud",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": ""
+        },
+        {
+          "id": 1779381231523.544,
+          "productCat": "Flat Sheet",
+          "type": "Galvanized",
+          "gauge": "16",
+          "size": "",
+          "qty": "200",
+          "wtUnit": 0,
+          "bundle": "",
+          "weight": 0,
+          "station": "IOWA",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "Blank:CR161272 (16 Ga. 12' x 72' CR) | 16 Ga. 12' x 72' CR",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": ""
+        }
+      ],
+      "created": "2026-05-21T16:33:51.521Z"
+    },
+    {
+      "id": 1779381520577,
+      "woNum": "46368",
+      "po": "",
+      "customer": "Johnstone Supply - Broomall",
+      "address": "505 Parkway Drive",
+      "cityst": "Broomall,  19008",
+      "zone": "",
+      "date": "2026-05-21",
+      "delivery": "2026-05-27",
+      "isPickup": false,
+      "truck": "",
+      "notes": "",
+      "items": [
+        {
+          "id": 1779381520577.4485,
+          "productCat": "Flat Sheet",
+          "type": "Galvanized",
+          "gauge": "26",
+          "size": "48x96",
+          "qty": "50",
+          "wtUnit": 25.375,
+          "bundle": "",
+          "weight": 1268.75,
+          "station": "PICK / PULL",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": ""
+        }
+      ],
+      "created": "2026-05-21T16:38:40.577Z"
+    },
+    {
+      "id": 1779384474507,
+      "woNum": "46370",
+      "po": "",
+      "customer": "Total Scope",
+      "address": "",
+      "cityst": "",
+      "zone": "",
+      "date": "2026-05-21",
+      "delivery": "",
+      "isPickup": true,
+      "truck": "",
+      "notes": "",
+      "items": [
+        {
+          "id": 1779384474507.6077,
+          "productCat": "Flat Sheet",
+          "type": "Stainless",
+          "gauge": "18",
+          "size": "48x120",
+          "qty": "1",
+          "wtUnit": 75.4688,
+          "bundle": "",
+          "weight": 75.47,
+          "station": "PICK / PULL",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "NonGlvSht:SS1848120 (18 Ga. 48' x 120' Stainless Steel 304 2B Mill Finish) | 18 Ga. 48' x 120' Stainless Steel 304 2B Mill Finish",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": ""
+        }
+      ],
+      "created": "2026-05-21T17:27:54.508Z"
+    },
+    {
+      "id": 1779384518508,
+      "woNum": "46371",
+      "po": "",
+      "customer": "Grossman & Hofkin Enterprises Inc.",
+      "address": "2855-B Philmont Ave",
+      "cityst": "Huntingdon Valley, PA 19006",
+      "zone": "SE Pennsylvania",
+      "date": "2026-05-26",
+      "delivery": "2026-05-27",
+      "isPickup": false,
+      "truck": "",
+      "notes": "",
+      "items": [
+        {
+          "id": 1779384518508.9893,
+          "productCat": "Flat Sheet",
+          "type": "Galvanized",
+          "gauge": "28",
+          "size": "36x96",
+          "qty": "250",
+          "wtUnit": 16.4063,
+          "bundle": "",
+          "weight": 4101.58,
+          "station": "SHEAR",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "GlvSht:283696 (28 Ga. 36' x 96' Galv) | 28 Ga. 36' x 96' Galv (2 skids of 125)",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": ""
+        },
+        {
+          "id": 1779384518509.4314,
+          "productCat": "Drive",
+          "type": "Galvanized",
+          "gauge": "28",
+          "size": "",
+          "qty": "2000",
+          "wtUnit": 0,
+          "bundle": "",
+          "weight": 0,
+          "station": "DRIVE",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "HVACAcsry:2860Drive (28 Ga. 5' Drive Galv) | 28 Ga. 5' Drive Galv",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": ""
+        },
+        {
+          "id": 1779384518510.9739,
+          "productCat": "Slip",
+          "type": "Galvanized",
+          "gauge": "28",
+          "size": "",
+          "qty": "1000",
+          "wtUnit": 0,
+          "bundle": "",
+          "weight": 0,
+          "station": "SLIP",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "HVACAcsry:2860Slip (28 Ga. 5' Slip Galv) | 28 Ga. 5' Slip Galv",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": ""
+        }
+      ],
+      "created": "2026-05-21T17:28:38.508Z"
+    },
+    {
+      "id": 1779384536861,
+      "woNum": "46372",
+      "po": "",
+      "customer": "Douglassville Mechanical, Inc.",
+      "address": "200 North Furnace Street",
+      "cityst": "Birdsboro, PA 19508",
+      "zone": "PA Other",
+      "date": "2026-05-27",
+      "delivery": "2026-05-27",
+      "isPickup": false,
+      "truck": "",
+      "notes": "",
+      "items": [
+        {
+          "id": 1779384536861.0571,
+          "productCat": "Flat Sheet",
+          "type": "Galvanized",
+          "gauge": "26",
+          "size": "60x120",
+          "qty": "75",
+          "wtUnit": 39.6484,
+          "bundle": "",
+          "weight": 2973.63,
+          "station": "SHEAR",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "GlvSht:2660120 (26 Ga. 60' x 120' Galv) | 26 Ga. 60' x 120' Galv",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": ""
+        }
+      ],
+      "created": "2026-05-21T17:28:56.861Z"
     }
   ],
   "trucks": [
@@ -7001,6 +7302,16 @@
           "cityst": "Cinnaminson, NJ 08077",
           "zone": "NJ South",
           "delivery": "2026-05-26",
+          "notes": ""
+        },
+        {
+          "woId": 1779300283202,
+          "woNum": "46362",
+          "customer": "Hunter Mechanical, Inc.",
+          "address": "2261 New York Avenue",
+          "cityst": "Bensalem, PA 19020",
+          "zone": "SE Pennsylvania",
+          "delivery": "2026-05-22",
           "notes": ""
         }
       ],
@@ -9428,6 +9739,14 @@
         "state": "PA",
         "zip": "19137",
         "zone": "SE Pennsylvania"
+      },
+      {
+        "name": "Johnstone Supply - Broomall",
+        "address": "505 Parkway Drive",
+        "city": "Broomall",
+        "state": "",
+        "zip": "19008",
+        "zone": ""
       }
     ],
     "stationDefaults": {
@@ -10837,6 +11156,14 @@
       "groupId": "",
       "notify": false,
       "notes": ""
+    },
+    "Johnstone Supply - Broomall": {
+      "contact": "",
+      "phone": "610-605-4150",
+      "email": "",
+      "groupId": "",
+      "notify": false,
+      "notes": ""
     }
   },
   "deliveryGroups": [
@@ -10891,6 +11218,6 @@
       "color": "#FF7043"
     }
   ],
-  "exportDate": "2026-05-21T16:24:47.497Z",
+  "exportDate": "2026-05-21T17:29:34.786Z",
   "version": "2.0"
 }
