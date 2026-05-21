@@ -2200,16 +2200,16 @@
           "station": "SHEAR → BREAK",
           "isDual": true,
           "step1Op": "Andrew",
-          "step1Status": "Pending",
-          "step1CompletedBy": "",
+          "step1Status": "Complete",
+          "step1CompletedBy": "?",
           "step2Op": "Andrew",
-          "step2Status": "Pending",
-          "step2CompletedBy": "",
+          "step2Status": "Complete",
+          "step2CompletedBy": "?",
           "notes": "Blank:20748 (20 Ga. 7' x 48' Galv) | 20 Ga. 7' x 48' Galv Punched Shroud",
           "assignee": "",
-          "status": "In Process",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "?",
+          "completedAt": "2026-05-21T18:44:57.296Z"
         }
       ],
       "created": "2026-05-14T12:24:00.694Z"
@@ -5327,12 +5327,12 @@
       "notes": "",
       "items": [
         {
-          "id": 1779275618839.3542,
+          "id": 1779389451922.1035,
           "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "",
           "size": "",
-          "qty": "200",
+          "qty": "20",
           "wtUnit": 0,
           "bundle": "",
           "weight": 0,
@@ -5345,8 +5345,8 @@
           "step2Status": "Pending",
           "step2CompletedBy": "",
           "notes": "HVACAcsry:201202Angle (20 Ga. 4' x 4' x 120' Angle Galv) | 20 Ga. 4' x 4' x 120' Angle Galv",
-          "assignee": "Dan",
-          "status": "In Process",
+          "assignee": "",
+          "status": "Pending",
           "completedBy": "",
           "completedAt": ""
         }
@@ -5453,9 +5453,9 @@
           "step2CompletedBy": "",
           "notes": "GlvSht:246096 (24 Ga. 60' x 96' Galv) | 24 Ga. 60' x 96' Galv- 3 skids of 100 ($37.40/ea.)",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "?",
+          "completedAt": "2026-05-21T18:56:29.914Z"
         },
         {
           "id": 1779275381405.7668,
@@ -5582,13 +5582,13 @@
       "cityst": "Vineland, NJ 08360",
       "zone": "NJ North",
       "date": "2026-05-21",
-      "delivery": "",
+      "delivery": "2026-05-26",
       "isPickup": false,
-      "truck": "",
+      "truck": "2",
       "notes": "",
       "items": [
         {
-          "id": 1779208445157.6797,
+          "id": 1779391342793.3804,
           "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "20",
@@ -5606,13 +5606,13 @@
           "step2Status": "Pending",
           "step2CompletedBy": "",
           "notes": "Blank:2048775 (20 Ga. 4' x 87.75' Galv) | 20 Ga. 4' x 87.75' Galv",
-          "assignee": "Dan",
-          "status": "In Process",
+          "assignee": "",
+          "status": "Pending",
           "completedBy": "",
           "completedAt": ""
         },
         {
-          "id": 1779208445158.3882,
+          "id": 1779391342794.9885,
           "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "20",
@@ -5630,13 +5630,13 @@
           "step2Status": "Pending",
           "step2CompletedBy": "",
           "notes": "Blank:2044775 (20 Ga. 4' x 47.75' Galv) | 20 Ga. 4' x 47.75' Galv Shroud",
-          "assignee": "Dan",
-          "status": "In Process",
+          "assignee": "",
+          "status": "Pending",
           "completedBy": "",
           "completedAt": ""
         },
         {
-          "id": 1779208445159.003,
+          "id": 1779391342795.933,
           "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "26",
@@ -5654,8 +5654,8 @@
           "step2Status": "Pending",
           "step2CompletedBy": "",
           "notes": "Blank:26458.75 (26 Ga. 4' x 58.75' Galv) | 26 Ga. 4' x 58.75' Galv Shroud",
-          "assignee": "Dan",
-          "status": "In Process",
+          "assignee": "",
+          "status": "Pending",
           "completedBy": "",
           "completedAt": ""
         }
@@ -5673,7 +5673,7 @@
       "date": "2026-05-26",
       "delivery": "2026-05-27",
       "isPickup": false,
-      "truck": "",
+      "truck": "1",
       "notes": "",
       "items": [
         {
@@ -6462,7 +6462,7 @@
       "date": "2026-05-29",
       "delivery": "2026-05-27",
       "isPickup": false,
-      "truck": "",
+      "truck": "2",
       "notes": "",
       "items": [
         {
@@ -6610,9 +6610,9 @@
           "step2CompletedBy": "",
           "notes": "",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "?",
+          "completedAt": "2026-05-21T18:56:21.894Z"
         }
       ],
       "created": "2026-05-20T18:43:34.649Z"
@@ -6626,7 +6626,7 @@
       "cityst": "Vineland, NJ 08360",
       "zone": "NJ North",
       "date": "2026-05-26",
-      "delivery": "",
+      "delivery": "2026-05-28",
       "isPickup": false,
       "truck": "",
       "notes": "",
@@ -6717,7 +6717,7 @@
       "date": "2026-05-21",
       "delivery": "2026-05-27",
       "isPickup": false,
-      "truck": "",
+      "truck": "1",
       "notes": "",
       "items": [
         {
@@ -6800,7 +6800,7 @@
       "date": "2026-05-26",
       "delivery": "2026-05-27",
       "isPickup": false,
-      "truck": "",
+      "truck": "2",
       "notes": "",
       "items": [
         {
@@ -6889,7 +6889,7 @@
       "date": "2026-05-27",
       "delivery": "2026-05-27",
       "isPickup": false,
-      "truck": "",
+      "truck": "1",
       "notes": "",
       "items": [
         {
@@ -6918,6 +6918,88 @@
         }
       ],
       "created": "2026-05-21T17:28:56.861Z"
+    },
+    {
+      "id": 1779391036901,
+      "woNum": "46373",
+      "po": "",
+      "customer": "Peirce Phelps, Inc. — Norristown PA",
+      "address": "603 General Washington Ave.",
+      "cityst": "Norristown, PA 19403",
+      "zone": "PA Other",
+      "date": "2026-05-27",
+      "delivery": "2026-05-27",
+      "isPickup": false,
+      "truck": "1",
+      "notes": "",
+      "items": [
+        {
+          "id": 1779391036901.7947,
+          "productCat": "Flat Sheet",
+          "type": "Galvanized",
+          "gauge": "26",
+          "size": "36x96",
+          "qty": "100",
+          "wtUnit": 19.0313,
+          "bundle": "",
+          "weight": 1903.13,
+          "station": "SHEAR",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "GlvSht:263696 (26 Ga. 36' x 96' Galv) | 26 Ga. 36' x 96' Galv (2 skids of 50)",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": ""
+        }
+      ],
+      "created": "2026-05-21T19:17:16.901Z"
+    },
+    {
+      "id": 1779391051938,
+      "woNum": "46374",
+      "po": "",
+      "customer": "National Pipe Hanger Company Corp.",
+      "address": "R.R. 30, 200 Campus Drive",
+      "cityst": "Mount Holly, NJ 08060",
+      "zone": "NJ South",
+      "date": "2026-05-27",
+      "delivery": "2026-05-28",
+      "isPickup": false,
+      "truck": "",
+      "notes": "",
+      "items": [
+        {
+          "id": 1779391051938.2964,
+          "productCat": "Other / Hardware",
+          "type": "Galvanized",
+          "gauge": "",
+          "size": "",
+          "qty": "200",
+          "wtUnit": 0,
+          "bundle": "",
+          "weight": 0,
+          "station": "PICK / PULL",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "HVACAcsry:181203Angle (18 Ga. 3' x 3' x 120' Angle Galv) | 18 Ga. 3' x 3' x 120' Angle Galv",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": ""
+        }
+      ],
+      "created": "2026-05-21T19:17:31.938Z"
     }
   ],
   "trucks": [
@@ -7315,6 +7397,46 @@
           "zone": "SE Pennsylvania",
           "delivery": "2026-05-22",
           "notes": ""
+        },
+        {
+          "woId": 1779283294062,
+          "woNum": "46353",
+          "customer": "Air Concepts Inc.",
+          "address": "2804B Old Rogers Road",
+          "cityst": "Bristol, PA 19007",
+          "zone": "SE Pennsylvania",
+          "delivery": "2026-05-27",
+          "notes": ""
+        },
+        {
+          "woId": 1779391036901,
+          "woNum": "46373",
+          "customer": "Peirce Phelps, Inc. — Norristown PA",
+          "address": "603 General Washington Ave.",
+          "cityst": "Norristown, PA 19403",
+          "zone": "PA Other",
+          "delivery": "2026-05-27",
+          "notes": ""
+        },
+        {
+          "woId": 1779384536861,
+          "woNum": "46372",
+          "customer": "Douglassville Mechanical, Inc.",
+          "address": "200 North Furnace Street",
+          "cityst": "Birdsboro, PA 19508",
+          "zone": "PA Other",
+          "delivery": "2026-05-27",
+          "notes": ""
+        },
+        {
+          "woId": 1779381520577,
+          "woNum": "46368",
+          "customer": "Johnstone Supply - Broomall",
+          "address": "505 Parkway Drive",
+          "cityst": "Broomall,  19008",
+          "zone": "",
+          "delivery": "2026-05-27",
+          "notes": ""
         }
       ],
       "shipDate": ""
@@ -7570,6 +7692,36 @@
           "address": "7310 State Road",
           "cityst": "Philadelphia, PA 19136",
           "zone": "SE Pennsylvania",
+          "delivery": "2026-05-26",
+          "notes": ""
+        },
+        {
+          "woId": 1779300381630,
+          "woNum": "46364",
+          "customer": "National Glass & Metal Co., Inc.",
+          "address": "",
+          "cityst": "",
+          "zone": "",
+          "delivery": "2026-05-27",
+          "notes": ""
+        },
+        {
+          "woId": 1779384518508,
+          "woNum": "46371",
+          "customer": "Grossman & Hofkin Enterprises Inc.",
+          "address": "2855-B Philmont Ave",
+          "cityst": "Huntingdon Valley, PA 19006",
+          "zone": "SE Pennsylvania",
+          "delivery": "2026-05-27",
+          "notes": ""
+        },
+        {
+          "woId": 1779208445157,
+          "woNum": "46352",
+          "customer": "Compass Wire Cloth Corp.",
+          "address": "1942 N Mill Road",
+          "cityst": "Vineland, NJ 08360",
+          "zone": "NJ North",
           "delivery": "2026-05-26",
           "notes": ""
         }
@@ -11220,6 +11372,6 @@
       "color": "#FF7043"
     }
   ],
-  "exportDate": "2026-05-21T17:45:39.953Z",
+  "exportDate": "2026-05-21T19:25:41.919Z",
   "version": "2.0"
 }
