@@ -299,6 +299,7 @@ select{cursor:pointer}
   background:#222;
 }
 .board-stop.done{opacity:0.45;}
+.q-item.q-drag-over{border:2px dashed var(--blue);background:var(--blue-l);}
 .board-stop-cust{font-size:13px;font-weight:700;color:#fff;line-height:1.2}
 .board-stop-wo{font-size:10px;color:#666;margin-top:1px}
 .board-stop-done{font-size:10px;color:#4CAF7D;font-weight:700;margin-top:2px}
@@ -2843,8 +2844,13 @@ function renderQueue(c){
 
   function renderQueueItem(item, qIdx, totalItems){
     return `
-    <div class="q-item">
-      <div style="display:flex;flex-direction:column;gap:2px;margin-right:6px;flex-shrink:0">
+    <div class="q-item" draggable="true"
+      ondragstart="qDragStart(this,${qIdx})"
+      ondragend="qDragEnd(this)"
+      ondragover="qDragOver(this,event)"
+      ondrop="qDrop(this,${qIdx})">
+      <div style="display:flex;flex-direction:column;gap:2px;margin-right:6px;flex-shrink:0;align-items:center">
+        <span style="font-size:14px;color:var(--text3);cursor:grab;line-height:1;margin-bottom:2px" title="Drag to reorder">⠿</span>
         <button data-qidx="${qIdx}" data-dir="-1"
           onclick="moveQueueByIndex(parseInt(this.dataset.qidx),parseInt(this.dataset.dir))"
           style="background:none;border:1px solid var(--border);border-radius:3px;width:22px;height:22px;font-size:12px;padding:0;display:flex;align-items:center;justify-content:center;color:var(--text2)"
@@ -2853,6 +2859,10 @@ function renderQueue(c){
           onclick="moveQueueByIndex(parseInt(this.dataset.qidx),parseInt(this.dataset.dir))"
           style="background:none;border:1px solid var(--border);border-radius:3px;width:22px;height:22px;font-size:12px;padding:0;display:flex;align-items:center;justify-content:center;color:var(--text2)"
           title="Move down">▼</button>
+        <button data-qidx="${qIdx}"
+          onclick="dropQueueToBottom(parseInt(this.dataset.qidx))"
+          style="background:none;border:1px solid var(--border);border-radius:3px;width:22px;height:22px;font-size:10px;padding:0;display:flex;align-items:center;justify-content:center;color:var(--text2);margin-top:2px"
+          title="Drop to bottom">⤓</button>
       </div>
       <div class="li-num-dot">${qIdx+1}</div>
       <div style="flex:1;min-width:0">
@@ -3033,8 +3043,7 @@ function renderQueue(c){
   <div class="station-tab">${tabs}</div>${_rows}`;
 }
 
-function moveQueueByIndex(qIdx, direction){
-  // Get current sorted items for active station
+function getQueueItems(){
   const today = new Date(); today.setHours(0,0,0,0);
   const allItems = [];
   state.wos.forEach(wo=>{
@@ -3046,21 +3055,13 @@ function moveQueueByIndex(qIdx, direction){
       }
     });
   });
+  // Sort first, then assign clean sequential priorities
+  allItems.sort((a,b)=>(a.item.priority ?? 99999)-(b.item.priority ?? 99999));
+  allItems.forEach((x,i)=>{ x.item.priority = i+1; });
+  return allItems;
+}
 
-  allItems.sort((a,b)=>(a.item.priority||99)-(b.item.priority||99));
-
-  // Assign default priorities based on current position
-  allItems.forEach((x,i)=>{ if(x.item.priority===undefined||x.item.priority===null) x.item.priority = i+1; });
-
-  const swapIdx = qIdx + direction;
-  if(swapIdx < 0 || swapIdx >= allItems.length) return;
-
-  // Swap the priorities of the two items
-  const tempP = allItems[qIdx].item.priority;
-  allItems[qIdx].item.priority = allItems[swapIdx].item.priority;
-  allItems[swapIdx].item.priority = tempP;
-
-  // Write back to state
+function writeQueuePriorities(allItems){
   allItems.forEach(x=>{
     const wo = state.wos.find(w=>String(w.id)===String(x.woId));
     if(wo){
@@ -3068,9 +3069,59 @@ function moveQueueByIndex(qIdx, direction){
       if(stateItem) stateItem.priority = x.item.priority;
     }
   });
-
   saveState();
   renderQueue(document.getElementById('content'));
+}
+
+function moveQueueByIndex(qIdx, direction){
+  const allItems = getQueueItems();
+  const swapIdx = qIdx + direction;
+  if(swapIdx < 0 || swapIdx >= allItems.length) return;
+  // Swap priorities
+  const tempP = allItems[qIdx].item.priority;
+  allItems[qIdx].item.priority = allItems[swapIdx].item.priority;
+  allItems[swapIdx].item.priority = tempP;
+  writeQueuePriorities(allItems);
+}
+
+function dropQueueToBottom(qIdx){
+  const allItems = getQueueItems();
+  if(qIdx >= allItems.length - 1) return;
+  // Move item to end by reassigning priorities
+  const moved = allItems.splice(qIdx, 1)[0];
+  allItems.push(moved);
+  allItems.forEach((x,i)=>{ x.item.priority = i+1; });
+  writeQueuePriorities(allItems);
+}
+
+// Drag and drop state
+let _dragQIdx = null;
+
+function qDragStart(el, qIdx){
+  _dragQIdx = qIdx;
+  el.style.opacity = '0.5';
+}
+
+function qDragEnd(el){
+  el.style.opacity = '1';
+  document.querySelectorAll('.q-item').forEach(el=>el.classList.remove('q-drag-over'));
+}
+
+function qDragOver(el, e){
+  e.preventDefault();
+  document.querySelectorAll('.q-item').forEach(el=>el.classList.remove('q-drag-over'));
+  el.classList.add('q-drag-over');
+}
+
+function qDrop(el, targetIdx){
+  el.classList.remove('q-drag-over');
+  if(_dragQIdx === null || _dragQIdx === targetIdx) return;
+  const allItems = getQueueItems();
+  const moved = allItems.splice(_dragQIdx, 1)[0];
+  allItems.splice(targetIdx, 0, moved);
+  allItems.forEach((x,i)=>{ x.item.priority = i+1; });
+  _dragQIdx = null;
+  writeQueuePriorities(allItems);
 }
 
 function moveQueueItem(woId, itemId, direction){
