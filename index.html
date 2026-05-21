@@ -467,6 +467,17 @@ select{cursor:pointer}
         value="${state.adminConfig?.weatherZip||'19020'}"
         style="width:60px;padding:3px 6px;border:1px solid var(--border);border-radius:var(--rad);font-size:12px;font-weight:600;text-align:center"
         onchange="state.adminConfig=state.adminConfig||{};state.adminConfig.weatherZip=this.value;saveState();fetchWeather().then(()=>renderDashboard())">
+      <span style="margin-left:4px">⏰</span>
+      <input type="number" min="0" max="23" step="1"
+        value="${parseInt(state.adminConfig?.rainStartHour)>=0?parseInt(state.adminConfig.rainStartHour):4}"
+        style="width:46px;padding:3px 6px;border:1px solid var(--border);border-radius:var(--rad);font-size:12px;font-weight:600;text-align:center"
+        onchange="state.adminConfig=state.adminConfig||{};state.adminConfig.rainStartHour=parseInt(this.value);saveState();fetchWeather().then(()=>renderDashboard())" title="Rain window start hour (0-23)">
+      <span>–</span>
+      <input type="number" min="0" max="23" step="1"
+        value="${parseInt(state.adminConfig?.rainEndHour)||17}"
+        style="width:46px;padding:3px 6px;border:1px solid var(--border);border-radius:var(--rad);font-size:12px;font-weight:600;text-align:center"
+        onchange="state.adminConfig=state.adminConfig||{};state.adminConfig.rainEndHour=parseInt(this.value);saveState();fetchWeather().then(()=>renderDashboard())" title="Rain window end hour (0-23)">
+      <span>hr</span>
     </div>
   </div>
   <div class="week-grid mb8"><div class="day-col" ondragover="calDragOver(event,'2026-05-04')" ondragleave="calDragLeave(event)" ondrop="calDrop(event,'2026-05-04')" onclick="toggleDayDetail('2026-05-04')">
@@ -2649,6 +2660,161 @@ function initAdminConfig(){
 const Q_STATIONS=['IOWA','SHEAR','IOWA → SHEAR','SLIP / DRIVE','SLIP','DRIVE','BREAK','SHEAR → BREAK','PLENUMS','PICK / PULL','STANDING S','RETURN AIR FRAMES','ROLLERS','OTHER'];
 let activeQStation=Q_STATIONS[0];
 
+function printQueueList(station){
+  const today = new Date(); today.setHours(0,0,0,0);
+  const items = [];
+  state.wos.forEach(wo=>{
+    const isPast = wo.delivery && new Date(wo.delivery+'T00:00:00') < today;
+    if(isPast && !showAllQueue) return;
+    wo.items.forEach(item=>{
+      if(item.status !== 'Complete' && item.station === station){
+        items.push({...item, woNum:wo.woNum, woId:wo.id, customer:wo.customer, delivery:wo.delivery});
+      }
+    });
+  });
+
+  const now = new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  const isIOWA = station === 'IOWA';
+
+  function renderPrintItem(item, i){
+    return `
+    <div class="task-row">
+      <div class="task-header">
+        <span class="row-num">${i+1}</span>
+        <span class="wo-num">WO #${item.woNum}</span>
+        <span class="customer">${item.customer}</span>
+        ${item.delivery ? `<span class="delivery">📅 ${fmtDate(item.delivery)}</span>` : ''}
+        <span class="assignee">${item.assignee || '<i style="color:#c0392b">Unassigned</i>'}</span>
+        ${isIOWA && item.coilNum ? `<span class="coil-badge">🪙 Coil #${item.coilNum}</span>` : ''}
+      </div>
+      <div class="task-fields">
+        <div class="field-group"><span class="flabel">Product</span><span class="fval">${item.productCat||item.type||'—'}</span></div>
+        <div class="field-group"><span class="flabel">Gauge / Mic.</span><span class="fval">${item.gauge||'—'}</span></div>
+        <div class="field-group"><span class="flabel">Size</span><span class="fval">${item.size||'—'}</span></div>
+        <div class="field-group"><span class="flabel">Qty</span><span class="fval">${item.qty||'—'}</span></div>
+      </div>
+      ${item.notes ? `<div class="task-notes">📝 ${item.notes}</div>` : ''}
+      <div class="task-footer">
+        <span>Bundle / Skid #: _______________________</span>
+        <span>Initials: ___________</span>
+        <span>☐ Complete</span>
+      </div>
+    </div>`;
+  }
+
+  let content = '';
+
+  if(isIOWA){
+    // Group by coil, sorted by coil priority
+    const coilGroups = {};
+    const noCoil = [];
+    items.forEach(item=>{
+      const coil = item.coilNum ? item.coilNum.trim() : '';
+      if(coil){ if(!coilGroups[coil]) coilGroups[coil]=[]; coilGroups[coil].push(item); }
+      else noCoil.push(item);
+    });
+
+    const coilRecords = state.adminConfig?.coilRecords || {};
+    const orderedCoils = Object.keys(coilGroups).sort((a,b)=>{
+      const pa = coilRecords[a]?.priority ?? 99;
+      const pb = coilRecords[b]?.priority ?? 99;
+      return pa - pb;
+    });
+
+    orderedCoils.forEach(coil=>{
+      const rec = coilRecords[coil] || {};
+      const skids = rec.skids || [];
+      content += `
+      <div class="coil-block">
+        <div class="coil-header">🪙 Coil #${coil}</div>
+        <div class="coil-details">
+          <div class="cd-field"><span class="cd-label">Gauge / Mic.</span><span class="cd-val">${rec.gauge||'___'}</span></div>
+          <div class="cd-field"><span class="cd-label">Size</span><span class="cd-val">${rec.size||'___'}</span></div>
+          <div class="cd-field"><span class="cd-label">Date Loaded</span><span class="cd-val">${rec.date||'___________'}</span></div>
+          <div class="cd-field"><span class="cd-label">Starting Weight</span><span class="cd-val">${rec.startWeight ? rec.startWeight+' lbs' : '___________'}</span></div>
+          <div class="cd-field"><span class="cd-label">Ending Weight</span><span class="cd-val">___________</span></div>
+        </div>`;
+
+      // WO items under this coil
+      coilGroups[coil].forEach((item, i)=>{ content += renderPrintItem(item, i+1); });
+
+      // Skids
+      if(skids.length){
+        content += `<div class="skid-section">
+          <div class="skid-title">📦 Inventory Skids</div>
+          <table class="skid-table">
+            <thead><tr><th>#</th><th>Size</th><th>Qty</th><th>Type</th><th>Bundle #</th></tr></thead>
+            <tbody>
+              ${skids.map((s,si)=>`<tr>
+                <td>${si+1}</td>
+                <td>${s.size||'___'}</td>
+                <td>___</td>
+                <td>${s.type||'___'}</td>
+                <td>${s.bundle||'_______________'}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>`;
+      }
+      content += `</div><div style="page-break-after:always"></div>`;
+    });
+
+    if(noCoil.length){
+      content += `<div class="coil-block"><div class="coil-header" style="background:#eee;color:#666">⬜ No Coil Assigned</div>`;
+      noCoil.forEach((item,i)=>{ content += renderPrintItem(item, i+1); });
+      content += `</div>`;
+    }
+  } else {
+    content = items.map((item,i)=>renderPrintItem(item,i+1)).join('');
+  }
+
+  const win = window.open('','_blank','width=900,height=700');
+  win.document.write(`<!DOCTYPE html>
+<html>
+<head>
+<title>${station} Queue — ${now}</title>
+<style>
+  body { font-family: Arial, sans-serif; font-size: 12px; margin: 24px; color: #111; }
+  h1 { font-size: 18px; margin: 0 0 2px 0; }
+  .subtitle { font-size: 12px; color: #666; margin-bottom: 16px; }
+  .coil-block { margin-bottom: 24px; }
+  .coil-header { background: #1565c0; color: #fff; font-size: 15px; font-weight: 800; padding: 8px 14px; border-radius: 6px 6px 0 0; letter-spacing:.02em; }
+  .coil-details { display: grid; grid-template-columns: repeat(5,1fr); gap: 8px; background: #e8f4fd; border: 1px solid #90caf9; border-top: none; padding: 10px 14px; margin-bottom: 8px; }
+  .cd-field { display: flex; flex-direction: column; }
+  .cd-label { font-size: 9px; font-weight: 700; text-transform: uppercase; color: #555; letter-spacing:.04em; }
+  .cd-val { font-size: 13px; font-weight: 700; color: #1565c0; }
+  .task-row { border: 1px solid #ccc; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; page-break-inside: avoid; }
+  .task-header { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+  .row-num { background:#eee;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0; }
+  .wo-num { font-weight: 700; font-size: 13px; }
+  .customer { font-weight: 600; color: #1a5c8a; font-size: 13px; flex:1; }
+  .delivery { background: #fff3cd; padding: 2px 6px; border-radius: 4px; font-size: 11px; }
+  .assignee { background: #e8f4fd; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; }
+  .coil-badge { background: #1565c0; color:#fff; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; }
+  .task-fields { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 8px; }
+  .field-group { display: flex; flex-direction: column; }
+  .flabel { font-size: 9px; text-transform: uppercase; letter-spacing: .05em; color: #888; font-weight: 700; }
+  .fval { font-size: 13px; font-weight: 600; }
+  .task-notes { background: #fff8e6; border-left: 3px solid #f0a500; padding: 5px 8px; font-size: 11px; margin-bottom: 8px; border-radius: 0 4px 4px 0; }
+  .task-footer { display: flex; gap: 24px; align-items: center; border-top: 1px dashed #ddd; padding-top: 8px; margin-top: 4px; font-size: 11px; color: #444; }
+  .skid-section { margin-top: 10px; border: 1px solid #ccc; border-radius: 6px; padding: 10px 12px; background: #fafafa; }
+  .skid-title { font-size: 12px; font-weight: 700; margin-bottom: 8px; color: #555; }
+  .skid-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .skid-table th { background: #eee; padding: 5px 8px; text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing:.04em; }
+  .skid-table td { padding: 5px 8px; border-bottom: 1px solid #eee; }
+  @media print { body { margin: 12px; } }
+</style>
+</head>
+<body>
+<h1>📋 ${station} Queue</h1>
+<div class="subtitle">Printed: ${now} &nbsp;·&nbsp; ${items.length} open item${items.length!==1?'s':''}</div>
+${content || '<p style="color:#888">No open items in this queue.</p>'}
+<script>window.onload=()=>window.print();<\/script>
+</body>
+</html>`);
+  win.document.close();
+}
+
 function renderQueue(c){
   if(!c)c=document.getElementById('content');
   const today=new Date();today.setHours(0,0,0,0);
@@ -2672,9 +2838,23 @@ function renderQueue(c){
   }).join('');
   const items=allItems.filter(i=>i.station===activeQStation).sort((a,b)=>(a.priority||9)-(b.priority||9));
   const hiddenNote=hiddenWOs?`<div style="font-size:12px;color:var(--text3);padding:6px 10px;background:var(--gray-l);border-radius:var(--rad);margin-bottom:8px">${hiddenWOs} past WO${hiddenWOs!==1?'s':''} hidden · <button class="btn btn-xs" onclick="showAllQueue=true;updateQueueToggle();renderQueue()">Show All</button></div>`:'';
-  const rows=items.length?items.map((item,idx)=>`
+  // IOWA: group by coil number
+  const isIOWA = activeQStation === 'IOWA';
+
+  function renderQueueItem(item, qIdx, totalItems){
+    return `
     <div class="q-item">
-      <div class="li-num-dot">${idx+1}</div>
+      <div style="display:flex;flex-direction:column;gap:2px;margin-right:6px;flex-shrink:0">
+        <button data-qidx="${qIdx}" data-dir="-1"
+          onclick="moveQueueByIndex(parseInt(this.dataset.qidx),parseInt(this.dataset.dir))"
+          style="background:none;border:1px solid var(--border);border-radius:3px;width:22px;height:22px;font-size:12px;padding:0;display:flex;align-items:center;justify-content:center;color:var(--text2)"
+          title="Move up">▲</button>
+        <button data-qidx="${qIdx}" data-dir="1"
+          onclick="moveQueueByIndex(parseInt(this.dataset.qidx),parseInt(this.dataset.dir))"
+          style="background:none;border:1px solid var(--border);border-radius:3px;width:22px;height:22px;font-size:12px;padding:0;display:flex;align-items:center;justify-content:center;color:var(--text2)"
+          title="Move down">▼</button>
+      </div>
+      <div class="li-num-dot">${qIdx+1}</div>
       <div style="flex:1;min-width:0">
         <div class="flex gap8 mb4 flex-wrap">
           <strong style="font-size:13px">WO #${item.woNum}</strong>
@@ -2703,9 +2883,142 @@ function renderQueue(c){
             style="width:110px;padding:3px 7px;font-size:12px;border:1px solid #FAC775;border-radius:var(--rad);background:var(--amber-l);font-weight:600"
             oninput="saveBundleQ(${item.woId},'${item.id}',this.value)">
         </div>
+        ${isIOWA ? `<div class="flex gap6" style="align-items:center;margin-top:2px">
+          <span style="font-size:11px;color:var(--text3);white-space:nowrap">🪙 Coil #:</span>
+          <input type="text" placeholder="Enter coil #" value="${item.coilNum||''}"
+            style="width:110px;padding:3px 7px;font-size:12px;border:1px solid var(--blue);border-radius:var(--rad);background:var(--blue-l);font-weight:600"
+            onblur="saveCoilNum(${item.woId},'${item.id}',this.value)"
+            onkeydown="if(event.key==='Enter')this.blur()">
+        </div>` : ''}
       </div>
-    </div>`).join('')
-  :`<div style="text-align:center;padding:40px;color:var(--text3);font-size:13px">No items at this station</div>`;
+    </div>`;
+  }
+
+  // Build rows — IOWA groups by coil, others render flat
+  let rows;
+  if(!items.length){
+    rows = '<div style="text-align:center;padding:40px;color:var(--text3);font-size:13px">No items at this station</div>';
+  } else if(isIOWA){
+    // Group by coil number
+    const coilGroups = {};
+    const noCoil = [];
+    items.forEach((item, qIdx)=>{
+      const coil = item.coilNum ? item.coilNum.trim() : '';
+      if(coil){ if(!coilGroups[coil]) coilGroups[coil]=[]; coilGroups[coil].push({item, qIdx}); }
+      else noCoil.push({item, qIdx});
+    });
+
+    let html = '';
+    Object.keys(coilGroups).sort().forEach(coil=>{
+      const group = coilGroups[coil];
+      // Get coil details from state
+      const coilData = (state.adminConfig.coilRecords||{})[coil] || {};
+      const skids = coilData.skids || [];
+
+      html += `<div style="background:var(--blue-l);border:2px solid var(--blue);border-radius:var(--rad2);padding:10px 14px;margin-bottom:8px;margin-top:4px">
+        <!-- Coil Header -->
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap">
+          <div style="display:flex;flex-direction:column;gap:2px;flex-shrink:0">
+            <button data-coil="${coil}" data-dir="-1"
+              onclick="moveCoil(this.dataset.coil,parseInt(this.dataset.dir))"
+              style="background:none;border:1px solid var(--blue);border-radius:3px;width:20px;height:20px;font-size:11px;padding:0;cursor:pointer;color:var(--blue);display:flex;align-items:center;justify-content:center"
+              title="Move coil up">▲</button>
+            <button data-coil="${coil}" data-dir="1"
+              onclick="moveCoil(this.dataset.coil,parseInt(this.dataset.dir))"
+              style="background:none;border:1px solid var(--blue);border-radius:3px;width:20px;height:20px;font-size:11px;padding:0;cursor:pointer;color:var(--blue);display:flex;align-items:center;justify-content:center"
+              title="Move coil down">▼</button>
+          </div>
+          <span style="font-size:14px;font-weight:800;color:var(--blue)">🪙 Coil #${coil}</span>
+          <span style="font-size:11px;color:var(--text2)">${group.length} WO item${group.length!==1?'s':''}</span>
+          <button data-coil="${coil}" onclick="toggleCoilDetails(this.dataset.coil)" class="btn btn-xs" style="margin-left:auto">
+            ${coilData.expanded ? '▲ Hide Details' : '▼ Coil Details'}
+          </button>
+        </div>
+
+        <!-- Coil Detail Fields (collapsible) -->
+        <div id="coil-details-${coil}" style="display:${coilData.expanded?'grid':'none'};grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;background:#fff;border:1px solid var(--blue);border-radius:var(--rad);padding:10px">
+          <div>
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:2px">Gauge / Mic.</div>
+            <input type="text" placeholder="e.g. 26" value="${coilData.gauge||''}"
+              style="width:100%;padding:4px 8px;border:1px solid var(--border);border-radius:var(--rad);font-size:13px;font-weight:600"
+              onblur="saveCoilField('${coil}','gauge',this.value)" onkeydown="if(event.key==='Enter')this.blur()">
+          </div>
+          <div>
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:2px">Size (width)</div>
+            <input type="text" placeholder='e.g. 48"' value="${coilData.size||''}"
+              style="width:100%;padding:4px 8px;border:1px solid var(--border);border-radius:var(--rad);font-size:13px;font-weight:600"
+              onblur="saveCoilField('${coil}','size',this.value)" onkeydown="if(event.key==='Enter')this.blur()">
+          </div>
+          <div>
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:2px">Date Loaded</div>
+            <input type="date" value="${coilData.date||''}"
+              style="width:100%;padding:4px 8px;border:1px solid var(--border);border-radius:var(--rad);font-size:13px;font-weight:600"
+              onchange="saveCoilField('${coil}','date',this.value)">
+          </div>
+          <div>
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:2px">Starting Weight (lbs)</div>
+            <input type="number" placeholder="0" value="${coilData.startWeight||''}"
+              style="width:100%;padding:4px 8px;border:1px solid var(--border);border-radius:var(--rad);font-size:13px;font-weight:600"
+              onblur="saveCoilField('${coil}','startWeight',this.value)" onkeydown="if(event.key==='Enter')this.blur()">
+          </div>
+          <div>
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:2px">Ending Weight (lbs)</div>
+            <input type="number" placeholder="0" value="${coilData.endWeight||''}"
+              style="width:100%;padding:4px 8px;border:1px solid var(--border);border-radius:var(--rad);font-size:13px;font-weight:600"
+              onblur="saveCoilField('${coil}','endWeight',this.value)" onkeydown="if(event.key==='Enter')this.blur()">
+          </div>
+          <div style="display:flex;align-items:flex-end">
+            ${coilData.startWeight&&coilData.endWeight?`<div style="padding:4px 8px;font-size:13px;font-weight:700;color:var(--blue)">
+              Used: ${(parseFloat(coilData.startWeight)-parseFloat(coilData.endWeight)).toLocaleString()} lbs
+            </div>`:''}
+          </div>
+        </div>
+
+        <!-- Skids Section -->
+        <div style="margin-bottom:8px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+            <span style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em">📦 Inventory Skids</span>
+            <button data-coil="${coil}" onclick="addCoilSkid(this.dataset.coil)" class="btn btn-xs btn-primary">+ Add Skid</button>
+          </div>
+          ${skids.length ? `<div style="display:grid;grid-template-columns:2fr 1fr 1.5fr 1.5fr auto;gap:4px;margin-bottom:4px">
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text3)">Size</div>
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text3)">Qty</div>
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text3)">Type</div>
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text3)">Bundle #</div>
+            <div></div>
+          </div>
+          ${skids.map((skid,si)=>`
+            <div style="display:grid;grid-template-columns:2fr 1fr 1.5fr 1.5fr auto;gap:4px;align-items:center;margin-bottom:4px;background:#fff;border-radius:var(--rad);padding:4px 6px;border:1px solid var(--border)">
+              <input type="text" placeholder='e.g. 48"x120"' value="${skid.size||''}"
+                style="padding:3px 6px;border:1px solid var(--border);border-radius:var(--rad);font-size:12px"
+                oninput="saveSkidField('${coil}',${si},'size',this.value)">
+              <input type="number" placeholder="—" value="${skid.qty||''}"
+                style="padding:3px 6px;border:1px solid var(--border);border-radius:var(--rad);font-size:12px"
+                oninput="saveSkidField('${coil}',${si},'qty',this.value)">
+              <input type="text" placeholder="Type" value="${skid.type||''}"
+                style="padding:3px 6px;border:1px solid var(--border);border-radius:var(--rad);font-size:12px"
+                oninput="saveSkidField('${coil}',${si},'type',this.value)">
+              <input type="text" placeholder="Bundle #" value="${skid.bundle||''}"
+                style="padding:3px 6px;border:1px solid var(--border);border-radius:var(--rad);font-size:12px;background:${skid.bundle?'var(--green-l)':'#fff'}"
+                oninput="saveSkidField('${coil}',${si},'bundle',this.value)">
+              <button data-coil="${coil}" data-si="${si}" onclick="removeCoilSkid(this.dataset.coil,parseInt(this.dataset.si))" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:0 4px" title="Remove">✕</button>
+            </div>
+          `).join('')}` : '<div style="font-size:11px;color:var(--text3);font-style:italic;padding:4px 0">No skids yet — click Add Skid to create inventory entries</div>'}
+        </div>
+      </div>`;
+      html += group.map(({item, qIdx})=>renderQueueItem(item, qIdx, items.length)).join('');
+    });
+    if(noCoil.length){
+      html += `<div style="background:var(--gray-l);border:1px solid var(--border);border-radius:var(--rad2);padding:6px 12px;margin-bottom:4px;margin-top:8px">
+        <span style="font-size:12px;font-weight:700;color:var(--text3)">⬜ No Coil Assigned</span>
+      </div>`;
+      html += noCoil.map(({item, qIdx})=>renderQueueItem(item, qIdx, items.length)).join('');
+    }
+    rows = html;
+  } else {
+    rows = items.map((item, qIdx)=>renderQueueItem(item, qIdx, items.length)).join('');
+  }
+  const _rows = rows || '<div style="text-align:center;padding:40px;color:var(--text3);font-size:13px">No items at this station</div>';
   c.innerHTML=`
   ${hiddenNote}
   <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
@@ -2715,8 +3028,94 @@ function renderQueue(c){
     ${totalUnassigned?`<div style="background:var(--red-l);border:1px solid #f09595;border-radius:var(--rad);padding:8px 16px;font-size:13px;font-weight:600;color:var(--red)">
       ⚠ ${totalUnassigned} unassigned
     </div>`:'<div style="background:var(--green-l);border:1px solid #c0dd97;border-radius:var(--rad);padding:8px 16px;font-size:13px;font-weight:600;color:var(--green)">✓ All items assigned</div>'}
+    <button onclick="printQueueList('${activeQStation}')" class="btn btn-sm" style="margin-left:auto">🖨 Print ${activeQStation} Queue</button>
   </div>
-  <div class="station-tab">${tabs}</div>${rows}`;
+  <div class="station-tab">${tabs}</div>${_rows}`;
+}
+
+function moveQueueByIndex(qIdx, direction){
+  // Get current sorted items for active station
+  const today = new Date(); today.setHours(0,0,0,0);
+  const allItems = [];
+  state.wos.forEach(wo=>{
+    const isPast = wo.delivery && new Date(wo.delivery+'T00:00:00') < today;
+    if(isPast && !showAllQueue) return;
+    wo.items.forEach(item=>{
+      if(item.status !== 'Complete' && item.station === activeQStation){
+        allItems.push({woId: wo.id, item});
+      }
+    });
+  });
+
+  allItems.sort((a,b)=>(a.item.priority||99)-(b.item.priority||99));
+
+  // Assign default priorities based on current position
+  allItems.forEach((x,i)=>{ if(x.item.priority===undefined||x.item.priority===null) x.item.priority = i+1; });
+
+  const swapIdx = qIdx + direction;
+  if(swapIdx < 0 || swapIdx >= allItems.length) return;
+
+  // Swap the priorities of the two items
+  const tempP = allItems[qIdx].item.priority;
+  allItems[qIdx].item.priority = allItems[swapIdx].item.priority;
+  allItems[swapIdx].item.priority = tempP;
+
+  // Write back to state
+  allItems.forEach(x=>{
+    const wo = state.wos.find(w=>String(w.id)===String(x.woId));
+    if(wo){
+      const stateItem = wo.items.find(it=>String(it.id)===String(x.item.id));
+      if(stateItem) stateItem.priority = x.item.priority;
+    }
+  });
+
+  saveState();
+  renderQueue(document.getElementById('content'));
+}
+
+function moveQueueItem(woId, itemId, direction){
+  // Get current sorted items for this station
+  const today = new Date(); today.setHours(0,0,0,0);
+  const allItems = [];
+  state.wos.forEach(wo=>{
+    const isPast = wo.delivery && new Date(wo.delivery+'T00:00:00') < today;
+    if(isPast && !showAllQueue) return;
+    wo.items.forEach(item=>{
+      if(item.status !== 'Complete' && item.station === activeQStation){
+        allItems.push({woId: wo.id, item});
+      }
+    });
+  });
+
+  // Sort by current priority
+  allItems.sort((a,b)=>(a.item.priority||99)-(b.item.priority||99));
+
+  // Find this item's index — use string comparison to handle int/float/string ids
+  const idx = allItems.findIndex(x=>String(x.woId)===String(woId) && String(x.item.id)===String(itemId));
+  if(idx === -1){ console.warn('moveQueueItem: item not found', woId, itemId); return; }
+  const swapIdx = idx + direction;
+  if(swapIdx < 0 || swapIdx >= allItems.length) return;
+
+  // Assign default priorities if missing
+  allItems.forEach((x,i)=>{ if(x.item.priority===undefined||x.item.priority===null) x.item.priority = i+1; });
+
+  // Swap priorities
+  const aP = allItems[idx].item.priority;
+  const bP = allItems[swapIdx].item.priority;
+  allItems[idx].item.priority = bP;
+  allItems[swapIdx].item.priority = aP;
+
+  // Write back to state using string comparison for ids
+  allItems.forEach((x)=>{
+    const wo = state.wos.find(w=>String(w.id)===String(x.woId));
+    if(wo){
+      const stateItem = wo.items.find(it=>String(it.id)===String(x.item.id));
+      if(stateItem) stateItem.priority = x.item.priority;
+    }
+  });
+
+  saveState();
+  renderQueue(document.getElementById('content'));
 }
 
 function switchQStation(s,el){
@@ -2800,6 +3199,107 @@ function quickAssign(woId,itemId,val){
 function setLIStatusQ(woId,itemId,status){
   setLIStatus(woId,itemId,status);
   setTimeout(()=>renderQueue(document.getElementById('content')),100);
+}
+
+function moveCoil(coilNum, direction){
+  const coilRecords = state.adminConfig?.coilRecords || {};
+  // Get all active coils from current IOWA items
+  const today = new Date(); today.setHours(0,0,0,0);
+  const activeCoils = new Set();
+  state.wos.forEach(wo=>{
+    const isPast = wo.delivery && new Date(wo.delivery+'T00:00:00') < today;
+    if(isPast && !showAllQueue) return;
+    wo.items.forEach(item=>{
+      if(item.status !== 'Complete' && item.station === 'IOWA' && item.coilNum){
+        activeCoils.add(item.coilNum.trim());
+      }
+    });
+  });
+
+  // Sort coils by current priority
+  const sorted = Array.from(activeCoils).sort((a,b)=>{
+    const pa = coilRecords[a]?.priority ?? 99;
+    const pb = coilRecords[b]?.priority ?? 99;
+    return pa - pb;
+  });
+
+  const idx = sorted.indexOf(coilNum);
+  if(idx === -1) return;
+  const swapIdx = idx + direction;
+  if(swapIdx < 0 || swapIdx >= sorted.length) return;
+
+  // Assign clean priorities and swap
+  sorted.forEach((c,i)=>{
+    if(!coilRecords[c]) coilRecords[c] = {};
+    coilRecords[c].priority = i + 1;
+  });
+  const tempP = coilRecords[coilNum].priority;
+  coilRecords[coilNum].priority = coilRecords[sorted[swapIdx]].priority;
+  coilRecords[sorted[swapIdx]].priority = tempP;
+
+  if(!state.adminConfig) state.adminConfig = {};
+  state.adminConfig.coilRecords = coilRecords;
+  saveState();
+  renderQueue(document.getElementById('content'));
+}
+
+function getCoilRecord(coilNum){
+  if(!state.adminConfig) state.adminConfig = {};
+  if(!state.adminConfig.coilRecords) state.adminConfig.coilRecords = {};
+  if(!state.adminConfig.coilRecords[coilNum]) state.adminConfig.coilRecords[coilNum] = {};
+  return state.adminConfig.coilRecords[coilNum];
+}
+
+function saveCoilField(coilNum, field, val){
+  const rec = getCoilRecord(coilNum);
+  rec[field] = val;
+  saveState();
+  // Don't re-render to avoid losing focus
+}
+
+function toggleCoilDetails(coilNum){
+  const rec = getCoilRecord(coilNum);
+  rec.expanded = !rec.expanded;
+  saveState();
+  renderQueue(document.getElementById('content'));
+}
+
+function addCoilSkid(coilNum){
+  const rec = getCoilRecord(coilNum);
+  if(!rec.skids) rec.skids = [];
+  rec.skids.push({size:'', qty:'', type:'', bundle:''});
+  saveState();
+  renderQueue(document.getElementById('content'));
+}
+
+function removeCoilSkid(coilNum, idx){
+  const rec = getCoilRecord(coilNum);
+  if(!rec.skids) return;
+  rec.skids.splice(idx, 1);
+  saveState();
+  renderQueue(document.getElementById('content'));
+}
+
+function saveSkidField(coilNum, idx, field, val){
+  const rec = getCoilRecord(coilNum);
+  if(!rec.skids || !rec.skids[idx]) return;
+  rec.skids[idx][field] = val;
+  saveState();
+  // Highlight bundle field green on completion without re-render
+  if(field === 'bundle'){
+    event.target.style.background = val ? 'var(--green-l)' : '#fff';
+  }
+}
+
+function saveCoilNum(woId, itemId, val){
+  const wo = state.wos.find(w=>String(w.id)===String(woId));
+  if(!wo) return;
+  const item = wo.items.find(i=>String(i.id)===String(itemId));
+  if(!item) return;
+  item.coilNum = val.trim();
+  saveState();
+  // Re-render queue to regroup
+  renderQueue(document.getElementById('content'));
 }
 
 function saveBundleQ(woId,itemId,val){
@@ -3464,10 +3964,12 @@ async function fetchWeather(){
     const times = wx.hourly.time;
     const probs = wx.hourly.precipitation_probability;
     const byDate = {};
+    const startHour = parseInt(state.adminConfig?.rainStartHour)>=0 ? parseInt(state.adminConfig.rainStartHour) : 4;
+    const endHour = parseInt(state.adminConfig?.rainEndHour) || 17;
     times.forEach((t, i)=>{
       const [date, timeStr] = t.split('T');
       const hour = parseInt(timeStr.split(':')[0]);
-      if(hour >= 4 && hour <= 17){
+      if(hour >= startHour && hour <= endHour){
         if(!byDate[date]) byDate[date] = [];
         byDate[date].push(probs[i]);
       }
@@ -3709,6 +4211,17 @@ function renderDashboard(c){
         value="${state.adminConfig?.weatherZip||'19020'}"
         style="width:60px;padding:3px 6px;border:1px solid var(--border);border-radius:var(--rad);font-size:12px;font-weight:600;text-align:center"
         onchange="state.adminConfig=state.adminConfig||{};state.adminConfig.weatherZip=this.value;saveState();fetchWeather().then(()=>renderDashboard())">
+      <span style="margin-left:4px">⏰</span>
+      <input type="number" min="0" max="23" step="1"
+        value="${parseInt(state.adminConfig?.rainStartHour)>=0?parseInt(state.adminConfig.rainStartHour):4}"
+        style="width:46px;padding:3px 6px;border:1px solid var(--border);border-radius:var(--rad);font-size:12px;font-weight:600;text-align:center"
+        onchange="state.adminConfig=state.adminConfig||{};state.adminConfig.rainStartHour=parseInt(this.value);saveState();fetchWeather().then(()=>renderDashboard())" title="Rain window start hour (0-23)">
+      <span>–</span>
+      <input type="number" min="0" max="23" step="1"
+        value="${parseInt(state.adminConfig?.rainEndHour)||17}"
+        style="width:46px;padding:3px 6px;border:1px solid var(--border);border-radius:var(--rad);font-size:12px;font-weight:600;text-align:center"
+        onchange="state.adminConfig=state.adminConfig||{};state.adminConfig.rainEndHour=parseInt(this.value);saveState();fetchWeather().then(()=>renderDashboard())" title="Rain window end hour (0-23)">
+      <span>hr</span>
     </div>
   </div>
   <div class="week-grid mb8">${weekCols}</div>
