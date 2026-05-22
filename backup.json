@@ -1283,9 +1283,9 @@
           "step2CompletedBy": "",
           "notes": "GlvCoil:G902260coil (22 Ga. 60' x Coil G-90) | 22 Ga. 60' x Coil G-90",
           "assignee": "",
-          "status": "In Process",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "Delivery",
+          "completedAt": "2026-05-22T12:18:42.498Z"
         }
       ],
       "created": "2026-05-13T16:59:57.008Z",
@@ -2815,12 +2815,12 @@
       "cityst": "Vineland, NJ 08360",
       "zone": "NJ North",
       "date": "2026-05-29",
-      "delivery": "2026-05-26",
-      "truck": "2",
+      "delivery": "2026-05-28",
+      "truck": "1",
       "notes": "",
       "items": [
         {
-          "id": 1779275528518.9124,
+          "id": 1779459517438.353,
           "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "18",
@@ -2842,12 +2842,11 @@
           "status": "Pending",
           "completedBy": "",
           "completedAt": "",
-          "coilNum": "xx",
-          "priority": 1,
           "woNum": "46289",
           "customer": "Compass Wire Cloth Corp.",
-          "delivery": "2026-05-26",
-          "woId": 1778762848614
+          "delivery": "2026-05-28",
+          "woId": 1778762848614,
+          "priority": 3
         }
       ],
       "created": "2026-05-14T12:47:28.614Z",
@@ -4627,7 +4626,10 @@
           "completedAt": "2026-05-21T16:55:40.673Z"
         }
       ],
-      "created": "2026-05-18T13:35:47.510Z"
+      "created": "2026-05-18T13:35:47.510Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-22T14:16:28.703Z",
+      "deliveredBy": ""
     },
     {
       "id": 1779111362494,
@@ -5162,7 +5164,10 @@
           "completedAt": "2026-05-20T18:37:13.284Z"
         }
       ],
-      "created": "2026-05-19T11:29:08.081Z"
+      "created": "2026-05-19T11:29:08.081Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-22T14:16:25.763Z",
+      "deliveredBy": ""
     },
     {
       "id": 1779190232666,
@@ -5355,9 +5360,9 @@
           "step2CompletedBy": "",
           "notes": "HVACAcsry:201202Angle (20 Ga. 4' x 4' x 120' Angle Galv) | 20 Ga. 4' x 4' x 120' Angle Galv",
           "assignee": "",
-          "status": "In Process",
-          "completedBy": "",
-          "completedAt": "",
+          "status": "Complete",
+          "completedBy": "?",
+          "completedAt": "2026-05-22T14:19:05.923Z",
           "woNum": "46348",
           "customer": "D.J Wagner Heating & A/C",
           "delivery": "2026-05-26",
@@ -5544,7 +5549,10 @@
           "completedAt": "2026-05-21T17:34:18.080Z"
         }
       ],
-      "created": "2026-05-19T16:33:05.070Z"
+      "created": "2026-05-19T16:33:05.070Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-22T14:16:26.483Z",
+      "deliveredBy": ""
     },
     {
       "id": 1779208421565,
@@ -5580,9 +5588,9 @@
           "step2CompletedBy": "",
           "notes": "GlvCoil:G902660coil (26 Ga. 60' x Coil G-90) | 26 Ga. 60' x Coil G-90",
           "assignee": "",
-          "status": "In Process",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "Delivery",
+          "completedAt": "2026-05-22T12:18:38.195Z"
         }
       ],
       "created": "2026-05-19T16:33:41.565Z"
@@ -5842,9 +5850,9 @@
           "step2CompletedBy": "",
           "notes": "GlvSht:264896 (26 Ga. 48' x 96' Galv) | 26 Ga. 48' x 96' Galv",
           "assignee": "",
-          "status": "In Process",
-          "completedBy": "",
-          "completedAt": "",
+          "status": "Complete",
+          "completedBy": "?",
+          "completedAt": "2026-05-22T14:18:47.915Z",
           "coilNum": "4313",
           "skidSplits": [
             {
@@ -5887,9 +5895,14 @@
           "step2CompletedBy": "",
           "notes": "GlvSht:244896 (24 Ga. 48' x 96' Galv) | 24 Ga. 48' x 96' Galv",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "?",
+          "completedAt": "2026-05-22T14:28:59.495Z",
+          "woNum": "46355",
+          "customer": "Riley Sales, Inc. — Plymouth Meeting PA",
+          "delivery": "2026-05-26",
+          "woId": 1779283364357,
+          "priority": 4
         },
         {
           "id": 1779445805976.2366,
@@ -5911,9 +5924,9 @@
           "step2CompletedBy": "",
           "notes": "GlvSht:224896 (22 Ga. 48' x 96' Galv) | 22 Ga. 48' x 96' Galv",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "?",
+          "completedAt": "2026-05-22T14:18:54.977Z"
         },
         {
           "id": 1779445805977.2317,
@@ -5935,9 +5948,9 @@
           "step2CompletedBy": "",
           "notes": "GlvSht:2460120 (24 Ga. 60' x 120' Galv) | 24 Ga. 60' x 120' Galv",
           "assignee": "",
-          "status": "In Process",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "?",
+          "completedAt": "2026-05-22T14:18:56.493Z"
         },
         {
           "id": 1779445805978.321,
@@ -5959,9 +5972,9 @@
           "step2CompletedBy": "",
           "notes": "GlvSht:G902260120 (22 Ga. 60' x 120' G-90) | 22 Ga. 60' x 120' G-90",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "?",
+          "completedAt": "2026-05-22T14:19:00.145Z"
         }
       ],
       "created": "2026-05-20T13:22:44.357Z"
@@ -6208,7 +6221,10 @@
           "completedAt": "2026-05-21T16:55:07.493Z"
         }
       ],
-      "created": "2026-05-20T13:24:12.425Z"
+      "created": "2026-05-20T13:24:12.425Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-22T14:16:29.439Z",
+      "deliveredBy": ""
     },
     {
       "id": 1779283512292,
@@ -6455,7 +6471,10 @@
           "completedAt": "2026-05-21T16:54:49.026Z"
         }
       ],
-      "created": "2026-05-20T18:04:43.202Z"
+      "created": "2026-05-20T18:04:43.202Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-22T14:16:30.643Z",
+      "deliveredBy": ""
     },
     {
       "id": 1779300350951,
@@ -6686,7 +6705,10 @@
           "completedAt": "2026-05-21T18:56:21.894Z"
         }
       ],
-      "created": "2026-05-20T18:43:34.649Z"
+      "created": "2026-05-20T18:43:34.649Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-22T14:16:31.441Z",
+      "deliveredBy": ""
     },
     {
       "id": 1779381231521,
@@ -6699,7 +6721,7 @@
       "date": "2026-05-26",
       "delivery": "2026-05-28",
       "isPickup": false,
-      "truck": "",
+      "truck": "1",
       "notes": "",
       "items": [
         {
@@ -6750,7 +6772,7 @@
           "completedBy": "",
           "completedAt": "",
           "coilNum": "xx",
-          "priority": 3,
+          "priority": 1,
           "woNum": "46369",
           "customer": "Compass Wire Cloth Corp.",
           "delivery": "2026-05-28",
@@ -6780,7 +6802,7 @@
           "completedBy": "",
           "completedAt": "",
           "coilNum": "xx",
-          "priority": 4,
+          "priority": 2,
           "woNum": "46369",
           "customer": "Compass Wire Cloth Corp.",
           "delivery": "2026-05-28",
@@ -7054,7 +7076,7 @@
       "date": "2026-05-27",
       "delivery": "2026-05-28",
       "isPickup": false,
-      "truck": "",
+      "truck": "1",
       "notes": "",
       "items": [
         {
@@ -7079,10 +7101,319 @@
           "assignee": "",
           "status": "In Process",
           "completedBy": "",
-          "completedAt": ""
+          "completedAt": "",
+          "woNum": "46374",
+          "customer": "National Pipe Hanger Company Corp.",
+          "delivery": "2026-05-28",
+          "woId": 1779391051938,
+          "priority": 1
         }
       ],
       "created": "2026-05-21T19:17:31.938Z"
+    },
+    {
+      "id": 1779459783076,
+      "woNum": "46375",
+      "po": "",
+      "customer": "Hutchinson Plumbing",
+      "address": "621 Chapel Ave",
+      "cityst": "Cherry Hill, NJ 08034",
+      "zone": "NJ South",
+      "date": "2026-05-27",
+      "delivery": "",
+      "isPickup": false,
+      "truck": "",
+      "notes": "",
+      "items": [
+        {
+          "id": 1779459783076.0422,
+          "productCat": "Standing S",
+          "type": "Galvanized",
+          "gauge": "26",
+          "size": "10' Stand 'S'",
+          "qty": "60",
+          "wtUnit": 4.53,
+          "bundle": "",
+          "weight": 271.8,
+          "station": "SLIP",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "HVACAcsry:261201Stand (26 Ga. 10' - 1' Standing-S Slip Galv) | 26 Ga. 10' - 1' Standing-S Slip Galv",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": ""
+        }
+      ],
+      "created": "2026-05-22T14:23:03.076Z"
+    },
+    {
+      "id": 1779459802539,
+      "woNum": "46376",
+      "po": "",
+      "customer": "Lincoln Tech",
+      "address": "311 Vartrens Highway",
+      "cityst": "Levittown, PA 19056",
+      "zone": "SE Pennsylvania",
+      "date": "2026-05-26",
+      "delivery": "2026-05-26",
+      "isPickup": false,
+      "truck": "",
+      "notes": "",
+      "items": [
+        {
+          "id": 1779459802539.2231,
+          "productCat": "Other / Hardware",
+          "type": "Galvanized",
+          "gauge": "",
+          "size": "",
+          "qty": "1",
+          "wtUnit": 0,
+          "bundle": "",
+          "weight": 0,
+          "station": "PICK / PULL",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "151515 | Lot Charge for:    Carbon Bar Stock:  40’ – 3/8” x 6”  200’ – ¼” x 2”  40’ – ¼” x 1”  20’ – 1/8”...",
+          "assignee": "",
+          "status": "Complete",
+          "completedBy": "?",
+          "completedAt": "2026-05-22T14:30:58.634Z"
+        }
+      ],
+      "created": "2026-05-22T14:23:22.539Z"
+    },
+    {
+      "id": 1779459857067,
+      "woNum": "46377",
+      "po": "",
+      "customer": "National Pipe Hanger Company Corp.",
+      "address": "R.R. 30, 200 Campus Drive",
+      "cityst": "Mount Holly, NJ 08060",
+      "zone": "NJ South",
+      "date": "2026-05-27",
+      "delivery": "2026-05-28",
+      "isPickup": false,
+      "truck": "1",
+      "notes": "",
+      "items": [
+        {
+          "id": 1779459857067.8674,
+          "productCat": "Flat Sheet",
+          "type": "Galvanized",
+          "gauge": "",
+          "size": "",
+          "qty": "152",
+          "wtUnit": 0,
+          "bundle": "",
+          "weight": 0,
+          "station": "IOWA",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "Misc:18misc (18 Ga. Galv) | 18 Ga. 9' x 53.5625' Galv",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": "",
+          "woNum": "46377",
+          "customer": "National Pipe Hanger Company Corp.",
+          "delivery": "2026-05-28",
+          "woId": 1779459857067,
+          "priority": 4
+        }
+      ],
+      "created": "2026-05-22T14:24:17.067Z"
+    },
+    {
+      "id": 1779459889037,
+      "woNum": "46378",
+      "po": "",
+      "customer": "Erhardt Mechanical, Inc.",
+      "address": "422 W 6th Street",
+      "cityst": "Lansdale, PA 19446",
+      "zone": "PA Other",
+      "date": "2026-05-27",
+      "delivery": "2026-05-29",
+      "isPickup": false,
+      "truck": "",
+      "notes": "",
+      "items": [
+        {
+          "id": 1779459889037.8943,
+          "productCat": "Flat Sheet",
+          "type": "Galvanized",
+          "gauge": "",
+          "size": "",
+          "qty": "324",
+          "wtUnit": 0,
+          "bundle": "",
+          "weight": 0,
+          "station": "IOWA",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "Blank:Plasma Slats (16 Ga.  ' x  ' CR Plasma Slats) | 14 Ga. 1.75' x  67' Galv. Plasma Slats",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": "",
+          "woNum": "46378",
+          "customer": "Erhardt Mechanical, Inc.",
+          "delivery": "2026-05-29",
+          "woId": 1779459889037,
+          "priority": 5
+        },
+        {
+          "id": 1779459889038.9429,
+          "productCat": "Flat Sheet",
+          "type": "Galvanized",
+          "gauge": "16",
+          "size": "60x120",
+          "qty": "5",
+          "wtUnit": 116.2109,
+          "bundle": "",
+          "weight": 581.05,
+          "station": "PICK / PULL",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "GlvSht:1660120 (16 Ga. 60' x 120' Galv) | 16 Ga. 60' x 120' Galv",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": ""
+        }
+      ],
+      "created": "2026-05-22T14:24:49.037Z"
+    },
+    {
+      "id": 1779459953499,
+      "woNum": "46379",
+      "po": "",
+      "customer": "Consolidated Mechanical Services",
+      "address": "1 N Washington St",
+      "cityst": "Telford, PA 18969",
+      "zone": "Bucks / Montgomery",
+      "date": "2026-05-29",
+      "delivery": "2026-05-28",
+      "isPickup": false,
+      "truck": "2",
+      "notes": "",
+      "items": [
+        {
+          "id": 1779459953499.9944,
+          "productCat": "Other / Hardware",
+          "type": "Galvanized",
+          "gauge": "",
+          "size": "",
+          "qty": "36000",
+          "wtUnit": 0,
+          "bundle": "",
+          "weight": 0,
+          "station": "OTHER",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "GlvCoil:G902660coil (26 Ga. 60' x Coil G-90) | 26 Ga. 60' x Coil G-90",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": ""
+        },
+        {
+          "id": 1779459953500.003,
+          "productCat": "Other / Hardware",
+          "type": "Galvanized",
+          "gauge": "",
+          "size": "",
+          "qty": "9000",
+          "wtUnit": 0,
+          "bundle": "",
+          "weight": 0,
+          "station": "OTHER",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "GlvCoil:G902060coil (20 Ga. 60' x Coil G-90) | 20 Ga. 60' x Coil G-90",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": ""
+        }
+      ],
+      "created": "2026-05-22T14:25:53.500Z"
+    },
+    {
+      "id": 1779459965149,
+      "woNum": "46380",
+      "po": "",
+      "customer": "Genesio Co.",
+      "address": "66 Richard Road",
+      "cityst": "Ivyland, PA 18974",
+      "zone": "Bucks / Montgomery",
+      "date": "2026-05-22",
+      "delivery": "2026-05-28",
+      "isPickup": false,
+      "truck": "2",
+      "notes": "",
+      "items": [
+        {
+          "id": 1779459965149.9287,
+          "productCat": "Flat Sheet",
+          "type": "Galvanized",
+          "gauge": "",
+          "size": "",
+          "qty": "1",
+          "wtUnit": 0,
+          "bundle": "",
+          "weight": 0,
+          "station": "PICK / PULL",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "GlvSht:1260120 (12 Ga. 60' x 120' Galv) | 12 Ga. 60' x 120' G-90",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": ""
+        }
+      ],
+      "created": "2026-05-22T14:26:05.149Z"
     }
   ],
   "trucks": [
@@ -7422,7 +7753,8 @@
           "cityst": "Bensalem, PA 19020",
           "zone": "SE Pennsylvania",
           "delivery": "2026-05-22",
-          "notes": ""
+          "notes": "",
+          "delivered": true
         },
         {
           "woId": 1779302614649,
@@ -7432,7 +7764,8 @@
           "cityst": "Levittown, PA 19057",
           "zone": "SE Pennsylvania",
           "delivery": "2026-05-22",
-          "notes": ""
+          "notes": "",
+          "delivered": true
         },
         {
           "woId": 1779283452425,
@@ -7442,7 +7775,8 @@
           "cityst": "Bensalem, PA 19020",
           "zone": "SE Pennsylvania",
           "delivery": "2026-05-22",
-          "notes": ""
+          "notes": "",
+          "delivered": true
         },
         {
           "woId": 1778691597008,
@@ -7482,7 +7816,8 @@
           "cityst": "Bensalem, PA 19020",
           "zone": "SE Pennsylvania",
           "delivery": "2026-05-22",
-          "notes": ""
+          "notes": "",
+          "delivered": true
         },
         {
           "woId": 1779283294062,
@@ -7522,6 +7857,46 @@
           "cityst": "Broomall,  19008",
           "zone": "",
           "delivery": "2026-05-27",
+          "notes": ""
+        },
+        {
+          "woId": 1779391051938,
+          "woNum": "46374",
+          "customer": "National Pipe Hanger Company Corp.",
+          "address": "R.R. 30, 200 Campus Drive",
+          "cityst": "Mount Holly, NJ 08060",
+          "zone": "NJ South",
+          "delivery": "2026-05-28",
+          "notes": ""
+        },
+        {
+          "woId": 1779459857067,
+          "woNum": "46377",
+          "customer": "National Pipe Hanger Company Corp.",
+          "address": "R.R. 30, 200 Campus Drive",
+          "cityst": "Mount Holly, NJ 08060",
+          "zone": "NJ South",
+          "delivery": "2026-05-28",
+          "notes": ""
+        },
+        {
+          "woId": 1778762848614,
+          "woNum": "46289",
+          "customer": "Compass Wire Cloth Corp.",
+          "address": "1942 N Mill Road",
+          "cityst": "Vineland, NJ 08360",
+          "zone": "NJ North",
+          "delivery": "2026-05-28",
+          "notes": ""
+        },
+        {
+          "woId": 1779381231521,
+          "woNum": "46369",
+          "customer": "Compass Wire Cloth Corp.",
+          "address": "1942 N Mill Road",
+          "cityst": "Vineland, NJ 08360",
+          "zone": "NJ North",
+          "delivery": "2026-05-28",
           "notes": ""
         }
       ],
@@ -7740,7 +8115,8 @@
           "cityst": "Douglassville, PA 19518",
           "zone": "PA Other",
           "delivery": "2026-05-22",
-          "notes": ""
+          "notes": "",
+          "delivered": true
         },
         {
           "woId": 1779208385070,
@@ -7750,17 +8126,8 @@
           "cityst": "Harleysville, PA 19438",
           "zone": "PA Other",
           "delivery": "2026-05-22",
-          "notes": ""
-        },
-        {
-          "woId": 1778762848614,
-          "woNum": "46289",
-          "customer": "Compass Wire Cloth Corp.",
-          "address": "1942 N Mill Road",
-          "cityst": "Vineland, NJ 08360",
-          "zone": "NJ North",
-          "delivery": "2026-05-26",
-          "notes": ""
+          "notes": "",
+          "delivered": true
         },
         {
           "woId": 1779190312096,
@@ -7810,6 +8177,26 @@
           "cityst": "Vineland, NJ 08360",
           "zone": "NJ North",
           "delivery": "2026-05-26",
+          "notes": ""
+        },
+        {
+          "woId": 1779459953499,
+          "woNum": "46379",
+          "customer": "Consolidated Mechanical Services",
+          "address": "1 N Washington St",
+          "cityst": "Telford, PA 18969",
+          "zone": "Bucks / Montgomery",
+          "delivery": "2026-05-28",
+          "notes": ""
+        },
+        {
+          "woId": 1779459965149,
+          "woNum": "46380",
+          "customer": "Genesio Co.",
+          "address": "66 Richard Road",
+          "cityst": "Ivyland, PA 18974",
+          "zone": "Bucks / Montgomery",
+          "delivery": "2026-05-28",
           "notes": ""
         }
       ],
@@ -11519,6 +11906,6 @@
       "color": "#FF7043"
     }
   ],
-  "exportDate": "2026-05-22T12:16:30.896Z",
+  "exportDate": "2026-05-22T14:31:08.003Z",
   "version": "2.0"
 }
