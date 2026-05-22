@@ -51,7 +51,7 @@
       "cityst": "Whiting, NJ 08759",
       "zone": "NJ North",
       "date": "2026-05-19",
-      "delivery": "",
+      "delivery": "2026-05-29",
       "truck": "",
       "notes": "",
       "items": [
@@ -6510,9 +6510,9 @@
           "step2CompletedBy": "",
           "notes": "GlvCoil:2460coil (24 Ga. 60' x Coil Galv) | 24 Ga. 60' x Coil Galv- 1,795 LF",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "Delivery",
+          "completedAt": "2026-05-22T14:36:27.041Z"
         },
         {
           "id": 1779303499033.085,
@@ -6534,9 +6534,9 @@
           "step2CompletedBy": "",
           "notes": "GlvCoil:2660coil (26 Ga. 60' x Coil Galv) | 26 Ga. 60' x Coil Galv- 2.611 LF",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "Delivery",
+          "completedAt": "2026-05-22T14:36:27.041Z"
         }
       ],
       "created": "2026-05-20T18:05:50.951Z"
@@ -7120,9 +7120,9 @@
       "cityst": "Cherry Hill, NJ 08034",
       "zone": "NJ South",
       "date": "2026-05-27",
-      "delivery": "",
+      "delivery": "2026-05-28",
       "isPickup": false,
-      "truck": "",
+      "truck": "1",
       "notes": "",
       "items": [
         {
@@ -7896,6 +7896,16 @@
           "address": "1942 N Mill Road",
           "cityst": "Vineland, NJ 08360",
           "zone": "NJ North",
+          "delivery": "2026-05-28",
+          "notes": ""
+        },
+        {
+          "woId": 1779459783076,
+          "woNum": "46375",
+          "customer": "Hutchinson Plumbing",
+          "address": "621 Chapel Ave",
+          "cityst": "Cherry Hill, NJ 08034",
+          "zone": "NJ South",
           "delivery": "2026-05-28",
           "notes": ""
         }
@@ -11906,6 +11916,6 @@
       "color": "#FF7043"
     }
   ],
-  "exportDate": "2026-05-22T14:31:08.003Z",
+  "exportDate": "2026-05-22T14:36:36.393Z",
   "version": "2.0"
 }
