@@ -2736,7 +2736,7 @@ function printQueueList(station){
           <tbody>${item.skidSplits.map((s,si)=>`<tr style="border-bottom:1px solid #eee">
             <td style="padding:3px 6px">${si+1}</td>
             <td style="padding:3px 6px">${s.size||'___'}</td>
-            <td style="padding:3px 6px">___</td>
+            <td style="padding:3px 6px">${s.qty||'___'}</td>
             <td style="padding:3px 6px">${s.type||'___'}</td>
             <td style="padding:3px 6px">${s.bundle||'_____________'}</td>
             <td style="padding:3px 6px">_______</td>
@@ -2801,7 +2801,7 @@ function printQueueList(station){
               ${skids.map((s,si)=>`<tr>
                 <td>${si+1}</td>
                 <td>${s.size||'___'}</td>
-                <td>___</td>
+                <td>${s.qty||'___'}</td>
                 <td>${s.type||'___'}</td>
                 <td>${s.bundle||'_______________'}</td>
               </tr>`).join('')}
@@ -3107,16 +3107,20 @@ function renderQueue(c){
             <div style="display:grid;grid-template-columns:2fr 1fr 1.5fr 1.5fr auto;gap:4px;align-items:center;margin-bottom:4px;background:#fff;border-radius:var(--rad);padding:4px 6px;border:1px solid var(--border)">
               <input type="text" placeholder='e.g. 48"x120"' value="${skid.size||''}"
                 style="padding:3px 6px;border:1px solid var(--border);border-radius:var(--rad);font-size:12px"
-                oninput="saveSkidField('${coil}',${si},'size',this.value)">
+                data-coil="${coil}" data-si="${si}" data-field="size"
+                oninput="saveSkidField(this.dataset.coil,this.dataset.si,this.dataset.field,this.value)">
               <input type="number" placeholder="—" value="${skid.qty||''}"
                 style="padding:3px 6px;border:1px solid var(--border);border-radius:var(--rad);font-size:12px"
-                oninput="saveSkidField('${coil}',${si},'qty',this.value)">
+                data-coil="${coil}" data-si="${si}" data-field="qty"
+                oninput="saveSkidField(this.dataset.coil,this.dataset.si,this.dataset.field,this.value)">
               <input type="text" placeholder="Type" value="${skid.type||''}"
                 style="padding:3px 6px;border:1px solid var(--border);border-radius:var(--rad);font-size:12px"
-                oninput="saveSkidField('${coil}',${si},'type',this.value)">
+                data-coil="${coil}" data-si="${si}" data-field="type"
+                oninput="saveSkidField(this.dataset.coil,this.dataset.si,this.dataset.field,this.value)">
               <input type="text" placeholder="Bundle #" value="${skid.bundle||''}"
                 style="padding:3px 6px;border:1px solid var(--border);border-radius:var(--rad);font-size:12px;background:${skid.bundle?'var(--green-l)':'#fff'}"
-                oninput="saveSkidField('${coil}',${si},'bundle',this.value)">
+                data-coil="${coil}" data-si="${si}" data-field="bundle"
+                oninput="saveSkidField(this.dataset.coil,this.dataset.si,this.dataset.field,this.value)">
               <button data-coil="${coil}" data-si="${si}" onclick="removeCoilSkid(this.dataset.coil,parseInt(this.dataset.si))" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:0 4px" title="Remove">✕</button>
             </div>
           `).join('')}` : '<div style="font-size:11px;color:var(--text3);font-style:italic;padding:4px 0">No skids yet — click Add Skid to create inventory entries</div>'}
@@ -3476,8 +3480,9 @@ function removeCoilSkid(coilNum, idx){
 
 function saveSkidField(coilNum, idx, field, val){
   const rec = getCoilRecord(coilNum);
-  if(!rec.skids || !rec.skids[idx]) return;
-  rec.skids[idx][field] = val;
+  const i = parseInt(idx); // dataset values are strings
+  if(!rec.skids || !rec.skids[i]) return;
+  rec.skids[i][field] = val;
   saveState();
   // Highlight bundle field green on completion without re-render
   if(field === 'bundle'){
