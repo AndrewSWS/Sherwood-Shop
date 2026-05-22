@@ -2777,7 +2777,12 @@
           "assignee": "",
           "status": "Pending",
           "completedBy": "",
-          "completedAt": ""
+          "completedAt": "",
+          "woNum": "46288",
+          "customer": "Dover Mechanical Contractors",
+          "delivery": "",
+          "woId": 1778762828677,
+          "priority": 9
         },
         {
           "id": 1778762828678.185,
@@ -2801,7 +2806,12 @@
           "assignee": "",
           "status": "Pending",
           "completedBy": "",
-          "completedAt": ""
+          "completedAt": "",
+          "woNum": "46288",
+          "customer": "Dover Mechanical Contractors",
+          "delivery": "",
+          "woId": 1778762828677,
+          "priority": 10
         }
       ],
       "created": "2026-05-14T12:47:08.677Z"
@@ -2846,7 +2856,8 @@
           "customer": "Compass Wire Cloth Corp.",
           "delivery": "2026-05-28",
           "woId": 1778762848614,
-          "priority": 3
+          "priority": 3,
+          "coilNum": "18ga 2.5"
         }
       ],
       "created": "2026-05-14T12:47:28.614Z",
@@ -5739,7 +5750,8 @@
           "woNum": "46353",
           "customer": "Air Concepts Inc.",
           "delivery": "2026-05-27",
-          "woId": 1779283294062
+          "woId": 1779283294062,
+          "priority": 1
         },
         {
           "id": 1779449036981.7378,
@@ -6086,7 +6098,7 @@
       "notes": "Balance 5/28",
       "items": [
         {
-          "id": 1779452157237.5881,
+          "id": 1779461305369.144,
           "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "26",
@@ -6095,7 +6107,7 @@
           "wtUnit": 15.8594,
           "bundle": "",
           "weight": 555.08,
-          "station": "PICK / PULL",
+          "station": "IOWA",
           "isDual": false,
           "step1Op": "",
           "step1Status": "Pending",
@@ -6111,7 +6123,9 @@
           "woNum": "46357",
           "customer": "Four Quarters Plumbing Htg & A/C",
           "delivery": "2026-05-28",
-          "woId": 1779283414344
+          "woId": 1779283414344,
+          "priority": 7,
+          "coilNum": "26ga 60"
         }
       ],
       "created": "2026-05-20T13:23:34.344Z"
@@ -6746,7 +6760,12 @@
           "assignee": "",
           "status": "Pending",
           "completedBy": "",
-          "completedAt": ""
+          "completedAt": "",
+          "woNum": "46369",
+          "customer": "Compass Wire Cloth Corp.",
+          "delivery": "2026-05-28",
+          "woId": 1779381231521,
+          "priority": 3
         },
         {
           "id": 1779381231522.332,
@@ -6771,7 +6790,7 @@
           "status": "Pending",
           "completedBy": "",
           "completedAt": "",
-          "coilNum": "xx",
+          "coilNum": "16ga",
           "priority": 1,
           "woNum": "46369",
           "customer": "Compass Wire Cloth Corp.",
@@ -6801,7 +6820,7 @@
           "status": "Pending",
           "completedBy": "",
           "completedAt": "",
-          "coilNum": "xx",
+          "coilNum": "16ga",
           "priority": 2,
           "woNum": "46369",
           "customer": "Compass Wire Cloth Corp.",
@@ -6847,7 +6866,12 @@
           "assignee": "",
           "status": "In Process",
           "completedBy": "",
-          "completedAt": ""
+          "completedAt": "",
+          "woNum": "46368",
+          "customer": "Johnstone Supply - Broomall",
+          "delivery": "2026-05-27",
+          "woId": 1779381520577,
+          "priority": 2
         }
       ],
       "created": "2026-05-21T16:38:40.577Z"
@@ -6930,7 +6954,12 @@
           "assignee": "",
           "status": "Pending",
           "completedBy": "",
-          "completedAt": ""
+          "completedAt": "",
+          "woNum": "46371",
+          "customer": "Grossman & Hofkin Enterprises Inc.",
+          "delivery": "2026-05-27",
+          "woId": 1779384518508,
+          "priority": 4
         },
         {
           "id": 1779385461817.9922,
@@ -7019,7 +7048,12 @@
           "assignee": "",
           "status": "Pending",
           "completedBy": "",
-          "completedAt": ""
+          "completedAt": "",
+          "woNum": "46372",
+          "customer": "Douglassville Mechanical, Inc.",
+          "delivery": "2026-05-27",
+          "woId": 1779384536861,
+          "priority": 5
         }
       ],
       "created": "2026-05-21T17:28:56.861Z"
@@ -7060,7 +7094,12 @@
           "assignee": "",
           "status": "Pending",
           "completedBy": "",
-          "completedAt": ""
+          "completedAt": "",
+          "woNum": "46373",
+          "customer": "Peirce Phelps, Inc. — Norristown PA",
+          "delivery": "2026-05-27",
+          "woId": 1779391036901,
+          "priority": 6
         }
       ],
       "created": "2026-05-21T19:17:16.901Z"
@@ -7234,7 +7273,8 @@
           "customer": "National Pipe Hanger Company Corp.",
           "delivery": "2026-05-28",
           "woId": 1779459857067,
-          "priority": 4
+          "priority": 4,
+          "coilNum": "18ga"
         }
       ],
       "created": "2026-05-22T14:24:17.067Z"
@@ -7280,7 +7320,8 @@
           "customer": "Erhardt Mechanical, Inc.",
           "delivery": "2026-05-29",
           "woId": 1779459889037,
-          "priority": 5
+          "priority": 5,
+          "coilNum": "14ga"
         },
         {
           "id": 1779459889038.9429,
@@ -7304,7 +7345,12 @@
           "assignee": "",
           "status": "Pending",
           "completedBy": "",
-          "completedAt": ""
+          "completedAt": "",
+          "woNum": "46378",
+          "customer": "Erhardt Mechanical, Inc.",
+          "delivery": "2026-05-29",
+          "woId": 1779459889037,
+          "priority": 7
         }
       ],
       "created": "2026-05-22T14:24:49.037Z"
@@ -7410,10 +7456,62 @@
           "assignee": "",
           "status": "Pending",
           "completedBy": "",
-          "completedAt": ""
+          "completedAt": "",
+          "woNum": "46380",
+          "customer": "Genesio Co.",
+          "delivery": "2026-05-28",
+          "woId": 1779459965149,
+          "priority": 8
         }
       ],
       "created": "2026-05-22T14:26:05.149Z"
+    },
+    {
+      "id": 1779460859765,
+      "woNum": "46381",
+      "po": "",
+      "customer": "Legendair",
+      "address": "1836 Stout Drive Unit 16",
+      "cityst": "Warminster, PA 18974",
+      "zone": "Bucks / Montgomery",
+      "date": "2026-05-22",
+      "delivery": "2026-05-28",
+      "isPickup": false,
+      "truck": "2",
+      "notes": "",
+      "items": [
+        {
+          "id": 1779460859765.7085,
+          "productCat": "Flat Sheet",
+          "type": "Galvanized",
+          "gauge": "26",
+          "size": "60x96",
+          "qty": "120",
+          "wtUnit": 31.7188,
+          "bundle": "",
+          "weight": 3806.26,
+          "station": "IOWA",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": "",
+          "woNum": "46381",
+          "customer": "Legendair",
+          "delivery": "2026-05-28",
+          "woId": 1779460859765,
+          "priority": 6,
+          "coilNum": "26ga 60"
+        }
+      ],
+      "created": "2026-05-22T14:40:59.765Z"
     }
   ],
   "trucks": [
@@ -8205,6 +8303,16 @@
           "customer": "Genesio Co.",
           "address": "66 Richard Road",
           "cityst": "Ivyland, PA 18974",
+          "zone": "Bucks / Montgomery",
+          "delivery": "2026-05-28",
+          "notes": ""
+        },
+        {
+          "woId": 1779460859765,
+          "woNum": "46381",
+          "customer": "Legendair",
+          "address": "1836 Stout Drive Unit 16",
+          "cityst": "Warminster, PA 18974",
           "zone": "Bucks / Montgomery",
           "delivery": "2026-05-28",
           "notes": ""
@@ -10475,6 +10583,21 @@
       },
       "xx": {
         "priority": 1
+      },
+      "18ga 2.5": {
+        "priority": 1
+      },
+      "26ga 60": {
+        "priority": 2
+      },
+      "16ga": {
+        "priority": 3
+      },
+      "18ga": {
+        "priority": 4
+      },
+      "14ga": {
+        "priority": 5
       }
     }
   },
@@ -11916,6 +12039,6 @@
       "color": "#FF7043"
     }
   ],
-  "exportDate": "2026-05-22T14:36:36.393Z",
+  "exportDate": "2026-05-22T14:54:15.022Z",
   "version": "2.0"
 }
