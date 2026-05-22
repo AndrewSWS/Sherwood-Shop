@@ -2841,7 +2841,13 @@
           "assignee": "",
           "status": "Pending",
           "completedBy": "",
-          "completedAt": ""
+          "completedAt": "",
+          "coilNum": "xx",
+          "priority": 1,
+          "woNum": "46289",
+          "customer": "Compass Wire Cloth Corp.",
+          "delivery": "2026-05-26",
+          "woId": 1778762848614
         }
       ],
       "created": "2026-05-14T12:47:28.614Z",
@@ -5351,7 +5357,12 @@
           "assignee": "",
           "status": "Pending",
           "completedBy": "",
-          "completedAt": ""
+          "completedAt": "",
+          "woNum": "46348",
+          "customer": "D.J Wagner Heating & A/C",
+          "delivery": "2026-05-26",
+          "woId": 1779190312096,
+          "priority": 1
         }
       ],
       "created": "2026-05-19T11:31:52.096Z"
@@ -5610,9 +5621,14 @@
           "step2CompletedBy": "",
           "notes": "Blank:2048775 (20 Ga. 4' x 87.75' Galv) | 20 Ga. 4' x 87.75' Galv",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "?",
+          "completedAt": "2026-05-22T11:37:39.747Z",
+          "woNum": "46352",
+          "customer": "Compass Wire Cloth Corp.",
+          "delivery": "2026-05-26",
+          "woId": 1779208445157,
+          "priority": 2
         },
         {
           "id": 1779391342794.9885,
@@ -5634,9 +5650,14 @@
           "step2CompletedBy": "",
           "notes": "Blank:2044775 (20 Ga. 4' x 47.75' Galv) | 20 Ga. 4' x 47.75' Galv Shroud",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "?",
+          "completedAt": "2026-05-22T11:37:38.825Z",
+          "woNum": "46352",
+          "customer": "Compass Wire Cloth Corp.",
+          "delivery": "2026-05-26",
+          "woId": 1779208445157,
+          "priority": 3
         },
         {
           "id": 1779391342795.933,
@@ -5658,9 +5679,14 @@
           "step2CompletedBy": "",
           "notes": "Blank:26458.75 (26 Ga. 4' x 58.75' Galv) | 26 Ga. 4' x 58.75' Galv Shroud",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "?",
+          "completedAt": "2026-05-22T11:37:40.945Z",
+          "woNum": "46352",
+          "customer": "Compass Wire Cloth Corp.",
+          "delivery": "2026-05-26",
+          "woId": 1779208445157,
+          "priority": 2
         }
       ],
       "created": "2026-05-19T16:34:05.158Z"
@@ -5680,7 +5706,7 @@
       "notes": "",
       "items": [
         {
-          "id": 1779359968113.257,
+          "id": 1779449036980.1162,
           "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "26",
@@ -5701,10 +5727,14 @@
           "assignee": "",
           "status": "Pending",
           "completedBy": "",
-          "completedAt": ""
+          "completedAt": "",
+          "woNum": "46353",
+          "customer": "Air Concepts Inc.",
+          "delivery": "2026-05-27",
+          "woId": 1779283294062
         },
         {
-          "id": 1779359968114.2466,
+          "id": 1779449036981.7378,
           "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "24",
@@ -5713,7 +5743,7 @@
           "wtUnit": 50.5859,
           "bundle": "",
           "weight": 7082.03,
-          "station": "IOWA",
+          "station": "PICK / PULL",
           "isDual": false,
           "step1Op": "",
           "step1Status": "Pending",
@@ -5725,7 +5755,11 @@
           "assignee": "",
           "status": "Pending",
           "completedBy": "",
-          "completedAt": ""
+          "completedAt": "",
+          "woNum": "46353",
+          "customer": "Air Concepts Inc.",
+          "delivery": "2026-05-27",
+          "woId": 1779283294062
         }
       ],
       "created": "2026-05-20T13:21:34.062Z"
@@ -5789,7 +5823,7 @@
       "notes": "",
       "items": [
         {
-          "id": 1779284277932.5945,
+          "id": 1779445805974.3584,
           "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "26",
@@ -5798,7 +5832,7 @@
           "wtUnit": 25.375,
           "bundle": "",
           "weight": 5075,
-          "station": "PICK / PULL",
+          "station": "IOWA",
           "isDual": false,
           "step1Op": "",
           "step1Status": "Pending",
@@ -5810,10 +5844,31 @@
           "assignee": "",
           "status": "Pending",
           "completedBy": "",
-          "completedAt": ""
+          "completedAt": "",
+          "coilNum": "4313",
+          "skidSplits": [
+            {
+              "qty": "100",
+              "size": "48x96",
+              "type": "",
+              "bundle": "",
+              "notes": ""
+            },
+            {
+              "qty": "100",
+              "size": "48x96",
+              "type": "",
+              "bundle": ""
+            }
+          ],
+          "priority": 2,
+          "woNum": "46355",
+          "customer": "Riley Sales, Inc. — Plymouth Meeting PA",
+          "delivery": "2026-05-26",
+          "woId": 1779283364357
         },
         {
-          "id": 1779284277933.2537,
+          "id": 1779445805975.7808,
           "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "24",
@@ -5837,7 +5892,7 @@
           "completedAt": ""
         },
         {
-          "id": 1779284277934.619,
+          "id": 1779445805976.2366,
           "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "22",
@@ -5861,7 +5916,7 @@
           "completedAt": ""
         },
         {
-          "id": 1779284277935.7551,
+          "id": 1779445805977.2317,
           "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "24",
@@ -5885,7 +5940,7 @@
           "completedAt": ""
         },
         {
-          "id": 1779284277936.6636,
+          "id": 1779445805978.321,
           "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "22",
@@ -6689,7 +6744,13 @@
           "assignee": "",
           "status": "Pending",
           "completedBy": "",
-          "completedAt": ""
+          "completedAt": "",
+          "coilNum": "xx",
+          "priority": 3,
+          "woNum": "46369",
+          "customer": "Compass Wire Cloth Corp.",
+          "delivery": "2026-05-28",
+          "woId": 1779381231521
         },
         {
           "id": 1779381231523.544,
@@ -6713,7 +6774,13 @@
           "assignee": "",
           "status": "Pending",
           "completedBy": "",
-          "completedAt": ""
+          "completedAt": "",
+          "coilNum": "xx",
+          "priority": 4,
+          "woNum": "46369",
+          "customer": "Compass Wire Cloth Corp.",
+          "delivery": "2026-05-28",
+          "woId": 1779381231521
         }
       ],
       "created": "2026-05-21T16:33:51.521Z"
@@ -6946,7 +7013,7 @@
       "notes": "",
       "items": [
         {
-          "id": 1779391036901.7947,
+          "id": 1779392733930.2175,
           "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "26",
@@ -6955,7 +7022,7 @@
           "wtUnit": 19.0313,
           "bundle": "",
           "weight": 1903.13,
-          "station": "SHEAR",
+          "station": "PICK / PULL",
           "isDual": false,
           "step1Op": "",
           "step1Status": "Pending",
@@ -9948,6 +10015,66 @@
     ],
     "wrapOverrides": {
       "2026-05-26": true
+    },
+    "coilRecords": {
+      "4313": {
+        "skids": [
+          {
+            "size": "48x96",
+            "qty": "100",
+            "type": "Stock 1",
+            "bundle": ""
+          },
+          {
+            "size": "48x96",
+            "qty": "100",
+            "type": "Stock 2",
+            "bundle": ""
+          },
+          {
+            "size": "48x96",
+            "qty": "100",
+            "type": "Stock 3",
+            "bundle": ""
+          },
+          {
+            "size": "48x96",
+            "qty": "100",
+            "type": "Stock 4",
+            "bundle": ""
+          },
+          {
+            "size": "48x96",
+            "qty": "100",
+            "type": "Stock 5",
+            "bundle": ""
+          },
+          {
+            "size": "48x96",
+            "qty": "100",
+            "type": "Stock 6",
+            "bundle": ""
+          },
+          {
+            "size": "48x96",
+            "qty": "",
+            "type": "Stock 7 Remainder",
+            "bundle": ""
+          }
+        ],
+        "expanded": true,
+        "gauge": "26",
+        "size": "48",
+        "date": "2026-05-22",
+        "startWeight": "16.984",
+        "priority": 2
+      },
+      "x": {
+        "priority": 3
+      },
+      "xx": {
+        "priority": 1
+      }
     }
   },
   "customerMeta": {
@@ -11388,6 +11515,6 @@
       "color": "#FF7043"
     }
   ],
-  "exportDate": "2026-05-21T19:37:43.880Z",
+  "exportDate": "2026-05-22T11:39:00.439Z",
   "version": "2.0"
 }

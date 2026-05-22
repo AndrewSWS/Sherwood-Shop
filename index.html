@@ -300,6 +300,7 @@ select{cursor:pointer}
 }
 .board-stop.done{opacity:0.45;}
 .q-item.q-drag-over{border:2px dashed var(--blue);background:var(--blue-l);}
+.coil-block.coil-drag-over{border:2px dashed #f0a500 !important;background:var(--amber-l) !important;opacity:0.8;}
 .board-stop-cust{font-size:13px;font-weight:700;color:#fff;line-height:1.2}
 .board-stop-wo{font-size:10px;color:#666;margin-top:1px}
 .board-stop-done{font-size:10px;color:#4CAF7D;font-weight:700;margin-top:2px}
@@ -2621,7 +2622,24 @@ function saveEditWO(id){
   const newItems=getLIs();
   newItems.forEach(ni=>{
     const old=wo.items.find(oi=>String(oi.id)===String(ni.id));
-    if(old){ni.status=old.status;ni.assignee=old.assignee;ni.completedBy=old.completedBy;ni.completedAt=old.completedAt;}
+    if(old){
+      // Restore operational fields that getLIs() doesn't collect
+      ni.status=old.status;
+      ni.assignee=old.assignee;
+      ni.completedBy=old.completedBy;
+      ni.completedAt=old.completedAt;
+      ni.priority=old.priority;
+      ni.bundle=old.bundle||ni.bundle;
+      ni.skidSplits=old.skidSplits;
+      // Only keep coilNum if station is still IOWA
+      if(ni.station==='IOWA') ni.coilNum=old.coilNum;
+      else ni.coilNum=''; // clear coilNum if moved off IOWA
+    }
+    // Always attach wo-level data for queue display
+    ni.woNum=wo.woNum;
+    ni.customer=wo.customer;
+    ni.delivery=wo.delivery;
+    ni.woId=wo.id;
   });
   wo.items=newItems;
   window._editingWOId=null;
@@ -2662,17 +2680,25 @@ const Q_STATIONS=['IOWA','SHEAR','IOWA → SHEAR','SLIP / DRIVE','SLIP','DRIVE',
 let activeQStation=Q_STATIONS[0];
 
 function printQueueList(station){
+  // Build items — normalize priorities right now so print always matches queue display
   const today = new Date(); today.setHours(0,0,0,0);
-  const items = [];
+  const rawItems = [];
   state.wos.forEach(wo=>{
     const isPast = wo.delivery && new Date(wo.delivery+'T00:00:00') < today;
     if(isPast && !showAllQueue) return;
     wo.items.forEach(item=>{
       if(item.status !== 'Complete' && item.station === station){
-        items.push({...item, woNum:wo.woNum, woId:wo.id, customer:wo.customer, delivery:wo.delivery});
+        rawItems.push({woId: wo.id, item, woNum: wo.woNum, customer: wo.customer, delivery: wo.delivery});
       }
     });
   });
+  // Sort by existing priority, then assign clean sequential priorities
+  rawItems.sort((a,b)=>{ const pa=a.item.priority??99999; const pb=b.item.priority??99999; if(pa!==pb)return pa-pb; return (a.woNum||0)-(b.woNum||0); });
+  rawItems.forEach((x,i)=>{
+    const wo = state.wos.find(w=>String(w.id)===String(x.woId));
+    if(wo){ const si = wo.items.find(it=>String(it.id)===String(x.item.id)); if(si) si.priority = i+1; }
+  });
+  const items = rawItems.map(x=>({...x.item, woNum:x.woNum, customer:x.customer, delivery:x.delivery, woId:x.woId}));
 
   const now = new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   const isIOWA = station === 'IOWA';
@@ -2695,11 +2721,33 @@ function printQueueList(station){
         <div class="field-group"><span class="flabel">Qty</span><span class="fval">${item.qty||'—'}</span></div>
       </div>
       ${item.notes ? `<div class="task-notes">📝 ${item.notes}</div>` : ''}
+      ${isIOWA && item.skidSplits && item.skidSplits.length ? `
+      <div style="margin-top:6px;border-top:1px dashed #ccc;padding-top:6px">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#888;margin-bottom:4px">📦 Skid Breakdown</div>
+        <table style="width:100%;border-collapse:collapse;font-size:11px">
+          <thead><tr style="background:#f5f5f5">
+            <th style="padding:3px 6px;text-align:left;font-size:9px;text-transform:uppercase">#</th>
+            <th style="padding:3px 6px;text-align:left;font-size:9px;text-transform:uppercase">Size</th>
+            <th style="padding:3px 6px;text-align:left;font-size:9px;text-transform:uppercase">Qty</th>
+            <th style="padding:3px 6px;text-align:left;font-size:9px;text-transform:uppercase">Type</th>
+            <th style="padding:3px 6px;text-align:left;font-size:9px;text-transform:uppercase">Bundle #</th>
+            <th style="padding:3px 6px;text-align:left;font-size:9px;text-transform:uppercase">Initials</th>
+          </tr></thead>
+          <tbody>${item.skidSplits.map((s,si)=>`<tr style="border-bottom:1px solid #eee">
+            <td style="padding:3px 6px">${si+1}</td>
+            <td style="padding:3px 6px">${s.size||'___'}</td>
+            <td style="padding:3px 6px">___</td>
+            <td style="padding:3px 6px">${s.type||'___'}</td>
+            <td style="padding:3px 6px">${s.bundle||'_____________'}</td>
+            <td style="padding:3px 6px">_______</td>
+          </tr>`).join('')}</tbody>
+        </table>
+      </div>` : `
       <div class="task-footer">
         <span>Bundle / Skid #: _______________________</span>
         <span>Initials: ___________</span>
         <span>☐ Complete</span>
-      </div>
+      </div>`}
     </div>`;
   }
 
@@ -2710,21 +2758,25 @@ function printQueueList(station){
     const coilGroups = {};
     const noCoil = [];
     items.forEach(item=>{
-      const coil = item.coilNum ? item.coilNum.trim() : '';
-      if(coil){ if(!coilGroups[coil]) coilGroups[coil]=[]; coilGroups[coil].push(item); }
-      else noCoil.push(item);
+      const coil = (item.coilNum||'').trim();
+      if(coil && coil.toLowerCase() !== 'xx'){ 
+        if(!coilGroups[coil]) coilGroups[coil]=[];
+        coilGroups[coil].push(item);
+      } else noCoil.push(item);
     });
 
     const coilRecords = state.adminConfig?.coilRecords || {};
-    const orderedCoils = Object.keys(coilGroups).sort((a,b)=>{
-      const pa = coilRecords[a]?.priority ?? 99;
-      const pb = coilRecords[b]?.priority ?? 99;
-      return pa - pb;
-    });
+    // Use getActiveCoilsSorted() to match exact queue display order
+    const allActiveSorted = getActiveCoilsSorted();
+    const orderedCoils = allActiveSorted.filter(c=>coilGroups[c]);
+    // Add any coils in print but not in getActiveCoilsSorted (edge case)
+    Object.keys(coilGroups).forEach(c=>{ if(!orderedCoils.includes(c)) orderedCoils.push(c); });
 
     orderedCoils.forEach(coil=>{
       const rec = coilRecords[coil] || {};
       const skids = rec.skids || [];
+      // Sort WOs within coil by item priority
+      coilGroups[coil].sort((a,b)=>(a.priority??99999)-(b.priority??99999));
       content += `
       <div class="coil-block">
         <div class="coil-header">🪙 Coil #${coil}</div>
@@ -2837,7 +2889,30 @@ function renderQueue(c){
     return`<div class="stab${activeQStation===s?' active':''}" onclick="switchQStation('${s}',this)">${s}${cnt?` <span style="opacity:.7">(${cnt})</span>`:''}
     </div>`;
   }).join('');
-  const items=allItems.filter(i=>i.station===activeQStation).sort((a,b)=>(a.priority||9)-(b.priority||9));
+  // Get items for active station, normalize priorities and write back to state immediately
+  const stationAllItems = [];
+  state.wos.forEach(wo=>{
+    const isPastQ = wo.delivery && new Date(wo.delivery+'T00:00:00') < today;
+    if(isPastQ && !showAllQueue) return;
+    wo.items.forEach(item=>{
+      if(item.status!=='Complete' && item.station===activeQStation){
+        // Attach wo-level fields to item so renderQueueItem can display them
+        item.woNum = wo.woNum;
+        item.customer = wo.customer;
+        item.delivery = wo.delivery;
+        item.woId = wo.id;
+        stationAllItems.push({woId:wo.id, item});
+      }
+    });
+  });
+  stationAllItems.sort((a,b)=>{ const pa=a.item.priority??99999; const pb=b.item.priority??99999; if(pa!==pb)return pa-pb; return (a.item.woNum||0)-(b.item.woNum||0); });
+  // Write clean sequential priorities back to state so print always matches
+  stationAllItems.forEach((x,i)=>{
+    const wo = state.wos.find(w=>String(w.id)===String(x.woId));
+    if(wo){ const si = wo.items.find(it=>String(it.id)===String(x.item.id)); if(si) si.priority = i+1; }
+  });
+  saveState();
+  const items = stationAllItems.map(x=>x.item);
   const hiddenNote=hiddenWOs?`<div style="font-size:12px;color:var(--text3);padding:6px 10px;background:var(--gray-l);border-radius:var(--rad);margin-bottom:8px">${hiddenWOs} past WO${hiddenWOs!==1?'s':''} hidden · <button class="btn btn-xs" onclick="showAllQueue=true;updateQueueToggle();renderQueue()">Show All</button></div>`:'';
   // IOWA: group by coil number
   const isIOWA = activeQStation === 'IOWA';
@@ -2893,12 +2968,43 @@ function renderQueue(c){
             style="width:110px;padding:3px 7px;font-size:12px;border:1px solid #FAC775;border-radius:var(--rad);background:var(--amber-l);font-weight:600"
             oninput="saveBundleQ(${item.woId},'${item.id}',this.value)">
         </div>
-        ${isIOWA ? `<div class="flex gap6" style="align-items:center;margin-top:2px">
-          <span style="font-size:11px;color:var(--text3);white-space:nowrap">🪙 Coil #:</span>
-          <input type="text" placeholder="Enter coil #" value="${item.coilNum||''}"
-            style="width:110px;padding:3px 7px;font-size:12px;border:1px solid var(--blue);border-radius:var(--rad);background:var(--blue-l);font-weight:600"
-            onblur="saveCoilNum(${item.woId},'${item.id}',this.value)"
-            onkeydown="if(event.key==='Enter')this.blur()">
+        ${isIOWA ? `<div style="display:flex;gap:8px;align-items:center;margin-top:4px;flex-wrap:wrap">
+          <div class="flex gap6" style="align-items:center">
+            <span style="font-size:11px;color:var(--text3);white-space:nowrap">🪙 Coil #:</span>
+            <input type="text" placeholder="Enter coil #" value="${item.coilNum||''}"
+              style="width:110px;padding:3px 7px;font-size:12px;border:1px solid var(--blue);border-radius:var(--rad);background:var(--blue-l);font-weight:600"
+              onblur="saveCoilNum(${item.woId},'${item.id}',this.value)"
+              onkeydown="if(event.key==='Enter')this.blur()">
+          </div>
+          <button data-woid="${item.woId}" data-iid="${item.id}"
+            onclick="openSplitSkids(this.dataset.woid, this.dataset.iid)"
+            class="btn btn-xs" style="border-color:var(--blue);color:var(--blue)">
+            ✂ Split into Skids
+          </button>
+        </div>` : ''}
+        ${isIOWA && item.skidSplits && item.skidSplits.length ? `
+        <div style="margin-top:8px;border:1px solid var(--blue);border-radius:var(--rad);overflow:hidden">
+          <div style="background:var(--blue-l);padding:4px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--blue);display:flex;align-items:center;justify-content:space-between">
+            <span>📦 Skid Splits — ${item.skidSplits.length} skid${item.skidSplits.length>1?'s':''}</span>
+          </div>
+          <div style="display:grid;grid-template-columns:2fr 1fr 1.5fr 1.5fr auto;gap:0;font-size:10px">
+            <div style="padding:3px 8px;font-weight:700;color:var(--text3);background:#f8f8f8;font-size:9px;text-transform:uppercase">Size</div>
+            <div style="padding:3px 8px;font-weight:700;color:var(--text3);background:#f8f8f8;font-size:9px;text-transform:uppercase">Qty</div>
+            <div style="padding:3px 8px;font-weight:700;color:var(--text3);background:#f8f8f8;font-size:9px;text-transform:uppercase">Type</div>
+            <div style="padding:3px 8px;font-weight:700;color:var(--text3);background:#f8f8f8;font-size:9px;text-transform:uppercase">Bundle #</div>
+            <div style="padding:3px 8px;background:#f8f8f8"></div>
+            ${item.skidSplits.map((s,si)=>`
+            <div style="padding:4px 8px;border-top:1px solid var(--border);font-size:12px">${s.size||'—'}</div>
+            <div style="padding:4px 8px;border-top:1px solid var(--border);font-size:12px;font-weight:600">${s.qty||'—'}</div>
+            <div style="padding:4px 8px;border-top:1px solid var(--border);font-size:12px">${s.type||'—'}</div>
+            <div style="padding:4px 8px;border-top:1px solid var(--border);font-size:12px;font-weight:600;color:${s.bundle?'var(--green)':'var(--text3)'}">${s.bundle||'—'}</div>
+            <div style="padding:4px 8px;border-top:1px solid var(--border)">
+              <button data-woid="${item.woId}" data-iid="${item.id}" data-si="${si}"
+                onclick="openSplitSkids(this.dataset.woid,this.dataset.iid)"
+                style="background:none;border:none;font-size:10px;color:var(--blue);cursor:pointer;padding:0" title="Edit skids">✏</button>
+            </div>
+            `).join('')}
+          </div>
         </div>` : ''}
       </div>
     </div>`;
@@ -2913,7 +3019,7 @@ function renderQueue(c){
     const coilGroups = {};
     const noCoil = [];
     items.forEach((item, qIdx)=>{
-      const coil = item.coilNum ? item.coilNum.trim() : '';
+      const coil = (item.coilNum||'').trim();
       if(coil){ if(!coilGroups[coil]) coilGroups[coil]=[]; coilGroups[coil].push({item, qIdx}); }
       else noCoil.push({item, qIdx});
     });
@@ -2925,7 +3031,7 @@ function renderQueue(c){
       const coilData = (state.adminConfig.coilRecords||{})[coil] || {};
       const skids = coilData.skids || [];
 
-      html += `<div style="background:var(--blue-l);border:2px solid var(--blue);border-radius:var(--rad2);padding:10px 14px;margin-bottom:8px;margin-top:4px">
+      html += `<div class="coil-block" draggable="true" data-coil="${coil}" style="background:var(--blue-l);border:2px solid var(--blue);border-radius:var(--rad2);padding:10px 14px;margin-bottom:8px;margin-top:4px" ondragstart="coilDragStart(this,'${coil}')" ondragend="coilDragEnd(this)" ondragover="coilDragOver(this,event)" ondrop="coilDrop(this,'${coil}')">
         <!-- Coil Header -->
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap">
           <div style="display:flex;flex-direction:column;gap:2px;flex-shrink:0">
@@ -3038,7 +3144,7 @@ function renderQueue(c){
     ${totalUnassigned?`<div style="background:var(--red-l);border:1px solid #f09595;border-radius:var(--rad);padding:8px 16px;font-size:13px;font-weight:600;color:var(--red)">
       ⚠ ${totalUnassigned} unassigned
     </div>`:'<div style="background:var(--green-l);border:1px solid #c0dd97;border-radius:var(--rad);padding:8px 16px;font-size:13px;font-weight:600;color:var(--green)">✓ All items assigned</div>'}
-    <button onclick="printQueueList('${activeQStation}')" class="btn btn-sm" style="margin-left:auto">🖨 Print ${activeQStation} Queue</button>
+    <button data-station="${activeQStation}" onclick="printQueueList(this.dataset.station)" class="btn btn-sm" style="margin-left:auto">🖨 Print ${activeQStation} Queue</button>
   </div>
   <div class="station-tab">${tabs}</div>${_rows}`;
 }
@@ -3056,7 +3162,7 @@ function getQueueItems(){
     });
   });
   // Sort first, then assign clean sequential priorities
-  allItems.sort((a,b)=>(a.item.priority ?? 99999)-(b.item.priority ?? 99999));
+  allItems.sort((a,b)=>{ const pa=a.item.priority??99999; const pb=b.item.priority??99999; if(pa!==pb)return pa-pb; return (a.item.woNum||0)-(b.item.woNum||0); });
   allItems.forEach((x,i)=>{ x.item.priority = i+1; });
   return allItems;
 }
@@ -3252,44 +3358,81 @@ function setLIStatusQ(woId,itemId,status){
   setTimeout(()=>renderQueue(document.getElementById('content')),100);
 }
 
-function moveCoil(coilNum, direction){
-  const coilRecords = state.adminConfig?.coilRecords || {};
-  // Get all active coils from current IOWA items
+let _dragCoil = null;
+
+function getActiveCoilsSorted(){
+  if(!state.adminConfig) state.adminConfig = {};
+  if(!state.adminConfig.coilRecords) state.adminConfig.coilRecords = {};
   const today = new Date(); today.setHours(0,0,0,0);
   const activeCoils = new Set();
   state.wos.forEach(wo=>{
     const isPast = wo.delivery && new Date(wo.delivery+'T00:00:00') < today;
     if(isPast && !showAllQueue) return;
     wo.items.forEach(item=>{
-      if(item.status !== 'Complete' && item.station === 'IOWA' && item.coilNum){
-        activeCoils.add(item.coilNum.trim());
+      const cn = (item.coilNum||'').trim();
+      if(item.status !== 'Complete' && item.station === 'IOWA' && cn){
+        activeCoils.add(cn);
       }
     });
   });
-
-  // Sort coils by current priority
-  const sorted = Array.from(activeCoils).sort((a,b)=>{
-    const pa = coilRecords[a]?.priority ?? 99;
-    const pb = coilRecords[b]?.priority ?? 99;
+  return Array.from(activeCoils).sort((a,b)=>{
+    const pa = state.adminConfig.coilRecords[a]?.priority ?? 99;
+    const pb = state.adminConfig.coilRecords[b]?.priority ?? 99;
     return pa - pb;
   });
+}
 
+function reindexCoilPriorities(sorted){
+  sorted.forEach((c,i)=>{
+    if(!state.adminConfig.coilRecords[c]) state.adminConfig.coilRecords[c] = {};
+    state.adminConfig.coilRecords[c].priority = i + 1;
+  });
+}
+
+function moveCoil(coilNum, direction){
+  const sorted = getActiveCoilsSorted();
+  reindexCoilPriorities(sorted); // clean up first
   const idx = sorted.indexOf(coilNum);
   if(idx === -1) return;
   const swapIdx = idx + direction;
   if(swapIdx < 0 || swapIdx >= sorted.length) return;
+  // Swap in array then reindex
+  const temp = sorted[idx];
+  sorted[idx] = sorted[swapIdx];
+  sorted[swapIdx] = temp;
+  reindexCoilPriorities(sorted);
+  saveState();
+  renderQueue(document.getElementById('content'));
+}
 
-  // Assign clean priorities and swap
-  sorted.forEach((c,i)=>{
-    if(!coilRecords[c]) coilRecords[c] = {};
-    coilRecords[c].priority = i + 1;
-  });
-  const tempP = coilRecords[coilNum].priority;
-  coilRecords[coilNum].priority = coilRecords[sorted[swapIdx]].priority;
-  coilRecords[sorted[swapIdx]].priority = tempP;
+function coilDragStart(el, coilNum){
+  _dragCoil = coilNum;
+  el.style.opacity = '0.5';
+}
 
-  if(!state.adminConfig) state.adminConfig = {};
-  state.adminConfig.coilRecords = coilRecords;
+function coilDragEnd(el){
+  el.style.opacity = '1';
+  document.querySelectorAll('.coil-drag-over').forEach(e=>e.classList.remove('coil-drag-over'));
+}
+
+function coilDragOver(el, e){
+  e.preventDefault();
+  document.querySelectorAll('.coil-drag-over').forEach(e=>e.classList.remove('coil-drag-over'));
+  el.classList.add('coil-drag-over');
+}
+
+function coilDrop(el, targetCoil){
+  el.classList.remove('coil-drag-over');
+  if(!_dragCoil || _dragCoil === targetCoil) return;
+  const sorted = getActiveCoilsSorted();
+  reindexCoilPriorities(sorted);
+  const fromIdx = sorted.indexOf(_dragCoil);
+  const toIdx = sorted.indexOf(targetCoil);
+  if(fromIdx === -1 || toIdx === -1) return;
+  sorted.splice(fromIdx, 1);
+  sorted.splice(toIdx, 0, _dragCoil);
+  reindexCoilPriorities(sorted);
+  _dragCoil = null;
   saveState();
   renderQueue(document.getElementById('content'));
 }
@@ -3340,6 +3483,93 @@ function saveSkidField(coilNum, idx, field, val){
   if(field === 'bundle'){
     event.target.style.background = val ? 'var(--green-l)' : '#fff';
   }
+}
+
+function openSplitSkids(woId, itemId){
+  const wo = state.wos.find(w=>String(w.id)===String(woId));
+  if(!wo) return;
+  const item = wo.items.find(i=>String(i.id)===String(itemId));
+  if(!item) return;
+
+  // Build modal
+  const existing = item.skidSplits || [];
+  const modal = document.createElement('div');
+  modal.id = 'split-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center';
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:var(--rad2);padding:24px;width:520px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.2)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div>
+          <div style="font-size:16px;font-weight:800">✂ Split into Skids</div>
+          <div style="font-size:12px;color:var(--text2)">WO #${wo.woNum} — ${wo.customer}</div>
+          <div style="font-size:11px;color:var(--text3)">Total Qty: ${item.qty||'?'} · ${item.gauge||''} ${item.size||''} ${item.productCat||''}</div>
+        </div>
+        <button onclick="document.getElementById('split-modal').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text3)">✕</button>
+      </div>
+      <div id="split-skid-list" style="margin-bottom:12px"></div>
+      <button onclick="addSplitSkid()" class="btn btn-sm btn-primary" style="width:100%;margin-bottom:12px">+ Add Skid</button>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button onclick="document.getElementById('split-modal').remove()" class="btn btn-sm">Cancel</button>
+        <button onclick="saveSplitSkids('${woId}','${itemId}')" class="btn btn-sm btn-primary">✓ Save Skids</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+
+  // Store temp skids
+  window._tempSkids = existing.length ? JSON.parse(JSON.stringify(existing)) : [{qty:'',size:'',type:'',bundle:'',notes:''}];
+  renderSplitSkidList();
+}
+
+function renderSplitSkidList(){
+  const list = document.getElementById('split-skid-list');
+  if(!list) return;
+  list.innerHTML = window._tempSkids.map((s,i)=>`
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:6px;align-items:center;margin-bottom:6px;padding:8px;background:var(--gray-l);border-radius:var(--rad);border:1px solid var(--border)">
+      <div>
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:2px">Skid ${i+1} — Qty</div>
+        <input type="number" placeholder="Qty" value="${s.qty||''}"
+          style="width:100%;padding:4px 6px;border:1px solid var(--border);border-radius:var(--rad);font-size:13px;font-weight:600"
+          oninput="window._tempSkids[${i}].qty=this.value">
+      </div>
+      <div>
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:2px">Size</div>
+        <input type="text" placeholder='e.g. 48"x120"' value="${s.size||''}"
+          style="width:100%;padding:4px 6px;border:1px solid var(--border);border-radius:var(--rad);font-size:13px"
+          oninput="window._tempSkids[${i}].size=this.value">
+      </div>
+      <div>
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:2px">Type</div>
+        <input type="text" placeholder="Type" value="${s.type||''}"
+          style="width:100%;padding:4px 6px;border:1px solid var(--border);border-radius:var(--rad);font-size:13px"
+          oninput="window._tempSkids[${i}].type=this.value">
+      </div>
+      <div>
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:2px">Bundle #</div>
+        <input type="text" placeholder="—" value="${s.bundle||''}"
+          style="width:100%;padding:4px 6px;border:1px solid var(--border);border-radius:var(--rad);font-size:13px;background:${s.bundle?'var(--green-l)':'#fff'}"
+          oninput="window._tempSkids[${i}].bundle=this.value;this.style.background=this.value?'var(--green-l)':'#fff'">
+      </div>
+      <button onclick="window._tempSkids.splice(${i},1);renderSplitSkidList()"
+        style="background:none;border:1px solid var(--border);border-radius:var(--rad);padding:4px 8px;cursor:pointer;color:var(--text3);font-size:14px;align-self:flex-end">✕</button>
+    </div>
+  `).join('');
+}
+
+function addSplitSkid(){
+  window._tempSkids.push({qty:'',size:'',type:'',bundle:''});
+  renderSplitSkidList();
+}
+
+function saveSplitSkids(woId, itemId){
+  const wo = state.wos.find(w=>String(w.id)===String(woId));
+  if(!wo) return;
+  const item = wo.items.find(i=>String(i.id)===String(itemId));
+  if(!item) return;
+  item.skidSplits = window._tempSkids.filter(s=>s.qty||s.size||s.type);
+  saveState();
+  document.getElementById('split-modal')?.remove();
+  renderQueue(document.getElementById('content'));
+  toast(`✓ ${item.skidSplits.length} skid${item.skidSplits.length!==1?'s':''} saved for WO #${wo.woNum}`);
 }
 
 function saveCoilNum(woId, itemId, val){
