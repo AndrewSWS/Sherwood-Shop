@@ -2707,7 +2707,7 @@ function printQueueList(station){
     return `
     <div class="task-row">
       <div class="task-header">
-        <span class="row-num">${i+1}</span>
+        <span class="row-num">${i}</span>
         <span class="wo-num">WO #${item.woNum}</span>
         <span class="customer">${item.customer}</span>
         ${item.delivery ? `<span class="delivery">📅 ${fmtDate(item.delivery)}</span>` : ''}
@@ -2917,7 +2917,8 @@ function renderQueue(c){
   // IOWA: group by coil number
   const isIOWA = activeQStation === 'IOWA';
 
-  function renderQueueItem(item, qIdx, totalItems){
+  function renderQueueItem(item, qIdx, totalItems, groupPos){
+    const displayNum = groupPos !== undefined ? groupPos : qIdx+1;
     return `
     <div class="q-item" draggable="true"
       ondragstart="qDragStart(this,${qIdx})"
@@ -2939,7 +2940,7 @@ function renderQueue(c){
           style="background:none;border:1px solid var(--border);border-radius:3px;width:22px;height:22px;font-size:10px;padding:0;display:flex;align-items:center;justify-content:center;color:var(--text2);margin-top:2px"
           title="Drop to bottom">⤓</button>
       </div>
-      <div class="li-num-dot">${qIdx+1}</div>
+      <div class="li-num-dot">${displayNum}</div>
       <div style="flex:1;min-width:0">
         <div class="flex gap8 mb4 flex-wrap">
           <strong style="font-size:13px">WO #${item.woNum}</strong>
@@ -3025,7 +3026,13 @@ function renderQueue(c){
     });
 
     let html = '';
-    Object.keys(coilGroups).sort().forEach(coil=>{
+    // Sort by coil priority using getActiveCoilsSorted, fall back to alphabetical
+    const sortedCoilKeys = getActiveCoilsSorted().filter(c=>coilGroups[c]);
+    // Add any coils not in getActiveCoilsSorted (edge case)
+    Object.keys(coilGroups).forEach(c=>{ if(!sortedCoilKeys.includes(c)) sortedCoilKeys.push(c); });
+    // Write clean priorities to state so move buttons work correctly
+    reindexCoilPriorities(sortedCoilKeys);
+    sortedCoilKeys.forEach(coil=>{
       const group = coilGroups[coil];
       // Get coil details from state
       const coilData = (state.adminConfig.coilRecords||{})[coil] || {};
@@ -3126,7 +3133,7 @@ function renderQueue(c){
           `).join('')}` : '<div style="font-size:11px;color:var(--text3);font-style:italic;padding:4px 0">No skids yet — click Add Skid to create inventory entries</div>'}
         </div>
       </div>`;
-      html += group.map(({item, qIdx})=>renderQueueItem(item, qIdx, items.length)).join('');
+      html += group.map(({item, qIdx}, groupPos)=>renderQueueItem(item, qIdx, items.length, groupPos+1)).join('');
     });
     if(noCoil.length){
       html += `<div style="background:var(--gray-l);border:1px solid var(--border);border-radius:var(--rad2);padding:6px 12px;margin-bottom:4px;margin-top:8px">
@@ -3373,7 +3380,7 @@ function getActiveCoilsSorted(){
     const isPast = wo.delivery && new Date(wo.delivery+'T00:00:00') < today;
     if(isPast && !showAllQueue) return;
     wo.items.forEach(item=>{
-      const cn = (item.coilNum||'').trim();
+      const cn = String(item.coilNum||'').trim();
       if(item.status !== 'Complete' && item.station === 'IOWA' && cn){
         activeCoils.add(cn);
       }
@@ -3395,12 +3402,14 @@ function reindexCoilPriorities(sorted){
 
 function moveCoil(coilNum, direction){
   const sorted = getActiveCoilsSorted();
-  reindexCoilPriorities(sorted); // clean up first
-  const idx = sorted.indexOf(coilNum);
-  if(idx === -1) return;
+  if(!sorted.length) return;
+  // Always reindex first so all coils have clean sequential priorities
+  reindexCoilPriorities(sorted);
+  const idx = sorted.indexOf(String(coilNum));
+  if(idx === -1){ console.warn('moveCoil: coil not found in sorted list', coilNum, sorted); return; }
   const swapIdx = idx + direction;
   if(swapIdx < 0 || swapIdx >= sorted.length) return;
-  // Swap in array then reindex
+  // Swap positions in array then reindex
   const temp = sorted[idx];
   sorted[idx] = sorted[swapIdx];
   sorted[swapIdx] = temp;
@@ -3410,7 +3419,7 @@ function moveCoil(coilNum, direction){
 }
 
 function coilDragStart(el, coilNum){
-  _dragCoil = coilNum;
+  _dragCoil = String(coilNum);
   el.style.opacity = '0.5';
 }
 
