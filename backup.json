@@ -1272,7 +1272,7 @@
           "qty": "9000",
           "wtUnit": 0,
           "bundle": "",
-          "weight": 0,
+          "weight": 9000,
           "station": "OTHER",
           "isDual": false,
           "step1Op": "",
@@ -1283,7 +1283,7 @@
           "step2CompletedBy": "",
           "notes": "GlvCoil:G902260coil (22 Ga. 60' x Coil G-90) | 22 Ga. 60' x Coil G-90",
           "assignee": "",
-          "status": "Pending",
+          "status": "In Process",
           "completedBy": "",
           "completedAt": ""
         }
@@ -5345,7 +5345,7 @@
           "wtUnit": 0,
           "bundle": "",
           "weight": 0,
-          "station": "SHEAR",
+          "station": "SHEAR → BREAK",
           "isDual": false,
           "step1Op": "",
           "step1Status": "Pending",
@@ -5355,7 +5355,7 @@
           "step2CompletedBy": "",
           "notes": "HVACAcsry:201202Angle (20 Ga. 4' x 4' x 120' Angle Galv) | 20 Ga. 4' x 4' x 120' Angle Galv",
           "assignee": "",
-          "status": "Pending",
+          "status": "In Process",
           "completedBy": "",
           "completedAt": "",
           "woNum": "46348",
@@ -5580,7 +5580,7 @@
           "step2CompletedBy": "",
           "notes": "GlvCoil:G902660coil (26 Ga. 60' x Coil G-90) | 26 Ga. 60' x Coil G-90",
           "assignee": "",
-          "status": "Pending",
+          "status": "In Process",
           "completedBy": "",
           "completedAt": ""
         }
@@ -5753,9 +5753,9 @@
           "step2CompletedBy": "",
           "notes": "GlvSht:2460120 (24 Ga. 60' x 120' Galv) | 24 Ga. 60' x 120' Galv",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": "",
+          "status": "Complete",
+          "completedBy": "?",
+          "completedAt": "2026-05-22T12:10:14.413Z",
           "woNum": "46353",
           "customer": "Air Concepts Inc.",
           "delivery": "2026-05-27",
@@ -5842,7 +5842,7 @@
           "step2CompletedBy": "",
           "notes": "GlvSht:264896 (26 Ga. 48' x 96' Galv) | 26 Ga. 48' x 96' Galv",
           "assignee": "",
-          "status": "Pending",
+          "status": "In Process",
           "completedBy": "",
           "completedAt": "",
           "coilNum": "4313",
@@ -5877,7 +5877,7 @@
           "wtUnit": 32.375,
           "bundle": "",
           "weight": 6507.38,
-          "station": "PICK / PULL",
+          "station": "IOWA",
           "isDual": false,
           "step1Op": "",
           "step1Status": "Pending",
@@ -5935,7 +5935,7 @@
           "step2CompletedBy": "",
           "notes": "GlvSht:2460120 (24 Ga. 60' x 120' Galv) | 24 Ga. 60' x 120' Galv",
           "assignee": "",
-          "status": "Pending",
+          "status": "In Process",
           "completedBy": "",
           "completedAt": ""
         },
@@ -6070,18 +6070,18 @@
       "delivery": "2026-05-28",
       "isPickup": false,
       "truck": "1",
-      "notes": "",
+      "notes": "Balance 5/28",
       "items": [
         {
-          "id": 1779391976072.5469,
+          "id": 1779452157237.5881,
           "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "26",
           "size": "30x96",
-          "qty": "65",
+          "qty": "35",
           "wtUnit": 15.8594,
           "bundle": "",
-          "weight": 1030.86,
+          "weight": 555.08,
           "station": "PICK / PULL",
           "isDual": false,
           "step1Op": "",
@@ -6094,7 +6094,11 @@
           "assignee": "",
           "status": "Pending",
           "completedBy": "",
-          "completedAt": ""
+          "completedAt": "",
+          "woNum": "46357",
+          "customer": "Four Quarters Plumbing Htg & A/C",
+          "delivery": "2026-05-28",
+          "woId": 1779283414344
         }
       ],
       "created": "2026-05-20T13:23:34.344Z"
@@ -6819,7 +6823,7 @@
           "step2CompletedBy": "",
           "notes": "",
           "assignee": "",
-          "status": "Pending",
+          "status": "In Process",
           "completedBy": "",
           "completedAt": ""
         }
@@ -7063,7 +7067,7 @@
           "wtUnit": 0,
           "bundle": "",
           "weight": 0,
-          "station": "PICK / PULL",
+          "station": "SHEAR → BREAK",
           "isDual": false,
           "step1Op": "",
           "step1Status": "Pending",
@@ -7073,7 +7077,7 @@
           "step2CompletedBy": "",
           "notes": "HVACAcsry:181203Angle (18 Ga. 3' x 3' x 120' Angle Galv) | 18 Ga. 3' x 3' x 120' Angle Galv",
           "assignee": "",
-          "status": "Pending",
+          "status": "In Process",
           "completedBy": "",
           "completedAt": ""
         }
@@ -7468,7 +7472,7 @@
           "cityst": "Cinnaminson, NJ 08077",
           "zone": "NJ South",
           "delivery": "2026-05-28",
-          "notes": ""
+          "notes": "Balance 5/28"
         },
         {
           "woId": 1779300283202,
@@ -11515,6 +11519,6 @@
       "color": "#FF7043"
     }
   ],
-  "exportDate": "2026-05-22T11:39:00.439Z",
+  "exportDate": "2026-05-22T12:16:30.896Z",
   "version": "2.0"
 }
