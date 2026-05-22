@@ -77,7 +77,12 @@
           "assignee": "Ed",
           "status": "In Process",
           "completedBy": "",
-          "completedAt": ""
+          "completedAt": "",
+          "woNum": "46195",
+          "customer": "E.P. Homiek Sheet Metal Inc.",
+          "delivery": "2026-05-29",
+          "woId": 1778688108357,
+          "priority": 1
         }
       ],
       "created": "2026-05-13T16:01:48.357Z"
@@ -6983,7 +6988,12 @@
           "assignee": "",
           "status": "Pending",
           "completedBy": "",
-          "completedAt": ""
+          "completedAt": "",
+          "woNum": "46371",
+          "customer": "Grossman & Hofkin Enterprises Inc.",
+          "delivery": "2026-05-27",
+          "woId": 1779384518508,
+          "priority": 2
         },
         {
           "id": 1779385461818.6018,
@@ -7007,7 +7017,12 @@
           "assignee": "",
           "status": "Pending",
           "completedBy": "",
-          "completedAt": ""
+          "completedAt": "",
+          "woNum": "46371",
+          "customer": "Grossman & Hofkin Enterprises Inc.",
+          "delivery": "2026-05-27",
+          "woId": 1779384518508,
+          "priority": 1
         }
       ],
       "created": "2026-05-21T17:28:38.508Z"
@@ -7186,7 +7201,12 @@
           "assignee": "",
           "status": "Pending",
           "completedBy": "",
-          "completedAt": ""
+          "completedAt": "",
+          "woNum": "46375",
+          "customer": "Hutchinson Plumbing",
+          "delivery": "2026-05-28",
+          "woId": 1779459783076,
+          "priority": 2
         }
       ],
       "created": "2026-05-22T14:23:03.076Z"
@@ -7391,7 +7411,12 @@
           "assignee": "",
           "status": "Pending",
           "completedBy": "",
-          "completedAt": ""
+          "completedAt": "",
+          "woNum": "46379",
+          "customer": "Consolidated Mechanical Services",
+          "delivery": "2026-05-28",
+          "woId": 1779459953499,
+          "priority": 1
         },
         {
           "id": 1779459953500.003,
@@ -7415,7 +7440,12 @@
           "assignee": "",
           "status": "Pending",
           "completedBy": "",
-          "completedAt": ""
+          "completedAt": "",
+          "woNum": "46379",
+          "customer": "Consolidated Mechanical Services",
+          "delivery": "2026-05-28",
+          "woId": 1779459953499,
+          "priority": 2
         }
       ],
       "created": "2026-05-22T14:25:53.500Z"
@@ -7512,6 +7542,133 @@
         }
       ],
       "created": "2026-05-22T14:40:59.765Z"
+    },
+    {
+      "id": 1779464974469,
+      "woNum": "46382",
+      "po": "",
+      "customer": "EDA Contractors, Inc",
+      "address": "633 Dunksferry Road",
+      "cityst": "Bensalem, PA 19020",
+      "zone": "SE Pennsylvania",
+      "date": "2026-05-28",
+      "delivery": "",
+      "isPickup": false,
+      "truck": "",
+      "notes": "",
+      "items": [
+        {
+          "id": 1779464974469.3992,
+          "productCat": "Flat Sheet",
+          "type": "Galvanized",
+          "gauge": "16",
+          "size": "60x120",
+          "qty": "200",
+          "wtUnit": 116.2109,
+          "bundle": "",
+          "weight": 23242.18,
+          "station": "IOWA",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "GlvSht:GR551660120 (16 Ga. 60' x 120' Grade 55 G-90) | 16 Ga. 60' x 120' Grade 55 G-90 (skids of , skid of )",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": "",
+          "woNum": "46382",
+          "customer": "EDA Contractors, Inc",
+          "delivery": "",
+          "woId": 1779464974469,
+          "priority": 8,
+          "coilNum": "16GA GR50"
+        }
+      ],
+      "created": "2026-05-22T15:49:34.470Z"
+    },
+    {
+      "id": 1779465024079,
+      "woNum": "46383",
+      "po": "",
+      "customer": "Goodman Distribution, Inc — Philadelphia PA",
+      "address": "2191 Hornig Rd Suite 1",
+      "cityst": "Philadelphia, PA 19116",
+      "zone": "SE Pennsylvania",
+      "date": "2026-05-28",
+      "delivery": "",
+      "isPickup": false,
+      "truck": "",
+      "notes": "",
+      "items": [
+        {
+          "id": 1779465024079.1782,
+          "productCat": "Flat Sheet",
+          "type": "Galvanized",
+          "gauge": "26",
+          "size": "48x96",
+          "qty": "500",
+          "wtUnit": 25.375,
+          "bundle": "",
+          "weight": 12687.5,
+          "station": "IOWA",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "GlvSht:264896 (26 Ga. 48' x 96' Galv) | 26 Ga. 48' x 96' Galv (5 skids of 100)",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": "",
+          "woNum": "46383",
+          "customer": "Goodman Distribution, Inc — Philadelphia PA",
+          "delivery": "",
+          "woId": 1779465024079,
+          "priority": 9,
+          "coilNum": "26ga 48",
+          "skidSplits": [
+            {
+              "qty": "100",
+              "size": "48x96",
+              "type": "",
+              "bundle": "",
+              "notes": ""
+            },
+            {
+              "qty": "100",
+              "size": "48x96",
+              "type": "",
+              "bundle": ""
+            },
+            {
+              "qty": "100",
+              "size": "48x96",
+              "type": "",
+              "bundle": ""
+            },
+            {
+              "qty": "100",
+              "size": "48x96",
+              "type": "",
+              "bundle": ""
+            },
+            {
+              "qty": "100",
+              "size": "48x96",
+              "type": "",
+              "bundle": ""
+            }
+          ]
+        }
+      ],
+      "created": "2026-05-22T15:50:24.079Z"
     }
   ],
   "trucks": [
@@ -10585,19 +10742,25 @@
         "priority": 1
       },
       "18ga 2.5": {
-        "priority": 1
+        "priority": 3
       },
       "26ga 60": {
-        "priority": 2
+        "priority": 1
       },
       "16ga": {
-        "priority": 3
+        "priority": 5
       },
       "18ga": {
         "priority": 4
       },
       "14ga": {
-        "priority": 5
+        "priority": 7
+      },
+      "16GA GR50": {
+        "priority": 6
+      },
+      "26ga 48": {
+        "priority": 2
       }
     }
   },
@@ -12039,6 +12202,6 @@
       "color": "#FF7043"
     }
   ],
-  "exportDate": "2026-05-22T14:54:15.022Z",
+  "exportDate": "2026-05-22T15:57:58.383Z",
   "version": "2.0"
 }
