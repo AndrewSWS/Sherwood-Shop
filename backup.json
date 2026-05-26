@@ -1294,7 +1294,10 @@
         }
       ],
       "created": "2026-05-13T16:59:57.008Z",
-      "isPickup": false
+      "isPickup": false,
+      "delivered": true,
+      "deliveredAt": "2026-05-26T14:28:54.775Z",
+      "deliveredBy": ""
     },
     {
       "id": 1778691607912,
@@ -5386,7 +5389,10 @@
           "priority": 1
         }
       ],
-      "created": "2026-05-19T11:31:52.096Z"
+      "created": "2026-05-19T11:31:52.096Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-26T14:28:59.107Z",
+      "deliveredBy": ""
     },
     {
       "id": 1779208315718,
@@ -5609,7 +5615,10 @@
           "completedAt": "2026-05-22T12:18:38.195Z"
         }
       ],
-      "created": "2026-05-19T16:33:41.565Z"
+      "created": "2026-05-19T16:33:41.565Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-26T14:28:59.862Z",
+      "deliveredBy": ""
     },
     {
       "id": 1779208445157,
@@ -5713,7 +5722,10 @@
           "priority": 2
         }
       ],
-      "created": "2026-05-19T16:34:05.158Z"
+      "created": "2026-05-19T16:34:05.158Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-26T14:29:00.744Z",
+      "deliveredBy": ""
     },
     {
       "id": 1779283294062,
@@ -5994,7 +6006,10 @@
           "completedAt": "2026-05-22T14:19:00.145Z"
         }
       ],
-      "created": "2026-05-20T13:22:44.357Z"
+      "created": "2026-05-20T13:22:44.357Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-26T14:28:56.264Z",
+      "deliveredBy": ""
     },
     {
       "id": 1779283393389,
@@ -7221,7 +7236,7 @@
       "date": "2026-05-26",
       "delivery": "2026-05-26",
       "isPickup": false,
-      "truck": "",
+      "truck": "2",
       "notes": "",
       "items": [
         {
@@ -7249,7 +7264,10 @@
           "completedAt": "2026-05-22T14:30:58.634Z"
         }
       ],
-      "created": "2026-05-22T14:23:22.539Z"
+      "created": "2026-05-22T14:23:22.539Z",
+      "delivered": false,
+      "deliveredAt": "",
+      "deliveredBy": ""
     },
     {
       "id": 1779459857067,
@@ -7385,7 +7403,7 @@
       "date": "2026-05-29",
       "delivery": "",
       "isPickup": false,
-      "truck": "2",
+      "truck": "",
       "notes": "",
       "items": [
         {
@@ -7598,7 +7616,7 @@
       "date": "2026-05-28",
       "delivery": "2026-05-26",
       "isPickup": false,
-      "truck": "",
+      "truck": "2",
       "notes": "",
       "items": [
         {
@@ -7665,7 +7683,10 @@
           ]
         }
       ],
-      "created": "2026-05-22T15:50:24.079Z"
+      "created": "2026-05-22T15:50:24.079Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-26T15:31:09.575Z",
+      "deliveredBy": ""
     },
     {
       "id": 1779797090248,
@@ -7985,9 +8006,9 @@
           "step2CompletedBy": "",
           "notes": "GlvSht:244896 (24 Ga. 48' x 96' Galv) | 24 Ga. 48' x 96' Galv",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "Pick Up",
+          "completedAt": "2026-05-26T15:30:31.565Z"
         },
         {
           "id": 1779798103960.3486,
@@ -8009,12 +8030,376 @@
           "step2CompletedBy": "",
           "notes": "GlvSht:263696 (26 Ga. 36' x 96' Galv) | 26 Ga. 36' x 96' Galv",
           "assignee": "",
+          "status": "Complete",
+          "completedBy": "Pick Up",
+          "completedAt": "2026-05-26T15:30:31.565Z"
+        }
+      ],
+      "created": "2026-05-26T12:21:43.959Z",
+      "pickupDate": "2026-05-26"
+    },
+    {
+      "id": 1779811359959,
+      "woNum": "46388",
+      "po": "",
+      "customer": "United Supply Company — Egg Harbor NJ",
+      "address": "108 Repetto Ave A",
+      "cityst": "Egg Harbor, NJ 08234",
+      "zone": "NJ Central",
+      "date": "2026-05-28",
+      "delivery": "",
+      "isPickup": false,
+      "truck": "",
+      "notes": "",
+      "items": [
+        {
+          "id": 1779811359959.8755,
+          "productCat": "Flat Sheet",
+          "type": "Galvanized",
+          "gauge": "26",
+          "size": "48x96",
+          "qty": "100",
+          "wtUnit": 25.375,
+          "bundle": "",
+          "weight": 2537.5,
+          "station": "SHEAR",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "GlvSht:264896 (26 Ga. 48' x 96' Galv) | 26 Ga. 48' x 96' Galv",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": ""
+        },
+        {
+          "id": 1779811359960.042,
+          "productCat": "Flat Sheet",
+          "type": "Galvanized",
+          "gauge": "",
+          "size": "",
+          "qty": "60",
+          "wtUnit": 0,
+          "bundle": "",
+          "weight": 0,
+          "station": "PLENUMS",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "Plenums:PK2616.52030 (26 Ga. 16.5' x 20' x 30' Plenum Kit) | 26 Ga. 16.5' x 20' x 30' Plenum Kit",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": ""
+        },
+        {
+          "id": 1779811359961.1653,
+          "productCat": "Flat Sheet",
+          "type": "Galvanized",
+          "gauge": "",
+          "size": "",
+          "qty": "12",
+          "wtUnit": 0,
+          "bundle": "",
+          "weight": 0,
+          "station": "PLENUMS",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "Plenums:PK26162430 (26 Ga. 16' x 24' x 30' Plenum Kit) | 26 Ga. 16' x 24' x 30' Plenum Kit",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": ""
+        },
+        {
+          "id": 1779811359962.8882,
+          "productCat": "Flat Sheet",
+          "type": "Galvanized",
+          "gauge": "",
+          "size": "",
+          "qty": "6",
+          "wtUnit": 0,
+          "bundle": "",
+          "weight": 0,
+          "station": "PLENUMS",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "Plenums:PK26202040 (26 Ga. 20' x 20' x 40' Plenum Kit) | 26 Ga. 20' x 20' x 40' Plenum Kit",
+          "assignee": "",
           "status": "Pending",
           "completedBy": "",
           "completedAt": ""
         }
       ],
-      "created": "2026-05-26T12:21:43.959Z"
+      "created": "2026-05-26T16:02:39.959Z"
+    },
+    {
+      "id": 1779811399696,
+      "woNum": "46389",
+      "po": "",
+      "customer": "Boyertown Sheet Metal",
+      "address": "64 Shore Ave.",
+      "cityst": "Douglassville, PA 19518",
+      "zone": "PA Other",
+      "date": "2026-06-10",
+      "delivery": "",
+      "isPickup": false,
+      "truck": "",
+      "notes": "",
+      "items": [
+        {
+          "id": 1779811399696.322,
+          "productCat": "Flat Sheet",
+          "type": "Galvanized",
+          "gauge": "",
+          "size": "",
+          "qty": "200",
+          "wtUnit": 0,
+          "bundle": "",
+          "weight": 0,
+          "station": "SHEAR",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "Misc:16misc (16 Ga. Galv) | 16 Ga. 3' x 3' x 120' Angle Galv",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": ""
+        },
+        {
+          "id": 1779811399697.9287,
+          "productCat": "Flat Sheet",
+          "type": "Galvanized",
+          "gauge": "",
+          "size": "",
+          "qty": "30",
+          "wtUnit": 0,
+          "bundle": "",
+          "weight": 0,
+          "station": "SHEAR",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "Misc:16misc (16 Ga. Galv) | 16 Ga. 2' x 3' x 120' Angle Galv",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": ""
+        }
+      ],
+      "created": "2026-05-26T16:03:19.696Z"
+    },
+    {
+      "id": 1779811500632,
+      "woNum": "46390",
+      "po": "",
+      "customer": "BKG Company Inc.",
+      "address": "2990 Clymer Ave.",
+      "cityst": "Telford, PA 18969",
+      "zone": "Bucks / Montgomery",
+      "date": "2026-05-29",
+      "delivery": "",
+      "isPickup": false,
+      "truck": "",
+      "notes": "",
+      "items": [
+        {
+          "id": 1779811500632.1614,
+          "productCat": "Other / Hardware",
+          "type": "Galvanized",
+          "gauge": "",
+          "size": "",
+          "qty": "4",
+          "wtUnit": 0,
+          "bundle": "",
+          "weight": 0,
+          "station": "PICK / PULL",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "Elgen:EHC (Elgen H Corners Galv (500/box)) | Elgen H Corners Galv (500/box)",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": ""
+        },
+        {
+          "id": 1779811500633.373,
+          "productCat": "Other / Hardware",
+          "type": "Galvanized",
+          "gauge": "",
+          "size": "",
+          "qty": "8",
+          "wtUnit": 0,
+          "bundle": "",
+          "weight": 0,
+          "station": "PICK / PULL",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "Elgen:EHNB (Elgen H Nuts & Bolts 1/4' (100/bag)) | Elgen H Nuts & Bolts 1/4' (100/bag)",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": ""
+        },
+        {
+          "id": 1779811500634.5137,
+          "productCat": "Other / Hardware",
+          "type": "Galvanized",
+          "gauge": "",
+          "size": "",
+          "qty": "1",
+          "wtUnit": 0,
+          "bundle": "",
+          "weight": 0,
+          "station": "PICK / PULL",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "Elgen:24DuctGaurd (24' Blue Duct Guard 2.5 mil (200'/Roll)) | 24' Blue Duct Guard 2.5 mil (200'/Roll)",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": ""
+        },
+        {
+          "id": 1779811500635.638,
+          "productCat": "Other / Hardware",
+          "type": "Galvanized",
+          "gauge": "",
+          "size": "",
+          "qty": "1",
+          "wtUnit": 0,
+          "bundle": "",
+          "weight": 0,
+          "station": "PICK / PULL",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "Elgen:36Ductguard (36' Blue Duct Guard 2.5 mil (200'/Roll)) | 36' Blue Duct Guard 2.5 mil (200'/Roll)",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": ""
+        },
+        {
+          "id": 1779811500636.0488,
+          "productCat": "Flat Sheet",
+          "type": "Galvanized",
+          "gauge": "24",
+          "size": "60x120",
+          "qty": "30",
+          "wtUnit": 50.5859,
+          "bundle": "",
+          "weight": 1517.58,
+          "station": "SHEAR",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "GlvSht:2460120 (24 Ga. 60' x 120' Galv) | 24 Ga. 60' x 120' Galv (1,735 pounds)",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": ""
+        },
+        {
+          "id": 1779811500637.896,
+          "productCat": "Flat Sheet",
+          "type": "Galvanized",
+          "gauge": "24",
+          "size": "48x120",
+          "qty": "30",
+          "wtUnit": 40.4688,
+          "bundle": "",
+          "weight": 1214.06,
+          "station": "SHEAR",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "GlvSht:2448120 (24 Ga. 48' x 120' Galv) | 24 Ga. 48' x 120' Galv (1,388 pounds)",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": ""
+        },
+        {
+          "id": 1779811500638.1628,
+          "productCat": "Flat Sheet",
+          "type": "Galvanized",
+          "gauge": "24",
+          "size": "36x96",
+          "qty": "20",
+          "wtUnit": 24.2813,
+          "bundle": "",
+          "weight": 485.63,
+          "station": "SHEAR",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "GlvSht:243696 (24 Ga. 36' x 96' Galv) | 24 Ga. 36' x 96' Galv (555 pounds)",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": ""
+        }
+      ],
+      "created": "2026-05-26T16:05:00.633Z"
     }
   ],
   "trucks": [
@@ -8387,7 +8772,8 @@
           "cityst": "Malvern, PA 19355",
           "zone": "PA Other",
           "delivery": "2026-05-26",
-          "notes": ""
+          "notes": "",
+          "delivered": true
         },
         {
           "woId": 1779283364357,
@@ -8397,7 +8783,8 @@
           "cityst": "Plymouth Meeting, PA 19462",
           "zone": "PA Other",
           "delivery": "2026-05-26",
-          "notes": ""
+          "notes": "",
+          "delivered": true
         },
         {
           "woId": 1779283414344,
@@ -8788,7 +9175,8 @@
           "cityst": "Westville, NJ 08093",
           "zone": "NJ South",
           "delivery": "2026-05-26",
-          "notes": ""
+          "notes": "",
+          "delivered": true
         },
         {
           "woId": 1779208421565,
@@ -8798,7 +9186,8 @@
           "cityst": "Philadelphia, PA 19136",
           "zone": "SE Pennsylvania",
           "delivery": "2026-05-26",
-          "notes": ""
+          "notes": "",
+          "delivered": true
         },
         {
           "woId": 1779300381630,
@@ -8828,17 +9217,8 @@
           "cityst": "Vineland, NJ 08360",
           "zone": "NJ North",
           "delivery": "2026-05-26",
-          "notes": ""
-        },
-        {
-          "woId": 1779459953499,
-          "woNum": "46379",
-          "customer": "Consolidated Mechanical Services",
-          "address": "1 N Washington St",
-          "cityst": "Telford, PA 18969",
-          "zone": "Bucks / Montgomery",
-          "delivery": "",
-          "notes": ""
+          "notes": "",
+          "delivered": true
         },
         {
           "woId": 1779459965149,
@@ -8869,6 +9249,28 @@
           "zone": "Delaware",
           "delivery": "2026-05-29",
           "notes": ""
+        },
+        {
+          "woId": 1779459802539,
+          "woNum": "46376",
+          "customer": "Lincoln Tech",
+          "address": "311 Vartrens Highway",
+          "cityst": "Levittown, PA 19056",
+          "zone": "SE Pennsylvania",
+          "delivery": "2026-05-26",
+          "notes": "",
+          "delivered": false
+        },
+        {
+          "woId": 1779465024079,
+          "woNum": "46383",
+          "customer": "Goodman Distribution, Inc — Philadelphia PA",
+          "address": "2191 Hornig Rd Suite 1",
+          "cityst": "Philadelphia, PA 19116",
+          "zone": "SE Pennsylvania",
+          "delivery": "2026-05-26",
+          "notes": "",
+          "delivered": true
         }
       ],
       "shipDate": ""
@@ -11159,7 +11561,8 @@
       "26ga 48": {
         "priority": 2
       }
-    }
+    },
+    "rainStartHour": 2
   },
   "customerMeta": {
     "A & H Metals": {
@@ -12599,6 +13002,6 @@
       "color": "#FF7043"
     }
   ],
-  "exportDate": "2026-05-26T14:27:15.366Z",
+  "exportDate": "2026-05-26T16:05:28.911Z",
   "version": "2.0"
 }
