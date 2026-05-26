@@ -2338,7 +2338,9 @@ function renderBoardView(){
     if(!grid || !overlay) return;
 
     const headerH = header ? header.offsetHeight : 60;
-    const availH = overlay.offsetHeight - headerH - 12;
+    const pickupBar = document.getElementById('board-pickup-bar');
+    const pickupBarH = pickupBar ? pickupBar.offsetHeight : 0;
+    const availH = overlay.offsetHeight - headerH - pickupBarH - 12;
 
     // Set grid to fill available height, no overflow
     grid.style.height = availH + 'px';
@@ -6402,7 +6404,6 @@ if("serviceWorker" in navigator){
     background:#1a1a2e;
     border-top:2px solid #f0a500;
     padding:8px 16px;
-    margin-bottom:48px;
     flex-shrink:0;
     display:flex;
     align-items:center;

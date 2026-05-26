@@ -7383,13 +7383,13 @@
       "cityst": "Telford, PA 18969",
       "zone": "Bucks / Montgomery",
       "date": "2026-05-29",
-      "delivery": "2026-05-28",
+      "delivery": "",
       "isPickup": false,
       "truck": "2",
       "notes": "",
       "items": [
         {
-          "id": 1779459953499.9944,
+          "id": 1779801514967.2837,
           "productCat": "Other / Hardware",
           "type": "Galvanized",
           "gauge": "",
@@ -7413,12 +7413,11 @@
           "completedAt": "",
           "woNum": "46379",
           "customer": "Consolidated Mechanical Services",
-          "delivery": "2026-05-28",
-          "woId": 1779459953499,
-          "priority": 1
+          "delivery": "",
+          "woId": 1779459953499
         },
         {
-          "id": 1779459953500.003,
+          "id": 1779801514969.057,
           "productCat": "Other / Hardware",
           "type": "Galvanized",
           "gauge": "",
@@ -7442,9 +7441,8 @@
           "completedAt": "",
           "woNum": "46379",
           "customer": "Consolidated Mechanical Services",
-          "delivery": "2026-05-28",
-          "woId": 1779459953499,
-          "priority": 2
+          "delivery": "",
+          "woId": 1779459953499
         }
       ],
       "created": "2026-05-22T14:25:53.500Z"
@@ -7551,7 +7549,7 @@
       "cityst": "Bensalem, PA 19020",
       "zone": "SE Pennsylvania",
       "date": "2026-05-28",
-      "delivery": "",
+      "delivery": "2026-05-27",
       "isPickup": false,
       "truck": "",
       "notes": "",
@@ -8839,7 +8837,7 @@
           "address": "1 N Washington St",
           "cityst": "Telford, PA 18969",
           "zone": "Bucks / Montgomery",
-          "delivery": "2026-05-28",
+          "delivery": "",
           "notes": ""
         },
         {
@@ -12600,6 +12598,6 @@
       "color": "#FF7043"
     }
   ],
-  "exportDate": "2026-05-26T13:02:24.092Z",
+  "exportDate": "2026-05-26T13:18:42.150Z",
   "version": "2.0"
 }
