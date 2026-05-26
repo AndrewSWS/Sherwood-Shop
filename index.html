@@ -2331,47 +2331,50 @@ function renderBoardView(){
       +'</div>';
   }).join('');
 
-  // Auto-scale: scale each column independently to fit without scrolling
-  requestAnimationFrame(()=>{
+  // Auto-scale: fit entire board grid to available screen height
+  setTimeout(()=>{
     const overlay = document.getElementById('board-overlay');
     const header = overlay ? overlay.querySelector('.board-header') : null;
     if(!grid || !overlay) return;
 
     const headerH = header ? header.offsetHeight : 60;
     const pickupBar = document.getElementById('board-pickup-bar');
-    const pickupBarH = pickupBar ? pickupBar.offsetHeight : 0;
-    const availH = overlay.offsetHeight - headerH - pickupBarH - 28;
+    const pickupBarH = pickupBar ? pickupBar.offsetHeight : 36;
+    const availH = overlay.offsetHeight - headerH - pickupBarH - 8;
 
-    // Set grid to fill available height, no overflow
-    grid.style.height = availH + 'px';
-    grid.style.overflow = 'hidden';
-
-    // Scale each column independently
+    // Reset all transforms first so we get true content height
+    grid.style.transform = '';
+    grid.style.transformOrigin = '';
+    grid.style.width = '';
+    grid.style.height = 'auto';
+    grid.style.overflow = 'visible';
     const cols = grid.querySelectorAll('.board-day');
     cols.forEach(col=>{
-      // Reset first
       col.style.transform = '';
-      col.style.transformOrigin = '';
-      col.style.overflow = 'hidden';
+      col.style.height = 'auto';
       col.style.width = '';
       col.style.marginRight = '';
-      col.style.height = availH + 'px';
-
-      const contentH = col.scrollHeight;
-      if(contentH > availH){
-        const scale = Math.max(0.35, availH / contentH);
-        col.style.transform = `scaleY(${scale})`;
-        col.style.transformOrigin = 'top center';
-        // Compensate width so text doesn't stretch horizontally
-        col.style.transform = `scale(${scale})`;
-        col.style.transformOrigin = 'top left';
-        col.style.width = `${100/scale}%`;
-        col.style.marginRight = `-${(100/scale - 100)}%`;
-      }
+      col.style.overflow = 'visible';
     });
-    // Render pickup bar
+
+    // Measure after reset
+    let maxH = 0;
+    cols.forEach(col=>{ maxH = Math.max(maxH, col.scrollHeight); });
+
+    if(maxH > availH && maxH > 0){
+      const scale = availH / maxH;
+      grid.style.transform = `scale(${scale})`;
+      grid.style.transformOrigin = 'top left';
+      grid.style.width = `${(100/scale).toFixed(2)}%`;
+      grid.style.height = `${Math.round(maxH * scale)}px`;
+      grid.style.overflow = 'hidden';
+    } else {
+      grid.style.height = availH + 'px';
+      grid.style.overflow = 'hidden';
+    }
+
     renderBoardPickups();
-  });
+  }, 150);
 }
 
 // Populate pickup bar in board view
@@ -6405,13 +6408,14 @@ if("serviceWorker" in navigator){
   <div id="board-pickup-bar" style="
     background:#1a1a2e;
     border-top:2px solid #f0a500;
-    padding:8px 16px;
+    padding:4px 16px;
     flex-shrink:0;
     display:flex;
     align-items:center;
     gap:12px;
     overflow-x:auto;
-    min-height:44px;
+    height:36px;
+    max-height:36px;
   ">
     <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#f0a500;white-space:nowrap;flex-shrink:0">
       📦 Pick Ups
