@@ -1167,7 +1167,7 @@ const CLOUD_BACKUP_URL = 'https://andrewsws.github.io/Sherwood-Shop/backup.json'
 async function syncFromCloud(){
   try {
     toast('☁️ Fetching latest backup...');
-    const res = await fetch(CLOUD_BACKUP_URL + '?nocache=' + Date.now());
+    const res = await fetch(CLOUD_BACKUP_URL + '?nocache=' + Date.now(), {cache:'no-store'});
     if(!res.ok) throw new Error('Could not reach backup file ('+res.status+')');
     const data = await res.json();
     if(!data.wos) throw new Error('Invalid backup — missing WO data');
@@ -6331,7 +6331,7 @@ async function bootApp(){
   fetchWeather();
   // Always pull latest from cloud first (Option A — cloud always wins)
   try {
-    const res = await fetch(CLOUD_BACKUP_URL + '?nocache=' + Date.now());
+    const res = await fetch(CLOUD_BACKUP_URL + '?nocache=' + Date.now(), {cache:'no-store'});
     if(res.ok){
       const data = await res.json();
       if(data && data.wos){
@@ -6377,11 +6377,9 @@ bootApp();
 </script>
 <script>
 if("serviceWorker" in navigator){
-  // Unregister ALL old service workers first to force fresh load
+  // Unregister ALL service workers — we don't want caching interfering with cloud sync
   navigator.serviceWorker.getRegistrations().then(regs=>{
     regs.forEach(r=>r.unregister());
-  }).then(()=>{
-    navigator.serviceWorker.register("./sw.js");
   }).catch(()=>{});
 }
 </script>
