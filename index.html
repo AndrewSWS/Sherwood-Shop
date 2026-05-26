@@ -1249,8 +1249,15 @@ function toast(msg,dur=2500){
   const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'),dur);
 }
+function localISO(d){
+  // Use local date to avoid UTC timezone shift (toISOString() uses UTC)
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const dd = String(d.getDate()).padStart(2,'0');
+  return y+'-'+m+'-'+dd;
+}
 function fmtDate(d){if(!d)return'—';const dt=new Date(d+'T12:00:00');return dt.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}
-function todayISO(){return new Date().toISOString().split('T')[0]}
+function todayISO(){return localISO(new Date())}
 function woStatus(wo){
   if(!wo.items||!wo.items.length)return'Pending';
   const done=wo.items.filter(i=>i.status==='Complete').length;
@@ -2268,10 +2275,10 @@ function renderBoardView(){
   // getWeekDays returns Date objects — convert to {iso, label}
   const rawDays = getWeekDays();
   const days = rawDays.map(d=>({
-    iso: d.toISOString().split('T')[0],
+    iso: localISO(d),
     label: d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})
   }));
-  const todayISO = new Date().toISOString().split('T')[0];
+  const todayISO = localISO(new Date());
   const subtitle = document.getElementById('board-subtitle');
   if(subtitle) subtitle.textContent = 'Today: '+fmtDate(days[0].iso)+' — '+fmtDate(days[4].iso);
 
@@ -3860,7 +3867,7 @@ function renderTruck(c){
 
   // Day selector tabs
   const dayTabs=days.map(d=>{
-    const iso=d.toISOString().split('T')[0];
+    const iso=localISO(d);
     const isSelected=iso===activeTruckDay;
     const isToday=iso===todayISOf;
     const dayWOs=state.wos.filter(w=>w.delivery===iso);
@@ -4347,7 +4354,7 @@ function getWrapToggleBtn(iso){
 
 function renderDashboard(c){
   if(!c)c=document.getElementById('content');
-  const todayStr=new Date().toISOString().split('T')[0];
+  const todayStr=localISO(new Date());
   // Active = not complete AND (no delivery date OR delivery date is today or future)
   // Pick Up WOs: show if no pickupDate OR pickupDate is today or future
   const activeWOs=state.wos.filter(w=>{
@@ -4384,7 +4391,7 @@ function renderDashboard(c){
   });
 
   const weekCols=days.map((d,i)=>{
-    const iso=d.toISOString().split('T')[0];
+    const iso=localISO(d);
     const isToday=iso===todayISOf;
     const dayWOs=state.wos.filter(w=>w.delivery===iso);
     const dayW=dayWOs.reduce((s,wo)=>s+getWOWeight(wo.id),0);
@@ -4621,7 +4628,7 @@ function toggleDayDetail(iso, forceOpen=false){
   if(activeDayISO===iso&&!forceOpen){
     activeDayISO=null;panel.innerHTML='';
     // Reset gauges to today
-    const todayISOf=new Date().toISOString().split('T')[0];
+    const todayISOf=localISO(new Date());
     updateDashTruckGauges(todayISOf);
     return;
   }

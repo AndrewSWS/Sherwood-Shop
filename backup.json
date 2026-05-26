@@ -2861,7 +2861,7 @@
           "customer": "Compass Wire Cloth Corp.",
           "delivery": "2026-05-28",
           "woId": 1778762848614,
-          "priority": 3,
+          "priority": 2,
           "coilNum": "18ga 2.5"
         }
       ],
@@ -6103,15 +6103,15 @@
       "notes": "Balance 5/28",
       "items": [
         {
-          "id": 1779461305369.144,
+          "id": 1779792936544.8413,
           "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "26",
           "size": "30x96",
-          "qty": "35",
+          "qty": "66",
           "wtUnit": 15.8594,
           "bundle": "",
-          "weight": 555.08,
+          "weight": 1046.72,
           "station": "IOWA",
           "isDual": false,
           "step1Op": "",
@@ -6129,8 +6129,7 @@
           "customer": "Four Quarters Plumbing Htg & A/C",
           "delivery": "2026-05-28",
           "woId": 1779283414344,
-          "priority": 7,
-          "coilNum": "26ga 60"
+          "priority": 8
         }
       ],
       "created": "2026-05-20T13:23:34.344Z"
@@ -6782,7 +6781,7 @@
           "wtUnit": 0,
           "bundle": "",
           "weight": 0,
-          "station": "IOWA",
+          "station": "SHEAR",
           "isDual": false,
           "step1Op": "",
           "step1Status": "Pending",
@@ -6826,7 +6825,7 @@
           "completedBy": "",
           "completedAt": "",
           "coilNum": "16ga",
-          "priority": 2,
+          "priority": 1,
           "woNum": "46369",
           "customer": "Compass Wire Cloth Corp.",
           "delivery": "2026-05-28",
@@ -7293,7 +7292,7 @@
           "customer": "National Pipe Hanger Company Corp.",
           "delivery": "2026-05-28",
           "woId": 1779459857067,
-          "priority": 4,
+          "priority": 3,
           "coilNum": "18ga"
         }
       ],
@@ -7340,7 +7339,7 @@
           "customer": "Erhardt Mechanical, Inc.",
           "delivery": "2026-05-29",
           "woId": 1779459889037,
-          "priority": 5,
+          "priority": 4,
           "coilNum": "14ga"
         },
         {
@@ -7459,13 +7458,13 @@
       "cityst": "Ivyland, PA 18974",
       "zone": "Bucks / Montgomery",
       "date": "2026-05-22",
-      "delivery": "2026-05-28",
-      "isPickup": false,
+      "delivery": "",
+      "isPickup": true,
       "truck": "2",
       "notes": "",
       "items": [
         {
-          "id": 1779459965149.9287,
+          "id": 1779792229667.8118,
           "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "",
@@ -7484,17 +7483,17 @@
           "step2CompletedBy": "",
           "notes": "GlvSht:1260120 (12 Ga. 60' x 120' Galv) | 12 Ga. 60' x 120' G-90",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": "",
+          "status": "Complete",
+          "completedBy": "Pick Up",
+          "completedAt": "2026-05-26T10:44:17.859Z",
           "woNum": "46380",
           "customer": "Genesio Co.",
-          "delivery": "2026-05-28",
-          "woId": 1779459965149,
-          "priority": 8
+          "delivery": "",
+          "woId": 1779459965149
         }
       ],
-      "created": "2026-05-22T14:26:05.149Z"
+      "created": "2026-05-22T14:26:05.149Z",
+      "pickupDate": "2026-05-29"
     },
     {
       "id": 1779460859765,
@@ -7537,7 +7536,7 @@
           "customer": "Legendair",
           "delivery": "2026-05-28",
           "woId": 1779460859765,
-          "priority": 6,
+          "priority": 5,
           "coilNum": "26ga 60"
         }
       ],
@@ -7584,7 +7583,7 @@
           "customer": "EDA Contractors, Inc",
           "delivery": "",
           "woId": 1779464974469,
-          "priority": 8,
+          "priority": 6,
           "coilNum": "16GA GR50"
         }
       ],
@@ -7631,7 +7630,7 @@
           "customer": "Goodman Distribution, Inc — Philadelphia PA",
           "delivery": "",
           "woId": 1779465024079,
-          "priority": 9,
+          "priority": 7,
           "coilNum": "26ga 48",
           "skidSplits": [
             {
@@ -8461,7 +8460,7 @@
           "address": "66 Richard Road",
           "cityst": "Ivyland, PA 18974",
           "zone": "Bucks / Montgomery",
-          "delivery": "2026-05-28",
+          "delivery": "",
           "notes": ""
         },
         {
@@ -12202,6 +12201,6 @@
       "color": "#FF7043"
     }
   ],
-  "exportDate": "2026-05-22T15:57:58.383Z",
+  "exportDate": "2026-05-26T10:58:02.352Z",
   "version": "2.0"
 }
