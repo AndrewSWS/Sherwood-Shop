@@ -2834,7 +2834,7 @@
       "zone": "NJ North",
       "date": "2026-05-29",
       "delivery": "2026-05-28",
-      "truck": "1",
+      "truck": "2",
       "notes": "",
       "items": [
         {
@@ -5736,13 +5736,13 @@
       "cityst": "Bristol, PA 19007",
       "zone": "SE Pennsylvania",
       "date": "2026-05-26",
-      "delivery": "2026-05-27",
+      "delivery": "",
       "isPickup": false,
-      "truck": "1",
+      "truck": "",
       "notes": "",
       "items": [
         {
-          "id": 1779449036980.1162,
+          "id": 1779816515455.8926,
           "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "26",
@@ -5761,17 +5761,16 @@
           "step2CompletedBy": "",
           "notes": "GlvSht:2660120 (26 Ga. 60' x 120' Galv) | 26 Ga. 60' x 120' Galv",
           "assignee": "",
-          "status": "Complete",
-          "completedBy": "Delivery",
-          "completedAt": "2026-05-26T13:27:07.020Z",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": "",
           "woNum": "46353",
           "customer": "Air Concepts Inc.",
-          "delivery": "2026-05-27",
-          "woId": 1779283294062,
-          "priority": 1
+          "delivery": "",
+          "woId": 1779283294062
         },
         {
-          "id": 1779449036981.7378,
+          "id": 1779816515456.3022,
           "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "24",
@@ -5790,12 +5789,12 @@
           "step2CompletedBy": "",
           "notes": "GlvSht:2460120 (24 Ga. 60' x 120' Galv) | 24 Ga. 60' x 120' Galv",
           "assignee": "",
-          "status": "Complete",
-          "completedBy": "Delivery",
-          "completedAt": "2026-05-26T13:27:07.020Z",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": "",
           "woNum": "46353",
           "customer": "Air Concepts Inc.",
-          "delivery": "2026-05-27",
+          "delivery": "",
           "woId": 1779283294062
         }
       ],
@@ -6754,7 +6753,7 @@
       "date": "2026-05-26",
       "delivery": "2026-05-28",
       "isPickup": false,
-      "truck": "1",
+      "truck": "2",
       "notes": "",
       "items": [
         {
@@ -7190,7 +7189,7 @@
       "date": "2026-05-27",
       "delivery": "2026-05-28",
       "isPickup": false,
-      "truck": "1",
+      "truck": "2",
       "notes": "",
       "items": [
         {
@@ -7520,9 +7519,9 @@
       "cityst": "Warminster, PA 18974",
       "zone": "Bucks / Montgomery",
       "date": "2026-05-22",
-      "delivery": "2026-05-28",
+      "delivery": "2026-05-29",
       "isPickup": false,
-      "truck": "2",
+      "truck": "1",
       "notes": "",
       "items": [
         {
@@ -7740,7 +7739,7 @@
       "date": "2026-05-26",
       "delivery": "2026-05-28",
       "isPickup": false,
-      "truck": "1",
+      "truck": "2",
       "notes": "",
       "items": [
         {
@@ -7940,7 +7939,7 @@
       "cityst": "Newark, DE 19702",
       "zone": "Delaware",
       "date": "2026-05-28",
-      "delivery": "2026-05-29",
+      "delivery": "2026-05-28",
       "isPickup": false,
       "truck": "2",
       "notes": "",
@@ -8047,9 +8046,9 @@
       "cityst": "Egg Harbor, NJ 08234",
       "zone": "NJ Central",
       "date": "2026-05-28",
-      "delivery": "",
+      "delivery": "2026-05-28",
       "isPickup": false,
-      "truck": "",
+      "truck": "1",
       "notes": "",
       "items": [
         {
@@ -8225,9 +8224,9 @@
       "cityst": "Telford, PA 18969",
       "zone": "Bucks / Montgomery",
       "date": "2026-05-29",
-      "delivery": "",
+      "delivery": "2026-05-29",
       "isPickup": false,
-      "truck": "",
+      "truck": "1",
       "notes": "",
       "items": [
         {
@@ -8435,12 +8434,13 @@
           "step2CompletedBy": "",
           "notes": "Elgen:EBG (Elgen Butyl Gasket (500'/box)) | Elgen Butyl Gasket (500'/box)",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "Pick Up",
+          "completedAt": "2026-05-26T17:05:12.619Z"
         }
       ],
-      "created": "2026-05-26T16:47:52.794Z"
+      "created": "2026-05-26T16:47:52.794Z",
+      "pickupDate": "2026-05-26"
     }
   ],
   "trucks": [
@@ -8849,16 +8849,6 @@
           "delivered": true
         },
         {
-          "woId": 1779283294062,
-          "woNum": "46353",
-          "customer": "Air Concepts Inc.",
-          "address": "2804B Old Rogers Road",
-          "cityst": "Bristol, PA 19007",
-          "zone": "SE Pennsylvania",
-          "delivery": "2026-05-27",
-          "notes": ""
-        },
-        {
           "woId": 1779391036901,
           "woNum": "46373",
           "customer": "Peirce Phelps, Inc. — Norristown PA",
@@ -8909,36 +8899,6 @@
           "notes": ""
         },
         {
-          "woId": 1778762848614,
-          "woNum": "46289",
-          "customer": "Compass Wire Cloth Corp.",
-          "address": "1942 N Mill Road",
-          "cityst": "Vineland, NJ 08360",
-          "zone": "NJ North",
-          "delivery": "2026-05-28",
-          "notes": ""
-        },
-        {
-          "woId": 1779381231521,
-          "woNum": "46369",
-          "customer": "Compass Wire Cloth Corp.",
-          "address": "1942 N Mill Road",
-          "cityst": "Vineland, NJ 08360",
-          "zone": "NJ North",
-          "delivery": "2026-05-28",
-          "notes": ""
-        },
-        {
-          "woId": 1779459783076,
-          "woNum": "46375",
-          "customer": "Hutchinson Plumbing",
-          "address": "621 Chapel Ave",
-          "cityst": "Cherry Hill, NJ 08034",
-          "zone": "NJ South",
-          "delivery": "2026-05-28",
-          "notes": ""
-        },
-        {
           "woId": 1778688108357,
           "woNum": "46195",
           "customer": "E.P. Homiek Sheet Metal Inc.",
@@ -8969,12 +8929,32 @@
           "notes": ""
         },
         {
-          "woId": 1779797193452,
-          "woNum": "46384",
-          "customer": "Louden Sheet Metal- a ThermoCool Company",
-          "address": "566 Jackson Road",
-          "cityst": "Atco, NJ 08004",
-          "zone": "NJ South",
+          "woId": 1779811500632,
+          "woNum": "46390",
+          "customer": "BKG Company Inc.",
+          "address": "2990 Clymer Ave.",
+          "cityst": "Telford, PA 18969",
+          "zone": "Bucks / Montgomery",
+          "delivery": "2026-05-29",
+          "notes": ""
+        },
+        {
+          "woId": 1779460859765,
+          "woNum": "46381",
+          "customer": "Legendair",
+          "address": "1836 Stout Drive Unit 16",
+          "cityst": "Warminster, PA 18974",
+          "zone": "Bucks / Montgomery",
+          "delivery": "2026-05-29",
+          "notes": ""
+        },
+        {
+          "woId": 1779811359959,
+          "woNum": "46388",
+          "customer": "United Supply Company — Egg Harbor NJ",
+          "address": "108 Repetto Ave A",
+          "cityst": "Egg Harbor, NJ 08234",
+          "zone": "NJ Central",
           "delivery": "2026-05-28",
           "notes": ""
         }
@@ -9272,26 +9252,6 @@
           "notes": ""
         },
         {
-          "woId": 1779460859765,
-          "woNum": "46381",
-          "customer": "Legendair",
-          "address": "1836 Stout Drive Unit 16",
-          "cityst": "Warminster, PA 18974",
-          "zone": "Bucks / Montgomery",
-          "delivery": "2026-05-28",
-          "notes": ""
-        },
-        {
-          "woId": 1779797278593,
-          "woNum": "46386",
-          "customer": "Goodman Distribution, Inc — Newark DE",
-          "address": "230 Executive Drive",
-          "cityst": "Newark, DE 19702",
-          "zone": "Delaware",
-          "delivery": "2026-05-29",
-          "notes": ""
-        },
-        {
           "woId": 1779459802539,
           "woNum": "46376",
           "customer": "Lincoln Tech",
@@ -9312,6 +9272,56 @@
           "delivery": "2026-05-26",
           "notes": "",
           "delivered": true
+        },
+        {
+          "woId": 1779797278593,
+          "woNum": "46386",
+          "customer": "Goodman Distribution, Inc — Newark DE",
+          "address": "230 Executive Drive",
+          "cityst": "Newark, DE 19702",
+          "zone": "Delaware",
+          "delivery": "2026-05-28",
+          "notes": ""
+        },
+        {
+          "woId": 1779797193452,
+          "woNum": "46384",
+          "customer": "Louden Sheet Metal- a ThermoCool Company",
+          "address": "566 Jackson Road",
+          "cityst": "Atco, NJ 08004",
+          "zone": "NJ South",
+          "delivery": "2026-05-28",
+          "notes": ""
+        },
+        {
+          "woId": 1779381231521,
+          "woNum": "46369",
+          "customer": "Compass Wire Cloth Corp.",
+          "address": "1942 N Mill Road",
+          "cityst": "Vineland, NJ 08360",
+          "zone": "NJ North",
+          "delivery": "2026-05-28",
+          "notes": ""
+        },
+        {
+          "woId": 1778762848614,
+          "woNum": "46289",
+          "customer": "Compass Wire Cloth Corp.",
+          "address": "1942 N Mill Road",
+          "cityst": "Vineland, NJ 08360",
+          "zone": "NJ North",
+          "delivery": "2026-05-28",
+          "notes": ""
+        },
+        {
+          "woId": 1779459783076,
+          "woNum": "46375",
+          "customer": "Hutchinson Plumbing",
+          "address": "621 Chapel Ave",
+          "cityst": "Cherry Hill, NJ 08034",
+          "zone": "NJ South",
+          "delivery": "2026-05-28",
+          "notes": ""
         }
       ],
       "shipDate": ""
@@ -13043,6 +13053,6 @@
       "color": "#FF7043"
     }
   ],
-  "exportDate": "2026-05-26T16:48:54.258Z",
+  "exportDate": "2026-05-26T17:33:09.471Z",
   "version": "2.0"
 }
