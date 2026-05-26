@@ -2854,7 +2854,7 @@
           "step2CompletedBy": "",
           "notes": "Blank:182.5168 (18 Ga. 2.5' x 168' Galv) | 18 Ga. 2.5' x 168' Galv",
           "assignee": "",
-          "status": "Pending",
+          "status": "In Process",
           "completedBy": "",
           "completedAt": "",
           "woNum": "46289",
@@ -6122,14 +6122,14 @@
           "step2CompletedBy": "",
           "notes": "GlvSht:263096 (26 Ga. 30' x 96' Galv) | 26 Ga. 30' x 96' Galv",
           "assignee": "",
-          "status": "Pending",
+          "status": "In Process",
           "completedBy": "",
           "completedAt": "",
           "woNum": "46357",
           "customer": "Four Quarters Plumbing Htg & A/C",
           "delivery": "2026-05-28",
           "woId": 1779283414344,
-          "priority": 8
+          "priority": 7
         }
       ],
       "created": "2026-05-20T13:23:34.344Z"
@@ -6517,7 +6517,7 @@
           "qty": "8780",
           "wtUnit": 0,
           "bundle": "",
-          "weight": 0,
+          "weight": 8780,
           "station": "OTHER",
           "isDual": false,
           "step1Op": "",
@@ -6541,7 +6541,7 @@
           "qty": "9860",
           "wtUnit": 0,
           "bundle": "",
-          "weight": 0,
+          "weight": 9860,
           "station": "OTHER",
           "isDual": false,
           "step1Op": "",
@@ -6582,7 +6582,7 @@
           "qty": "10",
           "wtUnit": 0,
           "bundle": "",
-          "weight": 0,
+          "weight": 993.6,
           "station": "PICK / PULL",
           "isDual": false,
           "step1Op": "",
@@ -6762,7 +6762,7 @@
           "step2CompletedBy": "",
           "notes": "NonGlvSht:CR1648120 (16 Ga. 48' x 120' CR) | 16 Ga. 48' x 120' CR",
           "assignee": "",
-          "status": "Pending",
+          "status": "In Process",
           "completedBy": "",
           "completedAt": "",
           "woNum": "46369",
@@ -6791,7 +6791,7 @@
           "step2CompletedBy": "",
           "notes": "Blank:CR16648 (16 Ga. 6' x 48' CR) | 16 Ga. 6' x 48' CR Shroud",
           "assignee": "",
-          "status": "Pending",
+          "status": "In Process",
           "completedBy": "",
           "completedAt": "",
           "coilNum": "16ga",
@@ -6821,7 +6821,7 @@
           "step2CompletedBy": "",
           "notes": "Blank:CR161272 (16 Ga. 12' x 72' CR) | 16 Ga. 12' x 72' CR",
           "assignee": "",
-          "status": "Pending",
+          "status": "In Process",
           "completedBy": "",
           "completedAt": "",
           "coilNum": "16ga",
@@ -6974,7 +6974,7 @@
           "qty": "2000",
           "wtUnit": 0,
           "bundle": "",
-          "weight": 0,
+          "weight": 1383.4625,
           "station": "DRIVE",
           "isDual": false,
           "step1Op": "",
@@ -7003,7 +7003,7 @@
           "qty": "1000",
           "wtUnit": 0,
           "bundle": "",
-          "weight": 0,
+          "weight": 1220.703125,
           "station": "SLIP",
           "isDual": false,
           "step1Op": "",
@@ -7574,12 +7574,12 @@
           "step2CompletedBy": "",
           "notes": "GlvSht:GR551660120 (16 Ga. 60' x 120' Grade 55 G-90) | 16 Ga. 60' x 120' Grade 55 G-90 (skids of , skid of )",
           "assignee": "",
-          "status": "Pending",
+          "status": "In Process",
           "completedBy": "",
           "completedAt": "",
           "woNum": "46382",
           "customer": "EDA Contractors, Inc",
-          "delivery": "",
+          "delivery": "2026-05-27",
           "woId": 1779464974469,
           "priority": 6,
           "coilNum": "16GA GR50"
@@ -11076,7 +11076,8 @@
       "Aluminum"
     ],
     "wrapOverrides": {
-      "2026-05-26": true
+      "2026-05-26": true,
+      "2026-05-27": true
     },
     "coilRecords": {
       "4313": {
@@ -11138,22 +11139,22 @@
         "priority": 1
       },
       "18ga 2.5": {
-        "priority": 3
+        "priority": 2
       },
       "26ga 60": {
         "priority": 1
       },
       "16ga": {
-        "priority": 5
-      },
-      "18ga": {
         "priority": 4
       },
+      "18ga": {
+        "priority": 3
+      },
       "14ga": {
-        "priority": 7
+        "priority": 6
       },
       "16GA GR50": {
-        "priority": 6
+        "priority": 5
       },
       "26ga 48": {
         "priority": 2
@@ -12598,6 +12599,6 @@
       "color": "#FF7043"
     }
   ],
-  "exportDate": "2026-05-26T13:27:17.336Z",
+  "exportDate": "2026-05-26T14:27:15.366Z",
   "version": "2.0"
 }
