@@ -51,8 +51,8 @@
       "cityst": "Whiting, NJ 08759",
       "zone": "NJ North",
       "date": "2026-05-19",
-      "delivery": "2026-05-29",
-      "truck": "1",
+      "delivery": "2026-05-27",
+      "truck": "",
       "notes": "",
       "items": [
         {
@@ -7264,8 +7264,8 @@
         }
       ],
       "created": "2026-05-22T14:23:22.539Z",
-      "delivered": false,
-      "deliveredAt": "",
+      "delivered": true,
+      "deliveredAt": "2026-05-26T18:17:28.910Z",
       "deliveredBy": ""
     },
     {
@@ -7874,9 +7874,9 @@
       "cityst": "Whiting, NJ 08759",
       "zone": "NJ North",
       "date": "2026-05-28",
-      "delivery": "2026-05-29",
+      "delivery": "2026-05-27",
       "isPickup": false,
-      "truck": "1",
+      "truck": "",
       "notes": "",
       "items": [
         {
@@ -8621,7 +8621,7 @@
           "step2CompletedBy": "",
           "notes": "Misc:16misc (16 Ga. Galv) | 16 Ga. 48' x 72' Galv",
           "assignee": "",
-          "status": "Pending",
+          "status": "In Process",
           "completedBy": "",
           "completedAt": ""
         }
@@ -9085,32 +9085,12 @@
           "notes": ""
         },
         {
-          "woId": 1778688108357,
-          "woNum": "46195",
-          "customer": "E.P. Homiek Sheet Metal Inc.",
-          "address": "1 Fedornak Freeway",
-          "cityst": "Whiting, NJ 08759",
-          "zone": "NJ North",
-          "delivery": "2026-05-29",
-          "notes": ""
-        },
-        {
           "woId": 1779459889037,
           "woNum": "46378",
           "customer": "Erhardt Mechanical, Inc.",
           "address": "422 W 6th Street",
           "cityst": "Lansdale, PA 19446",
           "zone": "PA Other",
-          "delivery": "2026-05-29",
-          "notes": ""
-        },
-        {
-          "woId": 1779797252854,
-          "woNum": "46385",
-          "customer": "E.P. Homiek Sheet Metal Inc.",
-          "address": "1 Fedornak Freeway",
-          "cityst": "Whiting, NJ 08759",
-          "zone": "NJ North",
           "delivery": "2026-05-29",
           "notes": ""
         },
@@ -9446,7 +9426,7 @@
           "zone": "SE Pennsylvania",
           "delivery": "2026-05-26",
           "notes": "",
-          "delivered": false
+          "delivered": true
         },
         {
           "woId": 1779465024079,
@@ -13239,6 +13219,6 @@
       "color": "#FF7043"
     }
   ],
-  "exportDate": "2026-05-26T18:15:44.895Z",
+  "exportDate": "2026-05-26T18:34:40.043Z",
   "version": "2.0"
 }
