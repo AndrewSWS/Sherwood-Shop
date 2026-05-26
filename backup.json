@@ -8400,6 +8400,47 @@
         }
       ],
       "created": "2026-05-26T16:05:00.633Z"
+    },
+    {
+      "id": 1779814072794,
+      "woNum": "46391",
+      "po": "",
+      "customer": "Aella Industries",
+      "address": "1602 Manning Blvd",
+      "cityst": "Levittown, PA 19057",
+      "zone": "SE Pennsylvania",
+      "date": "2026-05-26",
+      "delivery": "",
+      "isPickup": true,
+      "truck": "",
+      "notes": "",
+      "items": [
+        {
+          "id": 1779814072794.685,
+          "productCat": "Other / Hardware",
+          "type": "Galvanized",
+          "gauge": "",
+          "size": "",
+          "qty": "3",
+          "wtUnit": 0,
+          "bundle": "",
+          "weight": 0,
+          "station": "PICK / PULL",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "Elgen:EBG (Elgen Butyl Gasket (500'/box)) | Elgen Butyl Gasket (500'/box)",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": ""
+        }
+      ],
+      "created": "2026-05-26T16:47:52.794Z"
     }
   ],
   "trucks": [
@@ -13002,6 +13043,6 @@
       "color": "#FF7043"
     }
   ],
-  "exportDate": "2026-05-26T16:05:28.911Z",
+  "exportDate": "2026-05-26T16:48:54.258Z",
   "version": "2.0"
 }
