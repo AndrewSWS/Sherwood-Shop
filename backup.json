@@ -2790,7 +2790,7 @@
           "customer": "Dover Mechanical Contractors",
           "delivery": "",
           "woId": 1778762828677,
-          "priority": 9
+          "priority": 3
         },
         {
           "id": 1778762828678.185,
@@ -2819,7 +2819,7 @@
           "customer": "Dover Mechanical Contractors",
           "delivery": "",
           "woId": 1778762828677,
-          "priority": 10
+          "priority": 4
         }
       ],
       "created": "2026-05-14T12:47:08.677Z"
@@ -5767,7 +5767,8 @@
           "woNum": "46353",
           "customer": "Air Concepts Inc.",
           "delivery": "",
-          "woId": 1779283294062
+          "woId": 1779283294062,
+          "priority": 5
         },
         {
           "id": 1779816515456.3022,
@@ -5795,7 +5796,8 @@
           "woNum": "46353",
           "customer": "Air Concepts Inc.",
           "delivery": "",
-          "woId": 1779283294062
+          "woId": 1779283294062,
+          "priority": 6
         }
       ],
       "created": "2026-05-20T13:21:34.062Z"
@@ -6783,7 +6785,7 @@
           "customer": "Compass Wire Cloth Corp.",
           "delivery": "2026-05-28",
           "woId": 1779381231521,
-          "priority": 3
+          "priority": 1
         },
         {
           "id": 1779381231522.332,
@@ -7386,7 +7388,7 @@
           "customer": "Erhardt Mechanical, Inc.",
           "delivery": "2026-05-29",
           "woId": 1779459889037,
-          "priority": 7
+          "priority": 2
         }
       ],
       "created": "2026-05-22T14:24:49.037Z"
@@ -7431,7 +7433,8 @@
           "woNum": "46379",
           "customer": "Consolidated Mechanical Services",
           "delivery": "",
-          "woId": 1779459953499
+          "woId": 1779459953499,
+          "priority": 2
         },
         {
           "id": 1779801514969.057,
@@ -7459,7 +7462,8 @@
           "woNum": "46379",
           "customer": "Consolidated Mechanical Services",
           "delivery": "",
-          "woId": 1779459953499
+          "woId": 1779459953499,
+          "priority": 3
         }
       ],
       "created": "2026-05-22T14:25:53.500Z"
@@ -7901,7 +7905,12 @@
           "assignee": "",
           "status": "Pending",
           "completedBy": "",
-          "completedAt": ""
+          "completedAt": "",
+          "woNum": "46385",
+          "customer": "E.P. Homiek Sheet Metal Inc.",
+          "delivery": "2026-05-27",
+          "woId": 1779797252854,
+          "priority": 7
         },
         {
           "id": 1779797252855.6907,
@@ -8259,7 +8268,12 @@
           "assignee": "",
           "status": "Pending",
           "completedBy": "",
-          "completedAt": ""
+          "completedAt": "",
+          "woNum": "46390",
+          "customer": "BKG Company Inc.",
+          "delivery": "2026-05-29",
+          "woId": 1779811500632,
+          "priority": 8
         },
         {
           "id": 1779811500633.373,
@@ -8283,7 +8297,12 @@
           "assignee": "",
           "status": "Pending",
           "completedBy": "",
-          "completedAt": ""
+          "completedAt": "",
+          "woNum": "46390",
+          "customer": "BKG Company Inc.",
+          "delivery": "2026-05-29",
+          "woId": 1779811500632,
+          "priority": 9
         },
         {
           "id": 1779811500634.5137,
@@ -8307,7 +8326,12 @@
           "assignee": "",
           "status": "Pending",
           "completedBy": "",
-          "completedAt": ""
+          "completedAt": "",
+          "woNum": "46390",
+          "customer": "BKG Company Inc.",
+          "delivery": "2026-05-29",
+          "woId": 1779811500632,
+          "priority": 10
         },
         {
           "id": 1779811500635.638,
@@ -8331,7 +8355,12 @@
           "assignee": "",
           "status": "Pending",
           "completedBy": "",
-          "completedAt": ""
+          "completedAt": "",
+          "woNum": "46390",
+          "customer": "BKG Company Inc.",
+          "delivery": "2026-05-29",
+          "woId": 1779811500632,
+          "priority": 11
         },
         {
           "id": 1779811500636.0488,
@@ -8534,7 +8563,12 @@
           "assignee": "",
           "status": "Pending",
           "completedBy": "",
-          "completedAt": ""
+          "completedAt": "",
+          "woNum": "46392",
+          "customer": "Riley Sales, Inc. — Broomall PA",
+          "delivery": "2026-05-29",
+          "woId": 1779819167300,
+          "priority": 12
         },
         {
           "id": 1779819167303.4285,
@@ -8582,7 +8616,12 @@
           "assignee": "",
           "status": "Pending",
           "completedBy": "",
-          "completedAt": ""
+          "completedAt": "",
+          "woNum": "46392",
+          "customer": "Riley Sales, Inc. — Broomall PA",
+          "delivery": "2026-05-29",
+          "woId": 1779819167300,
+          "priority": 13
         }
       ],
       "created": "2026-05-26T18:12:47.300Z"
@@ -8627,6 +8666,93 @@
         }
       ],
       "created": "2026-05-26T18:13:15.524Z"
+    },
+    {
+      "id": 1779881437912,
+      "woNum": "46395",
+      "po": "",
+      "customer": "5 Star Sheet Metal, LLC",
+      "address": "",
+      "cityst": "",
+      "zone": "",
+      "date": "2026-05-28",
+      "delivery": "2026-05-28",
+      "isPickup": false,
+      "truck": "",
+      "notes": "",
+      "items": [
+        {
+          "id": 1779881810838.9612,
+          "productCat": "Other / Hardware",
+          "type": "Galvanized",
+          "gauge": "",
+          "size": "",
+          "qty": "5900",
+          "wtUnit": 0,
+          "bundle": "4284",
+          "weight": 5900,
+          "station": "OTHER",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "GlvCoil:2860coil (28 Ga. 60' x Coil Galv) | 28 Ga. 60' x Coil Galv",
+          "assignee": "Joel",
+          "status": "In Process",
+          "completedBy": "",
+          "completedAt": "",
+          "woNum": "46395",
+          "customer": "5 Star Sheet Metal, LLC",
+          "delivery": "2026-05-28",
+          "woId": 1779881437912,
+          "priority": 1
+        }
+      ],
+      "created": "2026-05-27T11:30:37.913Z"
+    },
+    {
+      "id": 1779882038179,
+      "woNum": "46394",
+      "po": "",
+      "customer": "Square Customers",
+      "address": "1431 Ford Road",
+      "cityst": "Bensalem, PA 19020",
+      "zone": "SE Pennsylvania",
+      "date": "2026-05-27",
+      "delivery": "",
+      "isPickup": true,
+      "truck": "",
+      "notes": "",
+      "items": [
+        {
+          "id": 1779882038179.5762,
+          "productCat": "Flat Sheet",
+          "type": "Galvanized",
+          "gauge": "22",
+          "size": "48x96",
+          "qty": "20",
+          "wtUnit": 39.375,
+          "bundle": "",
+          "weight": 787.5,
+          "station": "SHEAR",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "GlvSht:224896 (22 Ga. 48' x 96' Galv) | 22 Ga. 48' x 96' Galv",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": ""
+        }
+      ],
+      "created": "2026-05-27T11:40:38.179Z"
     }
   ],
   "trucks": [
@@ -13229,6 +13355,6 @@
       "color": "#FF7043"
     }
   ],
-  "exportDate": "2026-05-27T10:53:56.006Z",
+  "exportDate": "2026-05-27T11:47:21.088Z",
   "version": "2.0"
 }
