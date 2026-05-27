@@ -8459,9 +8459,9 @@
       "cityst": "Broomall, PA 19008",
       "zone": "SE Pennsylvania",
       "date": "2026-05-28",
-      "delivery": "",
+      "delivery": "2026-05-29",
       "isPickup": false,
-      "truck": "",
+      "truck": "1",
       "notes": "",
       "items": [
         {
@@ -9122,6 +9122,16 @@
           "cityst": "Egg Harbor, NJ 08234",
           "zone": "NJ Central",
           "delivery": "2026-05-28",
+          "notes": ""
+        },
+        {
+          "woId": 1779819167300,
+          "woNum": "46392",
+          "customer": "Riley Sales, Inc. — Broomall PA",
+          "address": "848 Sussex Blvd",
+          "cityst": "Broomall, PA 19008",
+          "zone": "SE Pennsylvania",
+          "delivery": "2026-05-29",
           "notes": ""
         }
       ],
@@ -13219,6 +13229,6 @@
       "color": "#FF7043"
     }
   ],
-  "exportDate": "2026-05-26T18:34:40.043Z",
+  "exportDate": "2026-05-27T10:53:56.006Z",
   "version": "2.0"
 }
