@@ -10074,7 +10074,7 @@
       "notes": "",
       "items": [
         {
-          "id": 1779972323808.6514,
+          "id": 1779982301901.9663,
           "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "24",
@@ -10095,10 +10095,14 @@
           "assignee": "",
           "status": "Pending",
           "completedBy": "",
-          "completedAt": ""
+          "completedAt": "",
+          "woNum": "46410",
+          "customer": "Hunter Mechanical, Inc.",
+          "delivery": "",
+          "woId": 1779972323808
         },
         {
-          "id": 1779972323809.0159,
+          "id": 1779982301902.054,
           "productCat": "Flat Sheet",
           "type": "Galvanized",
           "gauge": "26",
@@ -10119,7 +10123,11 @@
           "assignee": "",
           "status": "Pending",
           "completedBy": "",
-          "completedAt": ""
+          "completedAt": "",
+          "woNum": "46410",
+          "customer": "Hunter Mechanical, Inc.",
+          "delivery": "",
+          "woId": 1779972323808
         }
       ],
       "created": "2026-05-28T12:45:23.808Z"
@@ -10265,7 +10273,7 @@
       "cityst": "Edison, NJ 08817",
       "zone": "NJ North",
       "date": "2026-06-02",
-      "delivery": "",
+      "delivery": "2026-06-02",
       "isPickup": false,
       "truck": "",
       "notes": "",
@@ -10361,6 +10369,47 @@
         }
       ],
       "created": "2026-05-28T15:04:58.765Z"
+    },
+    {
+      "id": 1779981610852,
+      "woNum": "46415",
+      "po": "",
+      "customer": "JP Menszak & Son",
+      "address": "2624 Powell Ave.",
+      "cityst": "Pennsauken, NJ 08110",
+      "zone": "NJ Central",
+      "date": "2026-05-28",
+      "delivery": "2026-06-02",
+      "isPickup": false,
+      "truck": "",
+      "notes": "",
+      "items": [
+        {
+          "id": 1779981610852.6313,
+          "productCat": "Flat Sheet",
+          "type": "Galvanized",
+          "gauge": "24",
+          "size": "48x96",
+          "qty": "120",
+          "wtUnit": 32.375,
+          "bundle": "",
+          "weight": 3885,
+          "station": "PICK / PULL",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": ""
+        }
+      ],
+      "created": "2026-05-28T15:20:10.852Z"
     }
   ],
   "trucks": [
@@ -15090,6 +15139,6 @@
       "color": "#FF7043"
     }
   ],
-  "exportDate": "2026-05-28T15:08:11.298Z",
+  "exportDate": "2026-05-28T15:31:55.887Z",
   "version": "2.0"
 }
