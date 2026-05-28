@@ -52,7 +52,7 @@
       "zone": "NJ North",
       "date": "2026-05-19",
       "delivery": "2026-05-28",
-      "truck": "",
+      "truck": "2",
       "notes": "",
       "items": [
         {
@@ -85,7 +85,10 @@
           "priority": 1
         }
       ],
-      "created": "2026-05-13T16:01:48.357Z"
+      "created": "2026-05-13T16:01:48.357Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-28T18:45:01.054Z",
+      "deliveredBy": ""
     },
     {
       "id": 1778688311461,
@@ -2869,7 +2872,10 @@
         }
       ],
       "created": "2026-05-14T12:47:28.614Z",
-      "isPickup": false
+      "isPickup": false,
+      "delivered": true,
+      "deliveredAt": "2026-05-28T18:44:50.142Z",
+      "deliveredBy": ""
     },
     {
       "id": 1778762859909,
@@ -6148,7 +6154,10 @@
           "priority": 7
         }
       ],
-      "created": "2026-05-20T13:23:34.344Z"
+      "created": "2026-05-20T13:23:34.344Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-28T18:44:48.100Z",
+      "deliveredBy": ""
     },
     {
       "id": 1779283429712,
@@ -6854,7 +6863,10 @@
           "woId": 1779381231521
         }
       ],
-      "created": "2026-05-21T16:33:51.521Z"
+      "created": "2026-05-21T16:33:51.521Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-28T18:44:49.047Z",
+      "deliveredBy": ""
     },
     {
       "id": 1779381520577,
@@ -7241,7 +7253,10 @@
           "priority": 2
         }
       ],
-      "created": "2026-05-22T14:23:03.076Z"
+      "created": "2026-05-22T14:23:03.076Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-28T18:44:53.038Z",
+      "deliveredBy": ""
     },
     {
       "id": 1779459802539,
@@ -7574,7 +7589,10 @@
           "coilNum": "26ga 60"
         }
       ],
-      "created": "2026-05-22T14:40:59.765Z"
+      "created": "2026-05-22T14:40:59.765Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-28T18:44:54.882Z",
+      "deliveredBy": ""
     },
     {
       "id": 1779464974469,
@@ -7740,9 +7758,9 @@
           "step2CompletedBy": "",
           "notes": "Misc:16misc (16 Ga. Galv) | 16 Ga. 48 x 96 Aluminized Steel",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": "",
+          "status": "Complete",
+          "completedBy": "Delivery",
+          "completedAt": "2026-05-28T18:45:13.525Z",
           "woNum": "46298",
           "customer": "Aircon Filters",
           "delivery": "2026-05-29",
@@ -7886,7 +7904,10 @@
           "completedAt": "2026-05-27T18:20:22.111Z"
         }
       ],
-      "created": "2026-05-26T12:06:33.452Z"
+      "created": "2026-05-26T12:06:33.452Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-28T18:44:50.775Z",
+      "deliveredBy": ""
     },
     {
       "id": 1779797252854,
@@ -8000,7 +8021,10 @@
           "completedAt": "2026-05-27T18:20:24.136Z"
         }
       ],
-      "created": "2026-05-26T12:07:58.593Z"
+      "created": "2026-05-26T12:07:58.593Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-28T18:44:51.546Z",
+      "deliveredBy": ""
     },
     {
       "id": 1779798103959,
@@ -8749,7 +8773,10 @@
           "priority": 1
         }
       ],
-      "created": "2026-05-27T11:30:37.913Z"
+      "created": "2026-05-27T11:30:37.913Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-28T18:44:55.656Z",
+      "deliveredBy": ""
     },
     {
       "id": 1779882038179,
@@ -8785,12 +8812,13 @@
           "step2CompletedBy": "",
           "notes": "GlvSht:224896 (22 Ga. 48' x 96' Galv) | 22 Ga. 48' x 96' Galv",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "Pick Up",
+          "completedAt": "2026-05-28T18:44:41.117Z"
         }
       ],
-      "created": "2026-05-27T11:40:38.179Z"
+      "created": "2026-05-27T11:40:38.179Z",
+      "pickupDate": "2026-05-28"
     },
     {
       "id": 1779886600543,
@@ -8872,7 +8900,10 @@
           "completedAt": "2026-05-27T18:20:56.625Z"
         }
       ],
-      "created": "2026-05-27T12:56:54.939Z"
+      "created": "2026-05-27T12:56:54.939Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-28T18:44:56.500Z",
+      "deliveredBy": ""
     },
     {
       "id": 1779899307193,
@@ -8883,13 +8914,13 @@
       "cityst": "Harleysville, PA 19438",
       "zone": "PA Other",
       "date": "2026-05-29",
-      "delivery": "2026-05-29",
+      "delivery": "2026-06-03",
       "isPickup": false,
       "truck": "2",
       "notes": "slatted, 3 bands",
       "items": [
         {
-          "id": 1779900233488.0493,
+          "id": 1779984756672.478,
           "productCat": "Flat Sheet",
           "type": "Stainless",
           "gauge": "16",
@@ -8913,7 +8944,7 @@
           "completedAt": "",
           "woNum": "46398",
           "customer": "I T Landes & Son's, Inc.",
-          "delivery": "2026-05-29",
+          "delivery": "",
           "woId": 1779899307193
         }
       ],
@@ -9309,7 +9340,10 @@
           "completedAt": "2026-05-27T18:20:25.461Z"
         }
       ],
-      "created": "2026-05-27T16:36:07.604Z"
+      "created": "2026-05-27T16:36:07.604Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-28T18:44:52.243Z",
+      "deliveredBy": ""
     },
     {
       "id": 1779899829104,
@@ -10068,7 +10102,7 @@
       "cityst": "Bensalem, PA 19020",
       "zone": "SE Pennsylvania",
       "date": "2026-06-01",
-      "delivery": "",
+      "delivery": "2026-05-29",
       "isPickup": false,
       "truck": "",
       "notes": "",
@@ -10340,7 +10374,7 @@
       "date": "2026-05-29",
       "delivery": "2026-05-29",
       "isPickup": false,
-      "truck": "",
+      "truck": "2",
       "notes": "",
       "items": [
         {
@@ -10804,7 +10838,8 @@
           "cityst": "Cinnaminson, NJ 08077",
           "zone": "NJ South",
           "delivery": "2026-05-28",
-          "notes": "Balance 5/28"
+          "notes": "Balance 5/28",
+          "delivered": true
         },
         {
           "woId": 1779300283202,
@@ -10888,7 +10923,8 @@
           "cityst": "Vineland, NJ 08360",
           "zone": "NJ North",
           "delivery": "2026-05-28",
-          "notes": ""
+          "notes": "",
+          "delivered": true
         },
         {
           "woId": 1779381231521,
@@ -10898,7 +10934,8 @@
           "cityst": "Vineland, NJ 08360",
           "zone": "NJ North",
           "delivery": "2026-05-28",
-          "notes": ""
+          "notes": "",
+          "delivered": true
         },
         {
           "woId": 1779797193452,
@@ -10908,7 +10945,8 @@
           "cityst": "Atco, NJ 08004",
           "zone": "NJ South",
           "delivery": "2026-05-28",
-          "notes": ""
+          "notes": "",
+          "delivered": true
         },
         {
           "woId": 1779797278593,
@@ -10918,7 +10956,8 @@
           "cityst": "Newark, DE 19702",
           "zone": "Delaware",
           "delivery": "2026-05-28",
-          "notes": ""
+          "notes": "",
+          "delivered": true
         },
         {
           "woId": 1779899767604,
@@ -10928,7 +10967,8 @@
           "cityst": "",
           "zone": "",
           "delivery": "2026-05-28",
-          "notes": ""
+          "notes": "",
+          "delivered": true
         },
         {
           "woId": 1779899914676,
@@ -10948,7 +10988,8 @@
           "cityst": "Cherry Hill, NJ 08034",
           "zone": "NJ South",
           "delivery": "2026-05-28",
-          "notes": ""
+          "notes": "",
+          "delivered": true
         }
       ],
       "shipDate": ""
@@ -11314,7 +11355,7 @@
           "address": "247 Main Street",
           "cityst": "Harleysville, PA 19438",
           "zone": "PA Other",
-          "delivery": "2026-05-29",
+          "delivery": "2026-06-03",
           "notes": "slatted, 3 bands"
         },
         {
@@ -11325,7 +11366,8 @@
           "cityst": "Warminster, PA 18974",
           "zone": "Bucks / Montgomery",
           "delivery": "2026-05-28",
-          "notes": ""
+          "notes": "",
+          "delivered": true
         },
         {
           "woId": 1779881437912,
@@ -11335,7 +11377,8 @@
           "cityst": "",
           "zone": "",
           "delivery": "2026-05-28",
-          "notes": ""
+          "notes": "",
+          "delivered": true
         },
         {
           "woId": 1779886614939,
@@ -11345,7 +11388,8 @@
           "cityst": "Ivyland, PA 18974",
           "zone": "Bucks / Montgomery",
           "delivery": "2026-05-28",
-          "notes": ""
+          "notes": "",
+          "delivered": true
         },
         {
           "woId": 1779819195524,
@@ -11405,6 +11449,27 @@
           "cityst": "Edison, NJ 08817",
           "zone": "NJ North",
           "delivery": "2026-05-27",
+          "notes": "",
+          "delivered": true
+        },
+        {
+          "woId": 1779980698765,
+          "woNum": "46414",
+          "customer": "BKG Company Inc.",
+          "address": "2990 Clymer Ave.",
+          "cityst": "Telford, PA 18969",
+          "zone": "Bucks / Montgomery",
+          "delivery": "2026-05-29",
+          "notes": ""
+        },
+        {
+          "woId": 1778688108357,
+          "woNum": "46195",
+          "customer": "E.P. Homiek Sheet Metal Inc.",
+          "address": "1 Fedornak Freeway",
+          "cityst": "Whiting, NJ 08759",
+          "zone": "NJ North",
+          "delivery": "2026-05-28",
           "notes": "",
           "delivered": true
         }
@@ -15139,6 +15204,6 @@
       "color": "#FF7043"
     }
   ],
-  "exportDate": "2026-05-28T15:31:55.887Z",
+  "exportDate": "2026-05-28T18:45:48.910Z",
   "version": "2.0"
 }
