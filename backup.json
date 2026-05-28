@@ -9057,7 +9057,7 @@
       "cityst": "Philadelphia, PA 19154",
       "zone": "SE Pennsylvania",
       "date": "2026-06-01",
-      "delivery": "2026-06-01",
+      "delivery": "2026-06-02",
       "isPickup": false,
       "truck": "",
       "notes": "",
@@ -9954,9 +9954,9 @@
           "step2CompletedBy": "",
           "notes": "HVACAcsry:2896Slip (28 Ga. 8' Slip Galv) | 28 Ga. 8' Slip Galv",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": "",
+          "status": "Complete",
+          "completedBy": "Pick Up",
+          "completedAt": "2026-05-28T13:00:09.423Z",
           "woNum": "46408",
           "customer": "Precision Sheet Metal Co.",
           "delivery": "",
@@ -9982,16 +9982,17 @@
           "step2CompletedBy": "",
           "notes": "Elgen:E4V (Elgen 4' Turning Vane (50'/bundle)) | Elgen 4' Turning Vane (50'/bundle)",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": "",
+          "status": "Complete",
+          "completedBy": "Pick Up",
+          "completedAt": "2026-05-28T13:00:09.423Z",
           "woNum": "46408",
           "customer": "Precision Sheet Metal Co.",
           "delivery": "",
           "woId": 1779906492115
         }
       ],
-      "created": "2026-05-27T18:28:12.115Z"
+      "created": "2026-05-27T18:28:12.115Z",
+      "pickupDate": "2026-05-28"
     },
     {
       "id": 1779972300474,
@@ -10157,9 +10158,9 @@
           "step2CompletedBy": "",
           "notes": "GlvSht:264896 (26 Ga. 48' x 96' Galv) | 26 Ga. 48' x 96' Galv",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "Pick Up",
+          "completedAt": "2026-05-28T15:00:42.317Z"
         },
         {
           "id": 1779972343696.7563,
@@ -10181,12 +10182,13 @@
           "step2CompletedBy": "",
           "notes": "GlvSht:244896 (24 Ga. 48' x 96' Galv) | 24 Ga. 48' x 96' Galv",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "Pick Up",
+          "completedAt": "2026-05-28T15:00:42.317Z"
         }
       ],
-      "created": "2026-05-28T12:45:43.696Z"
+      "created": "2026-05-28T12:45:43.696Z",
+      "pickupDate": "2026-05-28"
     },
     {
       "id": 1779972362428,
@@ -10222,9 +10224,9 @@
           "step2CompletedBy": "",
           "notes": "GlvSht:G901660120 (16 Ga. 60' x 120'  G-90) | 16 Ga. 60' x 120'  G-90",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "Pick Up",
+          "completedAt": "2026-05-28T13:39:37.756Z"
         },
         {
           "id": 1779972362429.5269,
@@ -10246,12 +10248,119 @@
           "step2CompletedBy": "",
           "notes": "GlvSht:G901660120 (16 Ga. 60' x 120'  G-90) | 16 Ga. 60' x 70'  G-90",
           "assignee": "",
+          "status": "Complete",
+          "completedBy": "Pick Up",
+          "completedAt": "2026-05-28T13:39:37.756Z"
+        }
+      ],
+      "created": "2026-05-28T12:46:02.428Z",
+      "pickupDate": "2026-05-28"
+    },
+    {
+      "id": 1779980692125,
+      "woNum": "46413",
+      "po": "",
+      "customer": "Edison Heating & Cooling",
+      "address": "191 Vineyard Road",
+      "cityst": "Edison, NJ 08817",
+      "zone": "NJ North",
+      "date": "2026-06-02",
+      "delivery": "",
+      "isPickup": false,
+      "truck": "",
+      "notes": "",
+      "items": [
+        {
+          "id": 1779980692125.6704,
+          "productCat": "Drive",
+          "type": "Galvanized",
+          "gauge": "26",
+          "size": "10' Drive",
+          "qty": "300",
+          "wtUnit": 1.6048,
+          "bundle": "",
+          "weight": 481.44,
+          "station": "DRIVE",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "HVACAcsry:26120Drive (26 Ga. 10' Drive Galv) | 26 Ga. 10' Drive Galv",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": ""
+        },
+        {
+          "id": 1779980692126.537,
+          "productCat": "Slip",
+          "type": "Galvanized",
+          "gauge": "26",
+          "size": "10' Slip",
+          "qty": "300",
+          "wtUnit": 2.832,
+          "bundle": "",
+          "weight": 849.6,
+          "station": "SLIP",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "HVACAcsry:26120Slip (26 Ga. 10' Slip Galv) | 26 Ga. 10' Slip Galv",
+          "assignee": "",
           "status": "Pending",
           "completedBy": "",
           "completedAt": ""
         }
       ],
-      "created": "2026-05-28T12:46:02.428Z"
+      "created": "2026-05-28T15:04:52.125Z"
+    },
+    {
+      "id": 1779980698765,
+      "woNum": "46414",
+      "po": "",
+      "customer": "BKG Company Inc.",
+      "address": "2990 Clymer Ave.",
+      "cityst": "Telford, PA 18969",
+      "zone": "Bucks / Montgomery",
+      "date": "2026-05-29",
+      "delivery": "2026-05-29",
+      "isPickup": false,
+      "truck": "",
+      "notes": "",
+      "items": [
+        {
+          "id": 1779980698765.4558,
+          "productCat": "Other / Hardware",
+          "type": "Galvanized",
+          "gauge": "",
+          "size": "",
+          "qty": "4",
+          "wtUnit": 0,
+          "bundle": "",
+          "weight": 0,
+          "station": "PICK / PULL",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "Elgen:EBG (Elgen Butyl Gasket (500'/box)) | Elgen Butyl Gasket (500'/box)",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": ""
+        }
+      ],
+      "created": "2026-05-28T15:04:58.765Z"
     }
   ],
   "trucks": [
@@ -14981,6 +15090,6 @@
       "color": "#FF7043"
     }
   ],
-  "exportDate": "2026-05-28T12:53:43.557Z",
+  "exportDate": "2026-05-28T15:08:11.298Z",
   "version": "2.0"
 }
