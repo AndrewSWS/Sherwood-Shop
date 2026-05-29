@@ -2762,7 +2762,7 @@
       "cityst": "",
       "zone": "",
       "date": "2026-05-20",
-      "delivery": "",
+      "delivery": "2026-06-03",
       "truck": "",
       "notes": "",
       "items": [
@@ -7207,7 +7207,10 @@
           "woId": 1779391051938
         }
       ],
-      "created": "2026-05-21T19:17:31.938Z"
+      "created": "2026-05-21T19:17:31.938Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-29T13:49:55.976Z",
+      "deliveredBy": ""
     },
     {
       "id": 1779459783076,
@@ -7345,7 +7348,10 @@
           "woId": 1779459857067
         }
       ],
-      "created": "2026-05-22T14:24:17.067Z"
+      "created": "2026-05-22T14:24:17.067Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-29T13:49:54.292Z",
+      "deliveredBy": ""
     },
     {
       "id": 1779459889037,
@@ -7421,7 +7427,10 @@
           "priority": 2
         }
       ],
-      "created": "2026-05-22T14:24:49.037Z"
+      "created": "2026-05-22T14:24:49.037Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-29T13:49:49.023Z",
+      "deliveredBy": ""
     },
     {
       "id": 1779459953499,
@@ -7735,7 +7744,7 @@
       "date": "2026-06-03",
       "delivery": "2026-05-29",
       "isPickup": false,
-      "truck": "",
+      "truck": "2",
       "notes": "",
       "items": [
         {
@@ -7767,7 +7776,10 @@
           "woId": 1779797090248
         }
       ],
-      "created": "2026-05-26T12:04:50.248Z"
+      "created": "2026-05-26T12:04:50.248Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-29T13:49:46.572Z",
+      "deliveredBy": ""
     },
     {
       "id": 1779797193452,
@@ -8219,7 +8231,10 @@
           "woId": 1779811359959
         }
       ],
-      "created": "2026-05-26T16:02:39.959Z"
+      "created": "2026-05-26T16:02:39.959Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-29T13:49:55.304Z",
+      "deliveredBy": ""
     },
     {
       "id": 1779811399696,
@@ -8497,7 +8512,10 @@
           "completedAt": "2026-05-27T18:21:34.995Z"
         }
       ],
-      "created": "2026-05-26T16:05:00.633Z"
+      "created": "2026-05-26T16:05:00.633Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-29T13:49:48.242Z",
+      "deliveredBy": ""
     },
     {
       "id": 1779814072794,
@@ -8686,7 +8704,10 @@
           "priority": 13
         }
       ],
-      "created": "2026-05-26T18:12:47.300Z"
+      "created": "2026-05-26T18:12:47.300Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-29T13:49:49.802Z",
+      "deliveredBy": ""
     },
     {
       "id": 1779819195524,
@@ -8859,7 +8880,10 @@
           "completedAt": "2026-05-27T18:21:15.697Z"
         }
       ],
-      "created": "2026-05-27T12:56:40.543Z"
+      "created": "2026-05-27T12:56:40.543Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-29T13:49:51.270Z",
+      "deliveredBy": ""
     },
     {
       "id": 1779886614939,
@@ -9629,7 +9653,10 @@
           "woId": 1779899914676
         }
       ],
-      "created": "2026-05-27T16:38:34.676Z"
+      "created": "2026-05-27T16:38:34.676Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-29T13:49:53.470Z",
+      "deliveredBy": ""
     },
     {
       "id": 1779899963682,
@@ -10104,7 +10131,7 @@
       "date": "2026-06-01",
       "delivery": "2026-05-29",
       "isPickup": false,
-      "truck": "",
+      "truck": "2",
       "notes": "",
       "items": [
         {
@@ -10164,7 +10191,10 @@
           "woId": 1779972323808
         }
       ],
-      "created": "2026-05-28T12:45:23.808Z"
+      "created": "2026-05-28T12:45:23.808Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-29T13:49:45.860Z",
+      "deliveredBy": ""
     },
     {
       "id": 1779972343695,
@@ -10402,7 +10432,10 @@
           "completedAt": ""
         }
       ],
-      "created": "2026-05-28T15:04:58.765Z"
+      "created": "2026-05-28T15:04:58.765Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-29T13:49:47.610Z",
+      "deliveredBy": ""
     },
     {
       "id": 1779981610852,
@@ -10659,7 +10692,7 @@
       "date": "2026-06-01",
       "delivery": "2026-05-29",
       "isPickup": false,
-      "truck": "",
+      "truck": "2",
       "notes": "",
       "items": [
         {
@@ -10691,7 +10724,10 @@
           "woId": 1780048812116
         }
       ],
-      "created": "2026-05-29T10:00:12.116Z"
+      "created": "2026-05-29T10:00:12.116Z",
+      "delivered": true,
+      "deliveredAt": "2026-05-29T13:49:45.096Z",
+      "deliveredBy": ""
     },
     {
       "id": 1780048847355,
@@ -11009,6 +11045,411 @@
         }
       ],
       "created": "2026-05-29T10:02:11.559Z"
+    },
+    {
+      "id": 1780061769794,
+      "woNum": "46422",
+      "po": "",
+      "customer": "Johnstone Supply- Cherry Hill Group - Florham Park NJ",
+      "address": "",
+      "cityst": ",  ",
+      "zone": "",
+      "date": "2026-06-03",
+      "delivery": "2026-06-02",
+      "isPickup": false,
+      "truck": "",
+      "notes": "",
+      "items": [
+        {
+          "id": 1780062438807.052,
+          "productCat": "Flat Sheet",
+          "type": "Galvanized",
+          "gauge": "26",
+          "size": "36x96",
+          "qty": "100",
+          "wtUnit": 19.0313,
+          "bundle": "",
+          "weight": 1903.13,
+          "station": "PICK / PULL",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "GlvSht:263696 (26 Ga. 36' x 96' Galv) | 26 Ga. 36' x 96' Galv (2 skids of 50)",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": "",
+          "woNum": "46422",
+          "customer": "Johnstone Supply- Cherry Hill Group - Florham Park NJ",
+          "delivery": "2026-06-03",
+          "woId": 1780061769794
+        }
+      ],
+      "created": "2026-05-29T13:36:09.794Z"
+    },
+    {
+      "id": 1780061829552,
+      "woNum": "46423",
+      "po": "",
+      "customer": "Johnstone Supply- Cherry Hill Group - Saddle Brook NJ",
+      "address": "",
+      "cityst": ",  ",
+      "zone": "",
+      "date": "2026-06-03",
+      "delivery": "2026-06-02",
+      "isPickup": false,
+      "truck": "",
+      "notes": "",
+      "items": [
+        {
+          "id": 1780062335017.615,
+          "productCat": "Flat Sheet",
+          "type": "Galvanized",
+          "gauge": "26",
+          "size": "36x96",
+          "qty": "150",
+          "wtUnit": 19.0313,
+          "bundle": "",
+          "weight": 2854.7,
+          "station": "PICK / PULL",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "GlvSht:263696 (26 Ga. 36' x 96' Galv) | 26 Ga. 36' x 96' Galv (3 skids of 50)",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": "",
+          "woNum": "46423",
+          "customer": "Johnstone Supply- Cherry Hill Group - Saddle Brook NJ",
+          "delivery": "",
+          "woId": 1780061829552
+        }
+      ],
+      "created": "2026-05-29T13:37:09.553Z"
+    },
+    {
+      "id": 1780062006796,
+      "woNum": "46424",
+      "po": "",
+      "customer": "Johnstone Supply NJ — Mahwah NJ",
+      "address": "97 McKee Drive",
+      "cityst": "Mahwah, NJ 07430",
+      "zone": "NJ South",
+      "date": "2026-06-03",
+      "delivery": "2026-06-02",
+      "isPickup": false,
+      "truck": "",
+      "notes": "",
+      "items": [
+        {
+          "id": 1780062006796.7947,
+          "productCat": "Flat Sheet",
+          "type": "Galvanized",
+          "gauge": "26",
+          "size": "36x96",
+          "qty": "100",
+          "wtUnit": 19.0313,
+          "bundle": "",
+          "weight": 1903.13,
+          "station": "PICK / PULL",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "GlvSht:263696 (26 Ga. 36' x 96' Galv) | 26 Ga. 36' x 96' Galv (2 skids of 50)",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": ""
+        }
+      ],
+      "created": "2026-05-29T13:40:06.796Z"
+    },
+    {
+      "id": 1780062058983,
+      "woNum": "46425",
+      "po": "",
+      "customer": "Johnstone Supply NJ — Cranford NJ",
+      "address": "740 Walnut Avenue",
+      "cityst": "Cranford, NJ 07016",
+      "zone": "NJ South",
+      "date": "2026-06-03",
+      "delivery": "2026-06-02",
+      "isPickup": false,
+      "truck": "",
+      "notes": "",
+      "items": [
+        {
+          "id": 1780062058983.0007,
+          "productCat": "Flat Sheet",
+          "type": "Galvanized",
+          "gauge": "26",
+          "size": "36x96",
+          "qty": "100",
+          "wtUnit": 19.0313,
+          "bundle": "",
+          "weight": 1903.13,
+          "station": "PICK / PULL",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "GlvSht:263696 (26 Ga. 36' x 96' Galv) | 26 Ga. 36' x 96' Galv (2 skids of 50)",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": ""
+        }
+      ],
+      "created": "2026-05-29T13:40:58.983Z"
+    },
+    {
+      "id": 1780062084588,
+      "woNum": "46426",
+      "po": "",
+      "customer": "Johnstone Supply NJ — Cranbury NJ",
+      "address": "3 Corporate Dr",
+      "cityst": "Cranbury, NJ 08512",
+      "zone": "NJ North",
+      "date": "2026-06-03",
+      "delivery": "2026-06-02",
+      "isPickup": false,
+      "truck": "",
+      "notes": "",
+      "items": [
+        {
+          "id": 1780062084588.564,
+          "productCat": "Flat Sheet",
+          "type": "Galvanized",
+          "gauge": "26",
+          "size": "36x96",
+          "qty": "100",
+          "wtUnit": 19.0313,
+          "bundle": "",
+          "weight": 1903.13,
+          "station": "SHEAR",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "GlvSht:263696 (26 Ga. 36' x 96' Galv) | 26 Ga. 36' x 96' Galv (2 skids of 50)",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": ""
+        }
+      ],
+      "created": "2026-05-29T13:41:24.588Z"
+    },
+    {
+      "id": 1780062123476,
+      "woNum": "46428",
+      "po": "",
+      "customer": "Johnstone Supply- The Balsan Group — Eagleville PA",
+      "address": "2578 Industry Lane",
+      "cityst": "Eagleville, PA 19403",
+      "zone": "PA Other",
+      "date": "2026-06-04",
+      "delivery": "2026-06-03",
+      "isPickup": false,
+      "truck": "",
+      "notes": "",
+      "items": [
+        {
+          "id": 1780062537976.0737,
+          "productCat": "Flat Sheet",
+          "type": "Galvanized",
+          "gauge": "26",
+          "size": "48x96",
+          "qty": "50",
+          "wtUnit": 25.375,
+          "bundle": "",
+          "weight": 1268.75,
+          "station": "PICK / PULL",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "GlvSht:264896 (26 Ga. 48' x 96' Galv) | 26 Ga. 48' x 96' Galv",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": "",
+          "woNum": "46428",
+          "customer": "Johnstone Supply- The Balsan Group — Eagleville PA",
+          "delivery": "2026-06-03",
+          "woId": 1780062123476
+        }
+      ],
+      "created": "2026-05-29T13:42:03.476Z"
+    },
+    {
+      "id": 1780062147922,
+      "woNum": "46432",
+      "po": "",
+      "customer": "National Pipe Hanger Company Corp.",
+      "address": "R.R. 30, 200 Campus Drive",
+      "cityst": "Mount Holly, NJ 08060",
+      "zone": "NJ South",
+      "date": "2026-06-02",
+      "delivery": "2026-06-02",
+      "isPickup": false,
+      "truck": "",
+      "notes": "",
+      "items": [
+        {
+          "id": 1780062147922.9487,
+          "productCat": "Flat Sheet",
+          "type": "Galvanized",
+          "gauge": "16",
+          "size": "",
+          "qty": "12750",
+          "wtUnit": 0,
+          "bundle": "",
+          "weight": 0,
+          "station": "IOWA",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "GlvSht:163696 (16 Ga. 36' x 96' Galv) | 16 Ga. 36' x 96' Galv (4 skids of 50)",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": ""
+        },
+        {
+          "id": 1780062147923.7744,
+          "productCat": "Flat Sheet",
+          "type": "Galvanized",
+          "gauge": "16",
+          "size": "",
+          "qty": "4250",
+          "wtUnit": 0,
+          "bundle": "",
+          "weight": 0,
+          "station": "IOWA",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "Blank:161296 (16 Ga. 12' x 96' Galv) | 16 Ga. 12' x 96' Galv (2 skids of 100)",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": ""
+        }
+      ],
+      "created": "2026-05-29T13:42:27.922Z"
+    },
+    {
+      "id": 1780062168691,
+      "woNum": "46427",
+      "po": "",
+      "customer": "HVAC Distributors",
+      "address": "",
+      "cityst": "",
+      "zone": "",
+      "date": "2026-06-03",
+      "delivery": "",
+      "isPickup": false,
+      "truck": "",
+      "notes": "",
+      "items": [
+        {
+          "id": 1780062168691.2935,
+          "productCat": "Flat Sheet",
+          "type": "Galvanized",
+          "gauge": "28",
+          "size": "36x96",
+          "qty": "100",
+          "wtUnit": 16.4063,
+          "bundle": "",
+          "weight": 1640.63,
+          "station": "PICK / PULL",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "GlvSht:283696 (28 Ga. 36' x 96' Galv) | 28 Ga. 36' x 96' Galv (4 skids of 25)",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": ""
+        }
+      ],
+      "created": "2026-05-29T13:42:48.691Z"
+    },
+    {
+      "id": 1780062182082,
+      "woNum": "46433",
+      "po": "",
+      "customer": "Hunter Mechanical, Inc.",
+      "address": "2261 New York Avenue",
+      "cityst": "Bensalem, PA 19020",
+      "zone": "SE Pennsylvania",
+      "date": "2026-06-02",
+      "delivery": "2026-06-03",
+      "isPickup": false,
+      "truck": "",
+      "notes": "",
+      "items": [
+        {
+          "id": 1780062182082.0547,
+          "productCat": "Flat Sheet",
+          "type": "Galvanized",
+          "gauge": "24",
+          "size": "60x120",
+          "qty": "60",
+          "wtUnit": 50.5859,
+          "bundle": "",
+          "weight": 3035.15,
+          "station": "PICK / PULL",
+          "isDual": false,
+          "step1Op": "",
+          "step1Status": "Pending",
+          "step1CompletedBy": "",
+          "step2Op": "",
+          "step2Status": "Pending",
+          "step2CompletedBy": "",
+          "notes": "GlvSht:G902460120 (24 Ga. 60' x 120' G-90) | 24 Ga. 60' x 120' G-90",
+          "assignee": "",
+          "status": "Pending",
+          "completedBy": "",
+          "completedAt": ""
+        }
+      ],
+      "created": "2026-05-29T13:43:02.082Z"
     }
   ],
   "trucks": [
@@ -11458,7 +11899,8 @@
           "cityst": "Mount Holly, NJ 08060",
           "zone": "NJ South",
           "delivery": "2026-05-29",
-          "notes": ""
+          "notes": "",
+          "delivered": true
         },
         {
           "woId": 1779459857067,
@@ -11468,7 +11910,8 @@
           "cityst": "Mount Holly, NJ 08060",
           "zone": "NJ South",
           "delivery": "2026-05-29",
-          "notes": ""
+          "notes": "",
+          "delivered": true
         },
         {
           "woId": 1779811359959,
@@ -11478,7 +11921,8 @@
           "cityst": "Egg Harbor, NJ 08234",
           "zone": "NJ Central",
           "delivery": "2026-05-29",
-          "notes": ""
+          "notes": "",
+          "delivered": true
         },
         {
           "woId": 1778762848614,
@@ -11543,7 +11987,8 @@
           "cityst": "Moorestown, NJ 08057",
           "zone": "NJ South",
           "delivery": "2026-05-29",
-          "notes": ""
+          "notes": "",
+          "delivered": true
         },
         {
           "woId": 1779459783076,
@@ -11881,7 +12326,8 @@
           "cityst": "Souderton, PA 18964",
           "zone": "Bucks / Montgomery",
           "delivery": "2026-05-29",
-          "notes": ""
+          "notes": "",
+          "delivered": true
         },
         {
           "woId": 1779819167300,
@@ -11891,7 +12337,8 @@
           "cityst": "Broomall, PA 19008",
           "zone": "SE Pennsylvania",
           "delivery": "2026-05-29",
-          "notes": ""
+          "notes": "",
+          "delivered": true
         },
         {
           "woId": 1779459889037,
@@ -11901,7 +12348,8 @@
           "cityst": "Lansdale, PA 19446",
           "zone": "PA Other",
           "delivery": "2026-05-29",
-          "notes": ""
+          "notes": "",
+          "delivered": true
         },
         {
           "woId": 1779811500632,
@@ -11911,7 +12359,8 @@
           "cityst": "Telford, PA 18969",
           "zone": "Bucks / Montgomery",
           "delivery": "2026-05-29",
-          "notes": ""
+          "notes": "",
+          "delivered": true
         },
         {
           "woId": 1779899307193,
@@ -12025,7 +12474,8 @@
           "cityst": "Telford, PA 18969",
           "zone": "Bucks / Montgomery",
           "delivery": "2026-05-29",
-          "notes": ""
+          "notes": "",
+          "delivered": true
         },
         {
           "woId": 1778688108357,
@@ -12035,6 +12485,39 @@
           "cityst": "Whiting, NJ 08759",
           "zone": "NJ North",
           "delivery": "2026-05-28",
+          "notes": "",
+          "delivered": true
+        },
+        {
+          "woId": 1779797090248,
+          "woNum": "46298",
+          "customer": "Aircon Filters",
+          "address": "441 Green Street",
+          "cityst": "Philadelphia, PA 19123",
+          "zone": "SE Pennsylvania",
+          "delivery": "2026-05-29",
+          "notes": "",
+          "delivered": true
+        },
+        {
+          "woId": 1779972323808,
+          "woNum": "46410",
+          "customer": "Hunter Mechanical, Inc.",
+          "address": "2261 New York Avenue",
+          "cityst": "Bensalem, PA 19020",
+          "zone": "SE Pennsylvania",
+          "delivery": "2026-05-29",
+          "notes": "",
+          "delivered": true
+        },
+        {
+          "woId": 1780048812116,
+          "woNum": "46419",
+          "customer": "EDA Contractors, Inc",
+          "address": "633 Dunksferry Road",
+          "cityst": "Bensalem, PA 19020",
+          "zone": "SE Pennsylvania",
+          "delivery": "2026-05-29",
           "notes": "",
           "delivered": true
         }
@@ -14214,6 +14697,22 @@
         "state": "",
         "zip": "19008",
         "zone": ""
+      },
+      {
+        "name": "Johnstone Supply- Cherry Hill Group - Saddle Brook NJ",
+        "address": "",
+        "city": "",
+        "state": "",
+        "zip": "",
+        "zone": ""
+      },
+      {
+        "name": "Johnstone Supply- Cherry Hill Group - Florham Park NJ",
+        "address": "",
+        "city": "",
+        "state": "",
+        "zip": "",
+        "zone": ""
       }
     ],
     "stationDefaults": {
@@ -15769,6 +16268,6 @@
       "color": "#FF7043"
     }
   ],
-  "exportDate": "2026-05-29T10:39:31.328Z",
+  "exportDate": "2026-05-29T13:50:10.306Z",
   "version": "2.0"
 }
