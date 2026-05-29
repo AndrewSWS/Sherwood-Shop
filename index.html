@@ -263,6 +263,7 @@ select{cursor:pointer}
   font-family:inherit;
 }
 #board-overlay.active{display:flex;flex-direction:column;}
+#board-scaler{flex:1;min-height:0;overflow:hidden;position:relative;}
 .board-header{
   background:#1C2E1C;padding:12px 24px;
   display:flex;align-items:center;justify-content:space-between;
@@ -2331,50 +2332,54 @@ function renderBoardView(){
       +'</div>';
   }).join('');
 
-  // Auto-scale: fit entire board grid to available screen height
+  // Auto-scale: measure natural height then scale to fit
   setTimeout(()=>{
     const overlay = document.getElementById('board-overlay');
     const header = overlay ? overlay.querySelector('.board-header') : null;
-    if(!grid || !overlay) return;
+    const pickupBar = document.getElementById('board-pickup-bar');
+    const scaler = document.getElementById('board-scaler');
+    if(!grid || !overlay || !scaler) return;
 
     const headerH = header ? header.offsetHeight : 60;
-    const pickupBar = document.getElementById('board-pickup-bar');
     const pickupBarH = pickupBar ? pickupBar.offsetHeight : 36;
-    const availH = overlay.offsetHeight - headerH - pickupBarH - 8;
+    const availH = overlay.offsetHeight - headerH - pickupBarH - 4;
 
-    // Reset all transforms first so we get true content height
-    grid.style.transform = '';
-    grid.style.transformOrigin = '';
-    grid.style.width = '';
+    // Step 1: reset all transforms on grid and scaler
+    scaler.style.height = 'auto';
+    scaler.style.overflow = 'visible';
+    grid.style.transform = 'none';
+    grid.style.width = '100%';
     grid.style.height = 'auto';
     grid.style.overflow = 'visible';
     const cols = grid.querySelectorAll('.board-day');
     cols.forEach(col=>{
-      col.style.transform = '';
       col.style.height = 'auto';
-      col.style.width = '';
-      col.style.marginRight = '';
       col.style.overflow = 'visible';
     });
 
-    // Measure after reset
-    let maxH = 0;
-    cols.forEach(col=>{ maxH = Math.max(maxH, col.scrollHeight); });
+    // Step 2: force browser to recalculate layout
+    void overlay.offsetHeight;
 
-    if(maxH > availH && maxH > 0){
-      const scale = availH / maxH;
+    // Step 3: measure the natural rendered height of the grid
+    const naturalH = grid.scrollHeight;
+
+    // Step 4: scale if needed
+    if(naturalH > availH && naturalH > 0){
+      const scale = availH / naturalH;
       grid.style.transform = `scale(${scale})`;
       grid.style.transformOrigin = 'top left';
-      grid.style.width = `${(100/scale).toFixed(2)}%`;
-      grid.style.height = `${Math.round(maxH * scale)}px`;
-      grid.style.overflow = 'hidden';
+      grid.style.width = `${+(100/scale).toFixed(4)}%`;
+      // Scaler contains the scaled grid — set its height to the post-scale height
+      scaler.style.height = `${Math.round(naturalH * scale)}px`;
+      scaler.style.overflow = 'hidden';
+      grid.style.overflow = 'visible';
     } else {
-      grid.style.height = availH + 'px';
-      grid.style.overflow = 'hidden';
+      scaler.style.height = availH + 'px';
+      scaler.style.overflow = 'hidden';
     }
 
     renderBoardPickups();
-  }, 150);
+  }, 400);
 }
 
 // Populate pickup bar in board view
@@ -6422,11 +6427,14 @@ if("serviceWorker" in navigator){
       <button onclick="exitBoardView()" style="background:#333;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px">✕ Exit</button>
     </div>
   </div>
-  <div class="board-grid" id="board-grid"></div>
+  <div id="board-scaler" style="flex:1;overflow:hidden;position:relative;">
+    <div class="board-grid" id="board-grid"></div>
+  </div>
   <div id="board-pickup-bar" style="
     background:#1a1a2e;
     border-top:2px solid #f0a500;
     padding:4px 16px;
+    margin-bottom:6px;
     flex-shrink:0;
     display:flex;
     align-items:center;
