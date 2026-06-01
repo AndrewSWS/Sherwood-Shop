@@ -2745,6 +2745,12 @@ function toggleWOComplete(woId){
         item.completedAt='';
       }
     }
+    // Sync each line item to Supabase
+    sbUpdateLI(woId, item.id, {
+      status: item.status,
+      completedBy: item.completedBy,
+      completedAt: item.completedAt
+    }).catch(e=>console.warn('sbUpdateLI toggleWOComplete error',e));
   });
   saveState();
   updateBadges();
@@ -4159,6 +4165,7 @@ function markDoneFromMyView(woId,itemId){
   if(bundleEl&&bundleEl.value.trim())item.bundle=bundleEl.value.trim();
   item.status='Complete';item.completedBy=initials;item.completedAt=new Date().toISOString();
   saveState();toast(`✓ Done — initialed by ${initials}${item.bundle?' · Bundle '+item.bundle:''}`);
+  sbUpdateLI(woId,itemId,{status:item.status,completedBy:item.completedBy,completedAt:item.completedAt}).catch(e=>console.warn('sbUpdateLI markDone error',e));
   renderMyView(document.getElementById('content'));updateBadges();
 }
 
@@ -4166,6 +4173,7 @@ function startItemMyView(woId,itemId){
   const wo=state.wos.find(w=>w.id===woId);if(!wo)return;
   const item=wo.items.find(i=>i.id==itemId);if(!item)return;
   item.status='In Process';saveState();
+  sbUpdateLI(woId,itemId,{status:'In Process'}).catch(e=>console.warn('sbUpdateLI startItem error',e));
   renderMyView(document.getElementById('content'));
 }
 
