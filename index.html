@@ -1132,7 +1132,7 @@ function _liToRow(item, wo) {
 // DB row → WO item field name mapping
 function _rowToItem(row) {
   return {
-    id: row.id, productCat: row.product_cat, type: row.type, gauge: row.gauge,
+    id: row.id, _dbId: row.id, productCat: row.product_cat, type: row.type, gauge: row.gauge,
     size: row.size, qty: row.qty, wtUnit: row.wt_unit, bundle: row.bundle,
     weight: row.weight, station: row.station, isDual: row.is_dual,
     step1Op: row.step1_op, step1Status: row.step1_status, step1CompletedBy: row.step1_completed_by,
@@ -1196,7 +1196,6 @@ async function sbUpdateWO(wo) {
 
 // ── SUPABASE: Update a single line item field ──
 async function sbUpdateLI(woId, itemId, fields) {
-  // itemId from state is a float sometimes — find by wo_id + matching
   const dbFields = {};
   const fieldMap = {
     status:'status', completedBy:'completed_by', completedAt:'completed_at',
@@ -1209,14 +1208,26 @@ async function sbUpdateLI(woId, itemId, fields) {
     if (fieldMap[k]) dbFields[fieldMap[k]] = v || null;
   }
   if (!Object.keys(dbFields).length) return;
-  // Find the DB id by wo_id + approximate item match
-  const rows = await _sbGet('line_items', `wo_id=eq.${woId}&select=id,wo_id`);
-  if (!rows || !rows.length) return;
-  // Try to match by position (item order in WO)
+
+  // Find the item in state to get its _dbId (set when loaded from Supabase)
   const wo = state.wos.find(w=>w.id===woId);
-  if (!wo) return;
+  if (!wo) { console.warn('sbUpdateLI: WO not found', woId); return; }
+  const item = wo.items.find(i=>i.id==itemId);
+  if (!item) { console.warn('sbUpdateLI: item not found', itemId); return; }
+
+  // Use _dbId if available (set when loaded from Supabase), otherwise fall back to position
+  if (item._dbId) {
+    const result = await _sbPatch('line_items', {id: item._dbId}, dbFields);
+    if (!result) console.warn('sbUpdateLI: patch returned null for _dbId', item._dbId);
+    return;
+  }
+
+  // Fallback: match by wo_id and position index
+  console.warn('sbUpdateLI: no _dbId, falling back to position match for item', itemId);
+  const rows = await _sbGet('line_items', `wo_id=eq.${woId}&select=id&order=id.asc`);
+  if (!rows || !rows.length) { console.warn('sbUpdateLI: no rows found for wo_id', woId); return; }
   const idx = wo.items.findIndex(i=>i.id==itemId);
-  if (idx < 0 || idx >= rows.length) return;
+  if (idx < 0 || idx >= rows.length) { console.warn('sbUpdateLI: index out of range', idx, rows.length); return; }
   await _sbPatch('line_items', {id: rows[idx].id}, dbFields);
 }
 
