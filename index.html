@@ -1205,31 +1205,33 @@ async function sbUpdateLI(woId, itemId, fields) {
     weight:'weight', qty:'qty', delivery:'delivery'
   };
   for (const [k,v] of Object.entries(fields)) {
-    if (fieldMap[k]) dbFields[fieldMap[k]] = v || null;
+    if (fieldMap[k]) dbFields[fieldMap[k]] = v===''?null:v||null;
   }
   if (!Object.keys(dbFields).length) return;
 
-  // Find the item in state to get its _dbId (set when loaded from Supabase)
   const wo = state.wos.find(w=>w.id===woId);
   if (!wo) { console.warn('sbUpdateLI: WO not found', woId); return; }
   const item = wo.items.find(i=>i.id==itemId);
   if (!item) { console.warn('sbUpdateLI: item not found', itemId); return; }
 
-  // Use _dbId if available (set when loaded from Supabase), otherwise fall back to position
-  if (item._dbId) {
-    console.log('[sbUpdateLI] updating _dbId:', item._dbId, 'fields:', dbFields);
-    const result = await _sbPatch('line_items', {id: item._dbId}, dbFields);
-    console.log('[sbUpdateLI] patch result:', result);
-    if (!result) console.warn('sbUpdateLI: patch returned null for _dbId', item._dbId);
+  // Try _dbId directly on item (set when loaded from Supabase)
+  const dbId = item._dbId;
+  if (dbId) {
+    console.log('[sbUpdateLI] PATCH id:', dbId, 'fields:', dbFields);
+    const result = await _sbPatch('line_items', {id: dbId}, dbFields);
+    console.log('[sbUpdateLI] result:', JSON.stringify(result));
     return;
   }
 
-  // Fallback: match by wo_id and position index
-  console.warn('sbUpdateLI: no _dbId, falling back to position match for item', itemId);
+  // No _dbId — fetch from DB by wo_id and match by index
+  console.warn('[sbUpdateLI] no _dbId on item, fetching from DB...');
   const rows = await _sbGet('line_items', `wo_id=eq.${woId}&select=id&order=id.asc`);
-  if (!rows || !rows.length) { console.warn('sbUpdateLI: no rows found for wo_id', woId); return; }
+  if (!rows || !rows.length) { console.warn('sbUpdateLI: no rows for wo', woId); return; }
   const idx = wo.items.findIndex(i=>i.id==itemId);
-  if (idx < 0 || idx >= rows.length) { console.warn('sbUpdateLI: index out of range', idx, rows.length); return; }
+  if (idx < 0 || idx >= rows.length) { console.warn('sbUpdateLI: bad idx', idx); return; }
+  console.log('[sbUpdateLI] fallback PATCH id:', rows[idx].id, 'fields:', dbFields);
+  // Store it for next time
+  item._dbId = rows[idx].id;
   await _sbPatch('line_items', {id: rows[idx].id}, dbFields);
 }
 
@@ -1239,6 +1241,10 @@ async function sbDeleteWO(woId) {
   await _sbDelete('line_items', {wo_id: woId});
   await _sbDelete('work_orders', {id: woId});
 }
+
+// Global map: state item id → Supabase DB row id
+// Populated when loading from Supabase, used for reliable PATCH calls
+const _liDbIdMap = {};
 
 // ── SUPABASE: Load full state from DB ──
 async function sbLoadState() {
@@ -1251,14 +1257,23 @@ async function sbLoadState() {
     ]);
     if (!wosRaw) return false; // offline
 
-    // Build WOs with items
+    // Build WOs with items, populate DB ID map
     const lisByWO = {};
     (lisRaw||[]).forEach(li => {
       if (!lisByWO[li.wo_id]) lisByWO[li.wo_id] = [];
-      lisByWO[li.wo_id].push(_rowToItem(li));
+      lisByWO[li.wo_id].push(li); // keep raw row for now
     });
 
-    const wos = (wosRaw||[]).map(row => _rowToWO(row, lisByWO[row.id]||[]));
+    const wos = (wosRaw||[]).map(row => {
+      const rawItems = lisByWO[row.id] || [];
+      const items = rawItems.map(li => {
+        const item = _rowToItem(li);
+        // Store mapping: wo_id:db_id → db_id for reliable updates
+        _liDbIdMap[`${li.wo_id}:${li.id}`] = li.id;
+        return item;
+      });
+      return _rowToWO(row, items);
+    });
 
     // Build trucks with stops
     const stopsByTruck = {};
