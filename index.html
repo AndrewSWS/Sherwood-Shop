@@ -1283,9 +1283,24 @@ function startSBPoll() {
     if (ok) {
       // Save fresh state to localStorage as backup
       try { localStorage.setItem('kzn_state', JSON.stringify(state)); } catch(e){}
-      // Refresh current view if board is active
+      const c = document.getElementById('content');
       const overlay = document.getElementById('board-overlay');
-      if (overlay && overlay.classList.contains('active')) renderBoardView();
+      // Refresh board view if active
+      if (overlay && overlay.classList.contains('active')) {
+        renderBoardView();
+        return;
+      }
+      // Refresh whichever regular view is currently showing
+      if (c) {
+        try {
+          if (state.activeView==='dashboard') renderDashboard(c);
+          else if (state.activeView==='assign') renderAssign('', c);
+          else if (state.activeView==='queue') renderQueue(c);
+          else if (state.activeView==='trucks') renderTrucks(c);
+          else if (state.activeView==='myview') renderMyView(c);
+        } catch(e) { console.warn('poll render error', e); }
+      }
+      updateBadges();
     }
   }, 15000);
 }
