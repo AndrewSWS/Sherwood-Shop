@@ -1063,7 +1063,11 @@ const _SB_HDR = { 'Content-Type': 'application/json', 'apikey': _SB_KEY, 'Author
 
 async function _sbGet(table, params='') {
   try {
-    const r = await fetch(`${_SB_URL}/rest/v1/${table}?${params}`, { headers: _SB_HDR });
+    const cacheBust = `_ts=${Date.now()}`;
+    const sep = params ? '&' : '';
+    const r = await fetch(`${_SB_URL}/rest/v1/${table}?${params}${sep}${cacheBust}`, {
+      headers: { ..._SB_HDR, 'Cache-Control': 'no-cache' }
+    });
     if (!r.ok) return null;
     return await r.json();
   } catch(e) { return null; }
@@ -1274,6 +1278,9 @@ async function sbLoadState() {
       });
       return _rowToWO(row, items);
     });
+    // Debug: log any Complete items
+    const completeItems = wos.flatMap(w=>w.items).filter(i=>i.status==='Complete');
+    console.log('[sbLoadState] Complete items:', completeItems.length, completeItems.map(i=>i._dbId+':'+i.status));
 
     // Build trucks with stops
     const stopsByTruck = {};
