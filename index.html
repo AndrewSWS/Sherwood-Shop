@@ -1217,7 +1217,9 @@ async function sbUpdateLI(woId, itemId, fields) {
 
   // Use _dbId if available (set when loaded from Supabase), otherwise fall back to position
   if (item._dbId) {
+    console.log('[sbUpdateLI] updating _dbId:', item._dbId, 'fields:', dbFields);
     const result = await _sbPatch('line_items', {id: item._dbId}, dbFields);
+    console.log('[sbUpdateLI] patch result:', result);
     if (!result) console.warn('sbUpdateLI: patch returned null for _dbId', item._dbId);
     return;
   }
@@ -2466,6 +2468,7 @@ function setLIStatus(woId,itemId,status){
     item.completedAt='';
   }
   saveState();toast(`Item marked ${status}`);
+  console.log('[setLIStatus] item._dbId:', item._dbId, 'itemId:', itemId, 'status:', status);
   sbUpdateLI(woId, itemId, {status, completedBy: item.completedBy, completedAt: item.completedAt}).catch(e=>console.warn('sbUpdateLI error',e));
   const wo2=state.wos.find(w=>w.id===woId);
   // Re-render detail panel only (keep it open)
