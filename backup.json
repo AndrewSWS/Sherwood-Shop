@@ -2762,8 +2762,8 @@
       "cityst": "",
       "zone": "",
       "date": "2026-05-20",
-      "delivery": "2026-06-03",
-      "truck": "",
+      "delivery": "2026-06-02",
+      "truck": "2",
       "notes": "",
       "items": [
         {
@@ -7932,7 +7932,7 @@
       "date": "2026-05-28",
       "delivery": "2026-06-02",
       "isPickup": false,
-      "truck": "",
+      "truck": "1",
       "notes": "",
       "items": [
         {
@@ -8985,7 +8985,7 @@
       "date": "2026-06-01",
       "delivery": "2026-06-01",
       "isPickup": false,
-      "truck": "",
+      "truck": "1",
       "notes": "",
       "items": [
         {
@@ -9098,7 +9098,8 @@
           "woNum": "46399",
           "customer": "Riley Sales, Inc. — Allentown PA",
           "delivery": "2026-06-01",
-          "woId": 1779899418397
+          "woId": 1779899418397,
+          "priority": 1
         }
       ],
       "created": "2026-05-27T16:30:18.397Z"
@@ -9114,7 +9115,7 @@
       "date": "2026-06-01",
       "delivery": "2026-06-02",
       "isPickup": false,
-      "truck": "",
+      "truck": "2",
       "notes": "",
       "items": [
         {
@@ -9271,7 +9272,7 @@
       "date": "2026-06-01",
       "delivery": "2026-06-01",
       "isPickup": false,
-      "truck": "",
+      "truck": "2",
       "notes": "",
       "items": [
         {
@@ -9380,7 +9381,7 @@
       "date": "2026-06-01",
       "delivery": "2026-06-01",
       "isPickup": false,
-      "truck": "",
+      "truck": "2",
       "notes": "",
       "items": [
         {
@@ -9669,7 +9670,7 @@
       "date": "2026-06-01",
       "delivery": "2026-06-01",
       "isPickup": false,
-      "truck": "",
+      "truck": "1",
       "notes": "",
       "items": [
         {
@@ -9826,7 +9827,7 @@
       "date": "2026-06-01",
       "delivery": "2026-06-01",
       "isPickup": false,
-      "truck": "",
+      "truck": "1",
       "notes": "",
       "items": [
         {
@@ -9927,7 +9928,7 @@
       "date": "2026-06-02",
       "delivery": "2026-06-02",
       "isPickup": false,
-      "truck": "",
+      "truck": "2",
       "notes": "",
       "items": [
         {
@@ -10066,7 +10067,7 @@
       "date": "2026-06-01",
       "delivery": "2026-06-01",
       "isPickup": false,
-      "truck": "",
+      "truck": "1",
       "notes": "",
       "items": [
         {
@@ -10448,7 +10449,7 @@
       "date": "2026-05-28",
       "delivery": "2026-06-02",
       "isPickup": false,
-      "truck": "",
+      "truck": "2",
       "notes": "",
       "items": [
         {
@@ -10562,7 +10563,7 @@
       "date": "2026-06-02",
       "delivery": "2026-06-02",
       "isPickup": false,
-      "truck": "",
+      "truck": "2",
       "notes": "",
       "items": [
         {
@@ -10585,9 +10586,9 @@
           "step2CompletedBy": "",
           "notes": "Elgen:EFRFC (Elgen 28 Ga. Residential 1.75' x 3' x 1.75' Vinyl Flex Connector (100'/box)) | Elgen 28 Ga. Residential 1.75' x 3' x 1.75' Vinyl Flex Connector (100'/box)",
           "assignee": "",
-          "status": "Pending",
-          "completedBy": "",
-          "completedAt": ""
+          "status": "Complete",
+          "completedBy": "Delivery",
+          "completedAt": "2026-06-01T10:18:41.073Z"
         }
       ],
       "created": "2026-05-29T09:59:14.850Z"
@@ -10603,7 +10604,7 @@
       "date": "2026-06-01",
       "delivery": "2026-06-01",
       "isPickup": false,
-      "truck": "",
+      "truck": "1",
       "notes": "",
       "items": [
         {
@@ -10628,7 +10629,12 @@
           "assignee": "",
           "status": "Pending",
           "completedBy": "",
-          "completedAt": ""
+          "completedAt": "",
+          "woNum": "46418",
+          "customer": "R.F. Power Ventilation",
+          "delivery": "2026-06-01",
+          "woId": 1780048802300,
+          "priority": 2
         },
         {
           "id": 1780048802301.3594,
@@ -10652,7 +10658,12 @@
           "assignee": "",
           "status": "Pending",
           "completedBy": "",
-          "completedAt": ""
+          "completedAt": "",
+          "woNum": "46418",
+          "customer": "R.F. Power Ventilation",
+          "delivery": "2026-06-01",
+          "woId": 1780048802300,
+          "priority": 3
         },
         {
           "id": 1780048802302.8115,
@@ -10740,7 +10751,7 @@
       "date": "2026-06-02",
       "delivery": "2026-06-02",
       "isPickup": false,
-      "truck": "",
+      "truck": "2",
       "notes": "",
       "items": [
         {
@@ -10765,7 +10776,12 @@
           "assignee": "",
           "status": "Pending",
           "completedBy": "",
-          "completedAt": ""
+          "completedAt": "",
+          "woNum": "46420",
+          "customer": "Compass Wire Cloth Corp.",
+          "delivery": "2026-06-02",
+          "woId": 1780048847355,
+          "priority": 4
         }
       ],
       "created": "2026-05-29T10:00:47.355Z"
@@ -10838,7 +10854,8 @@
           "woNum": "46421",
           "customer": "Johnstone Supply of Warminster",
           "delivery": "",
-          "woId": 1780048870944
+          "woId": 1780048870944,
+          "priority": 5
         },
         {
           "id": 1780049113469.181,
@@ -10866,7 +10883,8 @@
           "woNum": "46421",
           "customer": "Johnstone Supply of Warminster",
           "delivery": "",
-          "woId": 1780048870944
+          "woId": 1780048870944,
+          "priority": 6
         }
       ],
       "created": "2026-05-29T10:01:10.944Z"
@@ -10911,7 +10929,8 @@
           "woNum": "46429",
           "customer": "Lincoln Tech",
           "delivery": "",
-          "woId": 1780048881058
+          "woId": 1780048881058,
+          "priority": 8
         }
       ],
       "created": "2026-05-29T10:01:21.058Z"
@@ -10927,7 +10946,7 @@
       "date": "2026-06-02",
       "delivery": "2026-06-02",
       "isPickup": false,
-      "truck": "",
+      "truck": "2",
       "notes": "",
       "items": [
         {
@@ -10952,7 +10971,12 @@
           "assignee": "",
           "status": "Pending",
           "completedBy": "",
-          "completedAt": ""
+          "completedAt": "",
+          "woNum": "46430",
+          "customer": "Compass Wire Cloth Corp.",
+          "delivery": "2026-06-02",
+          "woId": 1780048893109,
+          "priority": 9
         }
       ],
       "created": "2026-05-29T10:01:33.109Z"
@@ -10968,7 +10992,7 @@
       "date": "2026-06-02",
       "delivery": "2026-06-02",
       "isPickup": false,
-      "truck": "",
+      "truck": "1",
       "notes": "",
       "items": [
         {
@@ -11254,7 +11278,12 @@
           "assignee": "",
           "status": "Pending",
           "completedBy": "",
-          "completedAt": ""
+          "completedAt": "",
+          "woNum": "46426",
+          "customer": "Johnstone Supply NJ — Cranbury NJ",
+          "delivery": "2026-06-02",
+          "woId": 1780062084588,
+          "priority": 7
         }
       ],
       "created": "2026-05-29T13:41:24.588Z"
@@ -11315,7 +11344,7 @@
       "date": "2026-06-02",
       "delivery": "2026-06-02",
       "isPickup": false,
-      "truck": "",
+      "truck": "1",
       "notes": "",
       "items": [
         {
@@ -11340,7 +11369,12 @@
           "assignee": "",
           "status": "Pending",
           "completedBy": "",
-          "completedAt": ""
+          "completedAt": "",
+          "woNum": "46432",
+          "customer": "National Pipe Hanger Company Corp.",
+          "delivery": "2026-06-02",
+          "woId": 1780062147922,
+          "priority": 1
         },
         {
           "id": 1780062147923.7744,
@@ -11364,7 +11398,12 @@
           "assignee": "",
           "status": "Pending",
           "completedBy": "",
-          "completedAt": ""
+          "completedAt": "",
+          "woNum": "46432",
+          "customer": "National Pipe Hanger Company Corp.",
+          "delivery": "2026-06-02",
+          "woId": 1780062147922,
+          "priority": 2
         }
       ],
       "created": "2026-05-29T13:42:27.922Z"
@@ -11419,7 +11458,7 @@
       "cityst": "Bensalem, PA 19020",
       "zone": "SE Pennsylvania",
       "date": "2026-06-02",
-      "delivery": "2026-06-03",
+      "delivery": "2026-06-01",
       "isPickup": false,
       "truck": "",
       "notes": "",
@@ -11460,7 +11499,7 @@
       "cityst": "Broomall, PA 19008",
       "zone": "SE Pennsylvania",
       "date": "2026-06-02",
-      "delivery": "",
+      "delivery": "2026-06-03",
       "isPickup": false,
       "truck": "",
       "notes": "",
@@ -11573,9 +11612,9 @@
       "cityst": "Mount Holly, NJ 08060",
       "zone": "NJ South",
       "date": "2026-06-02",
-      "delivery": "",
+      "delivery": "2026-06-02",
       "isPickup": false,
-      "truck": "",
+      "truck": "1",
       "notes": "",
       "items": [
         {
@@ -11600,7 +11639,12 @@
           "assignee": "",
           "status": "Pending",
           "completedBy": "",
-          "completedAt": ""
+          "completedAt": "",
+          "woNum": "46435",
+          "customer": "National Pipe Hanger Company Corp.",
+          "delivery": "",
+          "woId": 1780074007944,
+          "priority": 10
         }
       ],
       "created": "2026-05-29T17:00:07.944Z"
@@ -11614,9 +11658,9 @@
       "cityst": "Mount Holly, NJ 08060",
       "zone": "NJ South",
       "date": "2026-06-05",
-      "delivery": "",
+      "delivery": "2026-06-02",
       "isPickup": false,
-      "truck": "",
+      "truck": "1",
       "notes": "",
       "items": [
         {
@@ -11641,7 +11685,12 @@
           "assignee": "",
           "status": "Pending",
           "completedBy": "",
-          "completedAt": ""
+          "completedAt": "",
+          "woNum": "46436",
+          "customer": "National Pipe Hanger Company Corp.",
+          "delivery": "",
+          "woId": 1780074012439,
+          "priority": 11
         }
       ],
       "created": "2026-05-29T17:00:12.439Z"
@@ -11655,7 +11704,7 @@
       "cityst": "Warminster, PA 18974",
       "zone": "Bucks / Montgomery",
       "date": "2026-06-03",
-      "delivery": "",
+      "delivery": "2026-06-03",
       "isPickup": false,
       "truck": "",
       "notes": "",
@@ -11682,7 +11731,12 @@
           "assignee": "",
           "status": "Pending",
           "completedBy": "",
-          "completedAt": ""
+          "completedAt": "",
+          "woNum": "46437",
+          "customer": "Kenrich Mechanical",
+          "delivery": "",
+          "woId": 1780074030958,
+          "priority": 12
         },
         {
           "id": 1780074030959.3115,
@@ -11706,7 +11760,12 @@
           "assignee": "",
           "status": "Pending",
           "completedBy": "",
-          "completedAt": ""
+          "completedAt": "",
+          "woNum": "46437",
+          "customer": "Kenrich Mechanical",
+          "delivery": "",
+          "woId": 1780074030958,
+          "priority": 13
         },
         {
           "id": 1780074030960.1467,
@@ -12284,6 +12343,106 @@
           "delivery": "2026-05-28",
           "notes": "",
           "delivered": true
+        },
+        {
+          "woId": 1779899418397,
+          "woNum": "46399",
+          "customer": "Riley Sales, Inc. — Allentown PA",
+          "address": "1660 E Race Street",
+          "cityst": "Allentown, PA 18109",
+          "zone": "Lehigh Valley",
+          "delivery": "2026-06-01",
+          "notes": ""
+        },
+        {
+          "woId": 1779899963682,
+          "woNum": "46403",
+          "customer": "Riley Sales, Inc. — Temple PA",
+          "address": "15 Tuckerton Rd.",
+          "cityst": "Temple, PA 19560",
+          "zone": "PA Other",
+          "delivery": "2026-06-01",
+          "notes": ""
+        },
+        {
+          "woId": 1779900018159,
+          "woNum": "46404",
+          "customer": "Riley Sales, Inc. — Temple PA",
+          "address": "15 Tuckerton Rd.",
+          "cityst": "Temple, PA 19560",
+          "zone": "PA Other",
+          "delivery": "2026-06-01",
+          "notes": ""
+        },
+        {
+          "woId": 1780048931559,
+          "woNum": "46431",
+          "customer": "Specialty Fabricators LLC",
+          "address": "118 Meany Rd.",
+          "cityst": "Wrightstown, NJ 08562",
+          "zone": "NJ North",
+          "delivery": "2026-06-02",
+          "notes": ""
+        },
+        {
+          "woId": 1779797252854,
+          "woNum": "46385",
+          "customer": "E.P. Homiek Sheet Metal Inc.",
+          "address": "1 Fedornak Freeway",
+          "cityst": "Whiting, NJ 08759",
+          "zone": "NJ North",
+          "delivery": "2026-06-02",
+          "notes": ""
+        },
+        {
+          "woId": 1780062147922,
+          "woNum": "46432",
+          "customer": "National Pipe Hanger Company Corp.",
+          "address": "R.R. 30, 200 Campus Drive",
+          "cityst": "Mount Holly, NJ 08060",
+          "zone": "NJ South",
+          "delivery": "2026-06-02",
+          "notes": ""
+        },
+        {
+          "woId": 1780074007944,
+          "woNum": "46435",
+          "customer": "National Pipe Hanger Company Corp.",
+          "address": "R.R. 30, 200 Campus Drive",
+          "cityst": "Mount Holly, NJ 08060",
+          "zone": "NJ South",
+          "delivery": "2026-06-02",
+          "notes": ""
+        },
+        {
+          "woId": 1780074012439,
+          "woNum": "46436",
+          "customer": "National Pipe Hanger Company Corp.",
+          "address": "R.R. 30, 200 Campus Drive",
+          "cityst": "Mount Holly, NJ 08060",
+          "zone": "NJ South",
+          "delivery": "2026-06-02",
+          "notes": ""
+        },
+        {
+          "woId": 1779972300474,
+          "woNum": "46409",
+          "customer": "Consolidated Mechanical Services",
+          "address": "1 N Washington St",
+          "cityst": "Telford, PA 18969",
+          "zone": "Bucks / Montgomery",
+          "delivery": "2026-06-01",
+          "notes": ""
+        },
+        {
+          "woId": 1780048802300,
+          "woNum": "46418",
+          "customer": "R.F. Power Ventilation",
+          "address": "129 E. 3rd Street",
+          "cityst": "Pottstown, PA 19464",
+          "zone": "PA Other",
+          "delivery": "2026-06-01",
+          "notes": ""
         }
       ],
       "shipDate": ""
@@ -12804,6 +12963,96 @@
           "delivery": "2026-05-29",
           "notes": "",
           "delivered": true
+        },
+        {
+          "woId": 1779899727718,
+          "woNum": "46406",
+          "customer": "Forge Sheet Metal",
+          "address": "503 N. Mill Road",
+          "cityst": "Kennett Square, PA 19348",
+          "zone": "PA Other",
+          "delivery": "2026-06-01",
+          "notes": ""
+        },
+        {
+          "woId": 1779899829104,
+          "woNum": "46401",
+          "customer": "Riley Sales, Inc. — Sharon Hill PA",
+          "address": "950 Calcon Hook Road",
+          "cityst": "Sharon Hill, PA 19079",
+          "zone": "SE Pennsylvania",
+          "delivery": "2026-06-01",
+          "notes": ""
+        },
+        {
+          "woId": 1779899508042,
+          "woNum": "46400",
+          "customer": "Riley Sales, Inc. — Philadelphia PA",
+          "address": "2801 Southampton RD",
+          "cityst": "Philadelphia, PA 19154",
+          "zone": "SE Pennsylvania",
+          "delivery": "2026-06-02",
+          "notes": ""
+        },
+        {
+          "woId": 1778762828677,
+          "woNum": "46288",
+          "customer": "Dover Mechanical Contractors",
+          "address": "",
+          "cityst": "",
+          "zone": "",
+          "delivery": "2026-06-02",
+          "notes": ""
+        },
+        {
+          "woId": 1779981610852,
+          "woNum": "46415",
+          "customer": "JP Menszak & Son",
+          "address": "2624 Powell Ave.",
+          "cityst": "Pennsauken, NJ 08110",
+          "zone": "NJ Central",
+          "delivery": "2026-06-02",
+          "notes": ""
+        },
+        {
+          "woId": 1780048754850,
+          "woNum": "46417",
+          "customer": "MC Custom Sheet Metal Fabrication, Inc.",
+          "address": "215 East Old Egg Harbor Rd",
+          "cityst": "West Berlin, NJ 08091",
+          "zone": "NJ South",
+          "delivery": "2026-06-02",
+          "notes": ""
+        },
+        {
+          "woId": 1779900135426,
+          "woNum": "46407",
+          "customer": "Modern Metals, Inc.",
+          "address": "345 Harding Highway",
+          "cityst": "Pittsgrove, NJ 08318",
+          "zone": "NJ North",
+          "delivery": "2026-06-02",
+          "notes": ""
+        },
+        {
+          "woId": 1780048847355,
+          "woNum": "46420",
+          "customer": "Compass Wire Cloth Corp.",
+          "address": "1942 N Mill Road",
+          "cityst": "Vineland, NJ 08360",
+          "zone": "NJ North",
+          "delivery": "2026-06-02",
+          "notes": ""
+        },
+        {
+          "woId": 1780048893109,
+          "woNum": "46430",
+          "customer": "Compass Wire Cloth Corp.",
+          "address": "1942 N Mill Road",
+          "cityst": "Vineland, NJ 08360",
+          "zone": "NJ North",
+          "delivery": "2026-06-02",
+          "notes": ""
         }
       ],
       "shipDate": ""
@@ -16552,6 +16801,6 @@
       "color": "#FF7043"
     }
   ],
-  "exportDate": "2026-05-29T17:00:52.664Z",
+  "exportDate": "2026-06-01T10:21:35.368Z",
   "version": "2.0"
 }
