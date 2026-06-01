@@ -1054,6 +1054,246 @@ let state = {
   liCounter: 0
 };
 
+// ══════════════════════════════════════════════════════
+// SUPABASE SYNC LAYER
+// ══════════════════════════════════════════════════════
+const _SB_URL = 'https://ecndvwmbycyppqkbvuzs.supabase.co';
+const _SB_KEY = 'sb_publishable_DPSLNDOI___sDI-lt3YbpQ_TGJbHaV-';
+const _SB_HDR = { 'Content-Type': 'application/json', 'apikey': _SB_KEY, 'Authorization': 'Bearer ' + _SB_KEY };
+
+async function _sbGet(table, params='') {
+  try {
+    const r = await fetch(`${_SB_URL}/rest/v1/${table}?${params}`, { headers: _SB_HDR });
+    if (!r.ok) return null;
+    return await r.json();
+  } catch(e) { return null; }
+}
+
+async function _sbPost(table, body) {
+  try {
+    const r = await fetch(`${_SB_URL}/rest/v1/${table}`, {
+      method: 'POST', headers: { ..._SB_HDR, 'Prefer': 'return=representation' },
+      body: JSON.stringify(body)
+    });
+    if (!r.ok) { console.warn('SB POST error', table, await r.text()); return null; }
+    return await r.json();
+  } catch(e) { return null; }
+}
+
+async function _sbPatch(table, match, body) {
+  try {
+    const params = Object.entries(match).map(([k,v])=>`${k}=eq.${encodeURIComponent(v)}`).join('&');
+    const r = await fetch(`${_SB_URL}/rest/v1/${table}?${params}`, {
+      method: 'PATCH', headers: { ..._SB_HDR, 'Prefer': 'return=representation' },
+      body: JSON.stringify(body)
+    });
+    if (!r.ok) { console.warn('SB PATCH error', table, await r.text()); return null; }
+    return await r.json();
+  } catch(e) { return null; }
+}
+
+async function _sbDelete(table, match) {
+  try {
+    const params = Object.entries(match).map(([k,v])=>`${k}=eq.${encodeURIComponent(v)}`).join('&');
+    await fetch(`${_SB_URL}/rest/v1/${table}?${params}`, { method: 'DELETE', headers: _SB_HDR });
+  } catch(e) {}
+}
+
+// Convert WO object → DB row
+function _woToRow(wo) {
+  return {
+    id: wo.id, wo_num: wo.woNum, po: wo.po||null, customer: wo.customer||null,
+    address: wo.address||null, cityst: wo.cityst||null, zone: wo.zone||null,
+    date: wo.date||null, delivery: wo.delivery||null, truck: wo.truck||null,
+    notes: wo.notes||null, is_pickup: wo.isPickup||false,
+    pickup_date: wo.pickupDate||null, delivered: wo.delivered||false,
+    delivered_at: wo.deliveredAt||null, delivered_by: wo.deliveredBy||null,
+    created_at: wo.created||new Date().toISOString()
+  };
+}
+
+// Convert line item → DB row
+function _liToRow(item, wo) {
+  return {
+    wo_id: wo.id, wo_num: item.woNum||wo.woNum, customer: item.customer||wo.customer||null,
+    product_cat: item.productCat||null, type: item.type||null, gauge: item.gauge||null,
+    size: item.size||null, qty: item.qty||null, wt_unit: item.wtUnit||null,
+    bundle: item.bundle||null, weight: item.weight||null, station: item.station||null,
+    is_dual: item.isDual||false, step1_op: item.step1Op||null,
+    step1_status: item.step1Status||'Pending', step1_completed_by: item.step1CompletedBy||null,
+    step2_op: item.step2Op||null, step2_status: item.step2Status||'Pending',
+    step2_completed_by: item.step2CompletedBy||null, notes: item.notes||null,
+    assignee: item.assignee||null, status: item.status||'Pending',
+    completed_by: item.completedBy||null, completed_at: item.completedAt||null,
+    delivery: item.delivery||wo.delivery||null, priority: item.priority||null
+  };
+}
+
+// DB row → WO item field name mapping
+function _rowToItem(row) {
+  return {
+    id: row.id, productCat: row.product_cat, type: row.type, gauge: row.gauge,
+    size: row.size, qty: row.qty, wtUnit: row.wt_unit, bundle: row.bundle,
+    weight: row.weight, station: row.station, isDual: row.is_dual,
+    step1Op: row.step1_op, step1Status: row.step1_status, step1CompletedBy: row.step1_completed_by,
+    step2Op: row.step2_op, step2Status: row.step2_status, step2CompletedBy: row.step2_completed_by,
+    notes: row.notes, assignee: row.assignee, status: row.status,
+    completedBy: row.completed_by, completedAt: row.completed_at,
+    delivery: row.delivery, priority: row.priority,
+    woNum: row.wo_num, customer: row.customer, woId: row.wo_id
+  };
+}
+
+// DB row → WO object
+function _rowToWO(row, items=[]) {
+  return {
+    id: row.id, woNum: row.wo_num, po: row.po||'', customer: row.customer||'',
+    address: row.address||'', cityst: row.cityst||'', zone: row.zone||'',
+    date: row.date||'', delivery: row.delivery||'', truck: row.truck||'',
+    notes: row.notes||'', isPickup: row.is_pickup||false,
+    pickupDate: row.pickup_date||'', delivered: row.delivered||false,
+    deliveredAt: row.delivered_at||'', deliveredBy: row.delivered_by||'',
+    created: row.created_at, items
+  };
+}
+
+// ── SUPABASE: Create a new work order + its line items ──
+async function sbCreateWO(wo) {
+  const row = await _sbPost('work_orders', _woToRow(wo));
+  if (!row) return;
+  // Insert line items
+  const liRows = wo.items.map(item => _liToRow(item, wo));
+  if (liRows.length) await _sbPost('line_items', liRows);
+  // Insert truck stops if assigned
+  if (wo.truck) {
+    const t = state.trucks.find(t=>String(t.id)===String(wo.truck));
+    if (t) {
+      const stop = t.stops.find(s=>s.woId===wo.id);
+      if (stop) await _sbPost('truck_stops', {
+        truck_id: parseInt(wo.truck), wo_id: wo.id, wo_num: wo.woNum,
+        customer: wo.customer, address: wo.address, cityst: wo.cityst,
+        zone: wo.zone, delivery: wo.delivery||null, notes: wo.notes||null, seq: t.stops.length-1
+      });
+    }
+  }
+}
+
+// ── SUPABASE: Update a work order header ──
+async function sbUpdateWO(wo) {
+  await _sbPatch('work_orders', {id: wo.id}, _woToRow(wo));
+  // Re-sync truck stops
+  await _sbDelete('truck_stops', {wo_id: wo.id});
+  for (const t of state.trucks) {
+    const stop = t.stops.find(s=>s.woId===wo.id);
+    if (stop) await _sbPost('truck_stops', {
+      truck_id: t.id, wo_id: wo.id, wo_num: wo.woNum,
+      customer: wo.customer, address: wo.address, cityst: wo.cityst,
+      zone: wo.zone, delivery: wo.delivery||null, notes: wo.notes||null,
+      delivered: stop.delivered||false, seq: t.stops.indexOf(stop)
+    });
+  }
+}
+
+// ── SUPABASE: Update a single line item field ──
+async function sbUpdateLI(woId, itemId, fields) {
+  // itemId from state is a float sometimes — find by wo_id + matching
+  const dbFields = {};
+  const fieldMap = {
+    status:'status', completedBy:'completed_by', completedAt:'completed_at',
+    assignee:'assignee', step1Op:'step1_op', step1Status:'step1_status',
+    step1CompletedBy:'step1_completed_by', step2Op:'step2_op', step2Status:'step2_status',
+    step2CompletedBy:'step2_completed_by', notes:'notes', priority:'priority',
+    weight:'weight', qty:'qty', delivery:'delivery'
+  };
+  for (const [k,v] of Object.entries(fields)) {
+    if (fieldMap[k]) dbFields[fieldMap[k]] = v || null;
+  }
+  if (!Object.keys(dbFields).length) return;
+  // Find the DB id by wo_id + approximate item match
+  const rows = await _sbGet('line_items', `wo_id=eq.${woId}&select=id,wo_id`);
+  if (!rows || !rows.length) return;
+  // Try to match by position (item order in WO)
+  const wo = state.wos.find(w=>w.id===woId);
+  if (!wo) return;
+  const idx = wo.items.findIndex(i=>i.id==itemId);
+  if (idx < 0 || idx >= rows.length) return;
+  await _sbPatch('line_items', {id: rows[idx].id}, dbFields);
+}
+
+// ── SUPABASE: Delete a work order ──
+async function sbDeleteWO(woId) {
+  await _sbDelete('truck_stops', {wo_id: woId});
+  await _sbDelete('line_items', {wo_id: woId});
+  await _sbDelete('work_orders', {id: woId});
+}
+
+// ── SUPABASE: Load full state from DB ──
+async function sbLoadState() {
+  try {
+    const [wosRaw, lisRaw, trucksRaw, stopsRaw] = await Promise.all([
+      _sbGet('work_orders', 'order=created_at.asc&limit=500'),
+      _sbGet('line_items', 'order=id.asc&limit=5000'),
+      _sbGet('trucks', 'order=id.asc'),
+      _sbGet('truck_stops', 'order=seq.asc&limit=1000')
+    ]);
+    if (!wosRaw) return false; // offline
+
+    // Build WOs with items
+    const lisByWO = {};
+    (lisRaw||[]).forEach(li => {
+      if (!lisByWO[li.wo_id]) lisByWO[li.wo_id] = [];
+      lisByWO[li.wo_id].push(_rowToItem(li));
+    });
+
+    const wos = (wosRaw||[]).map(row => _rowToWO(row, lisByWO[row.id]||[]));
+
+    // Build trucks with stops
+    const stopsByTruck = {};
+    (stopsRaw||[]).forEach(s => {
+      if (!stopsByTruck[s.truck_id]) stopsByTruck[s.truck_id] = [];
+      stopsByTruck[s.truck_id].push({
+        woId: s.wo_id, woNum: s.wo_num, customer: s.customer,
+        address: s.address, cityst: s.cityst, zone: s.zone,
+        delivery: s.delivery||'', notes: s.notes||'', delivered: s.delivered||false
+      });
+    });
+
+    const trucks = (trucksRaw||[]).map(t => ({
+      id: t.id, name: t.name, driver: t.driver||'', max: t.max_lbs||20000,
+      shipDate: t.ship_date||'', stops: stopsByTruck[t.id]||[]
+    }));
+
+    // Apply to state
+    if (wos.length) state.wos = wos;
+    if (trucks.length) state.trucks = trucks;
+
+    return true;
+  } catch(e) {
+    console.warn('sbLoadState error:', e);
+    return false;
+  }
+}
+
+// ── Poll Supabase every 15s for changes (for board view & multi-user sync) ──
+let _sbPollTimer = null;
+function startSBPoll() {
+  if (_sbPollTimer) return;
+  _sbPollTimer = setInterval(async () => {
+    const ok = await sbLoadState();
+    if (ok) {
+      // Save fresh state to localStorage as backup
+      try { localStorage.setItem('kzn_state', JSON.stringify(state)); } catch(e){}
+      // Refresh current view if board is active
+      const overlay = document.getElementById('board-overlay');
+      if (overlay && overlay.classList.contains('active')) renderBoardView();
+    }
+  }, 15000);
+}
+
+// ══════════════════════════════════════════════════════
+// END SUPABASE SYNC LAYER
+// ══════════════════════════════════════════════════════
+
 function saveState(){
   try{
     localStorage.setItem('kzn_state', JSON.stringify(state));
@@ -1215,11 +1455,11 @@ async function syncFromCloud(){
 // Auto-save every 30 seconds silently
 setInterval(saveState, 30000);
 function loadState(){
+  // First load from localStorage immediately (fast, works offline)
   try{
     const s=localStorage.getItem('kzn_state');
     if(s){
       const p=JSON.parse(s);
-      // Merge carefully — don't overwrite with empty arrays/objects
       state.wos = (p.wos&&p.wos.length) ? p.wos : state.wos;
       state.trucks = (p.trucks&&p.trucks.length) ? p.trucks : state.trucks;
       state.adminConfig = (p.adminConfig&&Object.keys(p.adminConfig).length) ? p.adminConfig : state.adminConfig;
@@ -1241,6 +1481,25 @@ function loadState(){
       state.adminConfig = snap.adminConfig;
     }
   }
+  // Then load from Supabase in background (authoritative, multi-user)
+  sbLoadState().then(ok => {
+    if(ok){
+      try { localStorage.setItem('kzn_state', JSON.stringify(state)); } catch(e){}
+      // Re-render current view with fresh data
+      const c = document.getElementById('content');
+      if(c && state.activeView) {
+        try {
+          if(state.activeView==='dashboard') renderDashboard(c);
+          else if(state.activeView==='assign') renderAssign('',c);
+          else if(state.activeView==='queue') renderQueue(c);
+          else if(state.activeView==='trucks') renderTrucks(c);
+        } catch(e){}
+      }
+      updateBadges();
+      // Start polling for live changes
+      startSBPoll();
+    }
+  });
 }
 
 // ══════════════════════════════════════════════════════
@@ -1905,6 +2164,7 @@ function saveWO(){
     }
   }
   state.wos.push(wo);saveState();
+  sbCreateWO(wo).catch(e=>console.warn('sbCreateWO error',e));
   toast(`✓ WO #${woNum} saved — ${items.length} line items`);
   renderCreate(document.getElementById('content'));updateBadges();
 }
@@ -2132,6 +2392,11 @@ function updateLIStep(woId,itemId,field,val){
     }
   }
   saveState();toast('Step updated');
+  sbUpdateLI(woId, itemId, {
+    step1Op: item.step1Op, step1Status: item.step1Status, step1CompletedBy: item.step1CompletedBy,
+    step2Op: item.step2Op, step2Status: item.step2Status, step2CompletedBy: item.step2CompletedBy,
+    status: item.status, completedBy: item.completedBy, completedAt: item.completedAt
+  }).catch(e=>console.warn('sbUpdateLI step error',e));
   // Refresh the detail
   const det=document.getElementById('wo-detail-'+woId);
   if(det&&det.style.display!=='none'){
@@ -2171,6 +2436,7 @@ function setLIStatus(woId,itemId,status){
     item.completedAt='';
   }
   saveState();toast(`Item marked ${status}`);
+  sbUpdateLI(woId, itemId, {status, completedBy: item.completedBy, completedAt: item.completedAt}).catch(e=>console.warn('sbUpdateLI error',e));
   const wo2=state.wos.find(w=>w.id===woId);
   // Re-render detail panel only (keep it open)
   const det=document.getElementById(`wo-detail-${woId}`);
@@ -2197,13 +2463,13 @@ function enterBoardView(){
   document.getElementById('board-overlay').classList.add('active');
   if(document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(()=>{});
   renderBoardView();
-  // Auto-refresh every 15 seconds — also reloads state from localStorage
-  // so changes made in another tab/window appear on the board automatically
-  _boardTimer = setInterval(()=>{
-    try{
-      const s = localStorage.getItem('kzn_state');
-      if(s){ const p=JSON.parse(s); state.wos=p.wos||state.wos; state.trucks=p.trucks||state.trucks; }
-    }catch(e){}
+  // Auto-refresh every 15 seconds — pulls from Supabase for live multi-user sync
+  _boardTimer = setInterval(async ()=>{
+    const ok = await sbLoadState();
+    if(ok){ try{localStorage.setItem('kzn_state',JSON.stringify(state));}catch(e){} }
+    else {
+      try{ const s=localStorage.getItem('kzn_state'); if(s){const p=JSON.parse(s);state.wos=p.wos||state.wos;state.trucks=p.trucks||state.trucks;} }catch(e){}
+    }
     renderBoardView();
   }, 15000);
   // Live clock
@@ -2463,6 +2729,7 @@ function quickTruckAssign(woId, truckId){
   }
   wo.truck=truckId;
   saveState();
+  sbUpdateWO(wo).catch(e=>console.warn('sbUpdateWO quickTruck error',e));
   toast(truckId?`WO #${wo.woNum} → Truck ${truckId}`:`WO #${wo.woNum} unassigned`);
   renderDashboard(document.getElementById('content'));
 }
@@ -2481,6 +2748,7 @@ function assignTruck(woId){
     }
   }
   saveState();toast(`WO #${wo.woNum} assigned to Truck ${tId||'none'}`);
+  sbUpdateWO(wo).catch(e=>console.warn('sbUpdateWO truck error',e));
 }
 
 // Always compute weight live from WO items — never cache it in the stop
@@ -2557,9 +2825,11 @@ function getWOTruckId(woId){
 
 function deleteWO(id){
   if(!confirm('Delete this work order?'))return;
+  const _delId = id;
   state.wos=state.wos.filter(w=>w.id!==id);
   state.trucks.forEach(t=>{t.stops=t.stops.filter(s=>s.woId!==id)});
   saveState();renderAssign('');updateBadges();toast('Work order deleted');
+  sbDeleteWO(_delId).catch(e=>console.warn('sbDeleteWO error',e));
 }
 
 function editWO(id){
@@ -2663,6 +2933,7 @@ function saveEditWO(id){
   wo.items=newItems;
   window._editingWOId=null;
   saveState();updateBadges();
+  sbUpdateWO(wo).catch(e=>console.warn('sbUpdateWO error',e));
   toast('WO #'+wo.woNum+' updated');
   nav('assign',document.querySelector('.nav-item[onclick*=assign]'));
 }
@@ -3381,6 +3652,7 @@ function quickAssign(woId,itemId,val){
   const item=wo.items.find(i=>i.id==itemId);if(!item)return;
   item.assignee=val;item.status=val?'In Process':'Pending';
   saveState();updateBadges();toast(val?`Assigned to ${val}`:'Unassigned');
+  sbUpdateLI(woId, itemId, {assignee: val, status: item.status}).catch(e=>console.warn('sbUpdateLI assignee error',e));
 }
 
 function setLIStatusQ(woId,itemId,status){
