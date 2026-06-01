@@ -1291,18 +1291,20 @@ function startSBPoll() {
         return;
       }
       // Refresh whichever regular view is currently showing
+      console.log('[SB Poll] activeView:', state.activeView, '— refreshing');
       if (c) {
         try {
           if (state.activeView==='dashboard') renderDashboard(c);
           else if (state.activeView==='assign') renderAssign('', c);
           else if (state.activeView==='queue') renderQueue(c);
           else if (state.activeView==='trucks') renderTrucks(c);
+          else if (state.activeView==='truck') renderTruck(c);
           else if (state.activeView==='myview') renderMyView(c);
         } catch(e) { console.warn('poll render error', e); }
       }
       updateBadges();
     }
-  }, 15000);
+  }, 10000);
 }
 
 // ══════════════════════════════════════════════════════
@@ -1470,7 +1472,8 @@ async function syncFromCloud(){
 // Auto-save every 30 seconds silently
 setInterval(saveState, 30000);
 function loadState(){
-  // First load from localStorage immediately (fast, works offline)
+  // Load from localStorage immediately as a quick first render (offline fallback only)
+  // Supabase will overwrite this shortly after with authoritative data
   try{
     const s=localStorage.getItem('kzn_state');
     if(s){
@@ -1499,6 +1502,7 @@ function loadState(){
   // Then load from Supabase in background (authoritative, multi-user)
   sbLoadState().then(ok => {
     if(ok){
+      // Supabase is authoritative — overwrite localStorage with fresh data
       try { localStorage.setItem('kzn_state', JSON.stringify(state)); } catch(e){}
       // Re-render current view with fresh data
       const c = document.getElementById('content');
@@ -6646,38 +6650,19 @@ function importSnapshot(input){
 async function bootApp(){
   // Fetch weather in background
   fetchWeather();
-  // Always pull latest from cloud first (Option A — cloud always wins)
+  // Load localStorage immediately for fast first render
+  loadState();
+  // Then load authoritative data from Supabase
   try {
-    const res = await fetch(CLOUD_BACKUP_URL + '?nocache=' + Date.now(), {cache:'no-store'});
-    if(res.ok){
-      const data = await res.json();
-      if(data && data.wos){
-        // Cloud loaded — save to localStorage and apply to state
-        const currentUser = (() => { try { const s=JSON.parse(localStorage.getItem('kzn_state')||'{}'); return s.currentUser||''; } catch(e){ return ''; } })();
-        const restored = {
-          wos: data.wos||[],
-          trucks: data.trucks||state.trucks||[],
-          adminConfig: data.adminConfig||state.adminConfig||{},
-          customerMeta: data.customerMeta||state.customerMeta||{},
-          deliveryGroups: data.deliveryGroups||state.deliveryGroups||[],
-          currentUser: currentUser,
-          activeView: 'dashboard',
-          liCounter: 0
-        };
-        localStorage.setItem('kzn_state', JSON.stringify(restored));
-        state.wos = restored.wos;
-        state.trucks = restored.trucks;
-        state.adminConfig = restored.adminConfig;
-        state.customerMeta = restored.customerMeta;
-        if(restored.deliveryGroups) state.deliveryGroups = restored.deliveryGroups;
-        state.currentUser = currentUser;
-        console.log('✓ Loaded from cloud: ' + state.wos.length + ' WOs');
-      }
+    const ok = await sbLoadState();
+    if(ok){
+      localStorage.setItem('kzn_state', JSON.stringify(state));
+      console.log('✓ Loaded from Supabase: ' + state.wos.length + ' WOs');
+    } else {
+      console.warn('Supabase unavailable — using local data');
     }
   } catch(e){
-    // Cloud unavailable — fall back to localStorage silently
-    console.warn('Cloud sync failed, using local data:', e.message);
-    loadState();
+    console.warn('Supabase load failed, using local data:', e.message);
   }
 
   // Boot UI
