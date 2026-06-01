@@ -4408,8 +4408,16 @@ function markStopDelivered(tid, woId, delivered){
       wo.deliveredAt = '';
       wo.deliveredBy = '';
     }
-    // NOTE: Do NOT change item statuses — Complete means shop done,
-    // Delivered means left the building. These are independent.
+    // Sync WO delivered status to Supabase
+    _sbPatch('work_orders', {id: wo.id}, {
+      delivered: wo.delivered,
+      delivered_at: wo.deliveredAt||null,
+      delivered_by: wo.deliveredBy||null
+    }).catch(e=>console.warn('sbPatch delivered error',e));
+    // Sync truck stop delivered status to Supabase
+    _sbPatch('truck_stops', {truck_id: parseInt(tid), wo_id: parseInt(woId)}, {
+      delivered
+    }).catch(e=>console.warn('sbPatch stop delivered error',e));
   }
   saveState();
   updateBadges();
@@ -4428,6 +4436,9 @@ function removeStop(tid,woId){
   const wo=state.wos.find(w=>w.id===parseInt(woId));if(wo)wo.truck='';
   t.stops=t.stops.filter(s=>s.woId!==parseInt(woId));
   saveState();renderTruck(document.getElementById('content'));
+  _sbDelete('truck_stops',{truck_id:parseInt(tid),wo_id:parseInt(woId)}).catch(e=>console.warn('sbDelete stop error',e));
+  if(wo) _sbPatch('work_orders',{id:wo.id},{truck:null}).catch(e=>console.warn('sbPatch wo truck error',e));
+}
 }
 function quickAddToTruck(){
   const woId=parseInt(document.getElementById('qa-wo').value);
