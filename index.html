@@ -1141,7 +1141,8 @@ function _rowToItem(row) {
     notes: row.notes, assignee: row.assignee, status: row.status,
     completedBy: row.completed_by, completedAt: row.completed_at,
     delivery: row.delivery, priority: row.priority,
-    woNum: row.wo_num, customer: row.customer, woId: row.wo_id
+    woNum: row.wo_num, customer: row.customer, woId: row.wo_id,
+    coilNum: row.coil_num||''
   };
 }
 
@@ -1203,7 +1204,7 @@ async function sbUpdateLI(woId, itemId, fields) {
     assignee:'assignee', step1Op:'step1_op', step1Status:'step1_status',
     step1CompletedBy:'step1_completed_by', step2Op:'step2_op', step2Status:'step2_status',
     step2CompletedBy:'step2_completed_by', notes:'notes', priority:'priority',
-    weight:'weight', qty:'qty', delivery:'delivery', bundle:'bundle'
+    weight:'weight', qty:'qty', delivery:'delivery', bundle:'bundle', coilNum:'coil_num'
   };
   for (const [k,v] of Object.entries(fields)) {
     if (fieldMap[k]) dbFields[fieldMap[k]] = v===''?null:v||null;
@@ -4031,7 +4032,7 @@ function saveCoilNum(woId, itemId, val){
   if(!item) return;
   item.coilNum = val.trim();
   saveState();
-  // Re-render queue to regroup
+  sbUpdateLI(parseInt(woId), item.id, {coilNum: item.coilNum}).catch(e=>console.warn('sbUpdateLI coilNum error',e));
   renderQueue(document.getElementById('content'));
 }
 
