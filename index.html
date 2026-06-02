@@ -1323,9 +1323,10 @@ function startSBPoll() {
         return;
       }
       // Refresh whichever regular view is currently showing
-      // Don't re-render if a modal is open or user is editing
+      // Don't re-render if a modal is open, user is editing a WO, or an input is focused
       const modalOpen = document.querySelector('#split-modal, #wo-modal, [id$="-modal"]');
-      if (modalOpen || window._editingWOId) {
+      const inputFocused = document.activeElement && ['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName);
+      if (modalOpen || window._editingWOId || inputFocused) {
         updateBadges();
         return;
       }
