@@ -371,16 +371,6 @@ select{cursor:pointer}
         <option>Andrew</option><option>Nick C</option><option>Chris</option>
       </select>
     </div>
-    <div style="margin-top:8px;padding:6px 8px;background:rgba(255,255,255,.08);border-radius:6px;text-align:center">
-      <span id="save-indicator" style="font-size:11px;color:rgba(255,255,255,.5)">⏳ Not yet saved</span>
-    </div>
-    <div style="margin-top:8px"><button onclick="exportSnapshot()" title="Export clean app HTML to share" style="width:100%;padding:6px 4px;font-size:11px;font-weight:600;background:#2D6A2D;color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px">📤 Export App</button></div>
-    <div style="margin-top:6px;display:flex;gap:6px">
-      <button onclick="exportBackup()" title="Download a lightweight JSON backup of all your data" style="flex:1;padding:6px 4px;font-size:11px;font-weight:600;background:rgba(255,255,255,.08);color:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.15);border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px">💾 Backup</button>
-      <button onclick="document.getElementById('restore-file-input').click()" title="Restore data from a JSON backup" style="flex:1;padding:6px 4px;font-size:11px;font-weight:600;background:rgba(255,255,255,.08);color:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.15);border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px">🔄 Restore</button>
-      <input type="file" id="restore-file-input" accept=".json,application/json,text/plain" style="display:none" onchange="importBackup(this)">
-      <button onclick="syncFromCloud()" title="Pull latest backup from GitHub" style="flex:1;padding:6px 4px;font-size:11px;font-weight:600;background:rgba(255,255,255,.08);color:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.15);border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px">☁️ Sync</button>
-    </div>
   </div>
 </div>
 
@@ -1440,7 +1430,6 @@ function saveState(){
   try{
     localStorage.setItem('kzn_state', JSON.stringify(state));
     localStorage.setItem('kzn_last_save', new Date().toISOString());
-    updateSaveIndicator();
   } catch(e){}
 }
 
@@ -1535,11 +1524,27 @@ function importBackup(input){
       state.adminConfig = restored.adminConfig;
       state.customerMeta = restored.customerMeta;
       if(restored.deliveryGroups) state.deliveryGroups = restored.deliveryGroups;
-      toast('✓ Restored — '+totalWOs+' WOs, '+metaCount+' contacts loaded!');
-      // Navigate to dashboard to show the restored data
+      toast('✓ Restored — '+totalWOs+' WOs loaded. Syncing to Supabase...');
+      // Navigate to dashboard
       const dashNav = document.querySelector('.nav-item[onclick*="dashboard"]');
       nav('dashboard', dashNav);
       updateBadges();
+      // Push restored data to Supabase so it sticks through polls
+      // Clear existing data first then re-migrate
+      toast('⏳ Pushing restored data to Supabase — please wait...');
+      Promise.all([
+        fetch(`${_SB_URL}/rest/v1/line_items?wo_id=gt.0`,{method:'DELETE',headers:_SB_HDR}),
+        fetch(`${_SB_URL}/rest/v1/truck_stops?truck_id=gt.0`,{method:'DELETE',headers:_SB_HDR}),
+      ]).then(()=>fetch(`${_SB_URL}/rest/v1/work_orders?id=gt.0`,{method:'DELETE',headers:_SB_HDR}))
+      .then(()=>{
+        const woPromises = state.wos.map(wo => sbCreateWO(wo));
+        return Promise.all(woPromises);
+      }).then(()=>{
+        toast('✓ Restore complete — '+totalWOs+' WOs synced to Supabase');
+      }).catch(e=>{
+        toast('⚠ Supabase sync failed: '+e.message+' — data is in localStorage only');
+        console.error('Restore Supabase sync error:', e);
+      });
     } catch(err){ toast('⚠ Restore failed: '+err.message); console.error('Restore error:', err); }
   };
   reader.readAsArrayBuffer(file);
@@ -5800,7 +5805,8 @@ function renderSettings(c){
     {id:'operators', label:'👤 Operators'},
     {id:'stations',  label:'⚙ Stations'},
     {id:'materials', label:'🔩 Material Types'},
-    {id:'products',  label:'📦 Product Catalog'}
+    {id:'products',  label:'📦 Product Catalog'},
+    {id:'data',      label:'💾 Data'}
   ];
   const tabBar=tabs.map(t=>`<div class="tab${settingsTab===t.id?' active':''}" onclick="settingsTab='${t.id}';renderSettings()">${t.label}</div>`).join('');
 
@@ -5809,11 +5815,29 @@ function renderSettings(c){
   else if(settingsTab==='stations') body=renderSettingsStations();
   else if(settingsTab==='materials') body=renderSettingsMaterials();
   else if(settingsTab==='products') body=renderSettingsProducts();
+  else if(settingsTab==='data') body=renderSettingsData();
 
   c.innerHTML=`<div class="tabs">${tabBar}</div>${body}`;
 }
 
-// ── OPERATORS TAB ─────────────────────────────────────────────────────────
+// ── DATA TAB ──────────────────────────────────────────────────────────────
+function renderSettingsData(){
+  return`
+  <div class="card" style="max-width:520px;margin:0 auto">
+    <div style="font-size:15px;font-weight:700;margin-bottom:4px">💾 Export Data</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:12px">Download a full JSON backup of all work orders, trucks, customers and settings. Store this somewhere safe.</div>
+    <button class="btn btn-primary" onclick="exportBackup()">💾 Export Data</button>
+  </div>
+
+  <div class="card" style="max-width:520px;margin:16px auto 0">
+    <div style="font-size:15px;font-weight:700;margin-bottom:4px">📂 Restore from Export</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:4px">Import a previously exported JSON file. This will <strong>overwrite all current data</strong> in Supabase — use with care.</div>
+    <div style="font-size:12px;color:var(--amber);margin-bottom:12px">⚠ Only use this if Supabase data is lost or corrupted. Normal day-to-day data is saved automatically.</div>
+    <button class="btn btn-danger" onclick="document.getElementById('restore-file-input').click()">📂 Restore from File</button>
+    <input type="file" id="restore-file-input" accept=".json,application/json,text/plain" style="display:none" onchange="importBackup(this)">
+  </div>`;
+}
+
 function renderSettingsOperators(){
   const ops=getOperators();
   const mgmt=getMgmtUsers();
@@ -6789,7 +6813,7 @@ function exportSnapshot(){
     a.download = 'Sherwood_Steel_App_'+new Date().toISOString().split('T')[0]+'.html';
     a.click();
     URL.revokeObjectURL(url);
-    toast('✓ Clean app exported — use 💾 Backup to save your WO data');
+    toast('✓ Clean app exported — use 💾 Export Data to save your WO data');
   } catch(e){
     toast('⚠ Export failed: '+e.message);
   }
@@ -6881,10 +6905,8 @@ async function bootApp(){
     document.getElementById('global-user').value=state.currentUser;
     setUser(state.currentUser);
   }
-  const _bootView = 'dashboard';
   const _bootNavEl = document.querySelector(`.nav-item[onclick*="${_bootView}"]`) || document.querySelector('.nav-item');
   nav(_bootView, _bootNavEl);
-  updateSaveIndicator();
 }
 bootApp();
 </script>
