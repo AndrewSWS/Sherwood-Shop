@@ -1063,11 +1063,8 @@ const _SB_HDR = { 'Content-Type': 'application/json', 'apikey': _SB_KEY, 'Author
 
 async function _sbGet(table, params='') {
   try {
-    const sep = params ? '&' : '';
-    const url = `${_SB_URL}/rest/v1/${table}?${params}${sep}_ts=${Date.now()}`;
-    const r = await fetch(url, {
-      headers: { ..._SB_HDR, 'Cache-Control': 'no-cache' }
-    });
+    const url = `${_SB_URL}/rest/v1/${table}${params ? '?' + params : ''}`;
+    const r = await fetch(url, { headers: _SB_HDR });
     if (!r.ok) { console.warn('SB GET error', table, r.status, await r.text()); return null; }
     return await r.json();
   } catch(e) { return null; }
