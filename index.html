@@ -3680,10 +3680,10 @@ function quickAssignStep(woId,itemId,step,val){
   const wo=state.wos.find(w=>w.id===woId);if(!wo)return;
   const item=wo.items.find(i=>i.id==itemId);if(!item)return;
   if(step===1){item.step1Op=val;}else{item.step2Op=val;}
-  // Set overall assignee to step1 op for display
   if(step===1)item.assignee=val;
   saveState();updateBadges();
   renderQueue(document.getElementById('content'));
+  sbUpdateLI(woId,itemId,{step1Op:item.step1Op,step2Op:item.step2Op,assignee:item.assignee}).catch(e=>console.warn('sbUpdateLI step assign error',e));
 }
 
 function queueStepStatus(woId,itemId,step,status){
@@ -3703,6 +3703,11 @@ function queueStepStatus(woId,itemId,step,status){
   }
   saveState();updateBadges();
   renderQueue(document.getElementById('content'));
+  sbUpdateLI(woId,itemId,{
+    step1Status:item.step1Status, step1CompletedBy:item.step1CompletedBy,
+    step2Status:item.step2Status, step2CompletedBy:item.step2CompletedBy,
+    status:item.status, completedBy:item.completedBy, completedAt:item.completedAt
+  }).catch(e=>console.warn('sbUpdateLI queueStep error',e));
 }
 
 function quickAssign(woId,itemId,val){
@@ -4384,10 +4389,17 @@ function quickAssignTruck(woId,tId){
   wo.truck=String(tId);
   t.stops.push({woId:wo.id,woNum:wo.woNum,customer:wo.customer,address:wo.address,cityst:wo.cityst,zone:wo.zone,delivery:wo.delivery,notes:wo.notes});
   saveState();renderTruck(document.getElementById('content'));toast('WO #'+wo.woNum+' → Truck '+tId);
+  sbUpdateWO(wo).catch(e=>console.warn('sbUpdateWO quickAssignTruck error',e));
 }
 const var_amber='#BA7517';
 
-function t_driver(tid,v){const t=state.trucks.find(x=>x.id===tid);if(t){t.driver=v;saveState()}}
+function t_driver(tid,v){
+  const t=state.trucks.find(x=>x.id===tid);
+  if(t){
+    t.driver=v;saveState();
+    _sbPatch('trucks',{id:tid},{driver:v}).catch(e=>console.warn('sbPatch driver error',e));
+  }
+}
 function markStopDelivered(tid, woId, delivered){
   // Normalize types for comparison
   const truck = state.trucks.find(tr=>String(tr.id)===String(tid));
@@ -4447,6 +4459,7 @@ function quickAddToTruck(){
   wo.truck=String(tId);
   t.stops.push({woId:wo.id,woNum:wo.woNum,customer:wo.customer,address:wo.address,cityst:wo.cityst,zone:wo.zone,delivery:wo.delivery,notes:wo.notes});
   saveState();renderTruck(document.getElementById('content'));toast(`WO #${wo.woNum} added to ${t.name}`);
+  sbUpdateWO(wo).catch(e=>console.warn('sbUpdateWO quickAddToTruck error',e));
 }
 
 // ══════════════════════════════════════════════════════
@@ -5110,7 +5123,6 @@ function openWOFromDash(woId){
 function setDeliveryFromCard(woId, dateVal){
   const wo=state.wos.find(w=>w.id===woId);if(!wo)return;
   wo.delivery=dateVal;
-  // Update truck stop if assigned
   state.trucks.forEach(t=>{
     const stop=t.stops.find(s=>s.woId===woId);
     if(stop)stop.delivery=dateVal;
@@ -5118,6 +5130,7 @@ function setDeliveryFromCard(woId, dateVal){
   saveState();
   renderDashboard(document.getElementById('content'));
   toast('Delivery date set to '+fmtDate(dateVal));
+  sbUpdateWO(wo).catch(e=>console.warn('sbUpdateWO delivery date error',e));
 }
 
 function assignDeliveryDate(woId){
