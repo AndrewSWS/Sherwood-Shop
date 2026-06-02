@@ -1250,11 +1250,13 @@ const _liDbIdMap = {};
 // ── SUPABASE: Load full state from DB ──
 async function sbLoadState() {
   try {
-    const [wosRaw, lisRaw, trucksRaw, stopsRaw] = await Promise.all([
+    const [wosRaw, lisRaw, trucksRaw, stopsRaw, coilsRaw, configRaw] = await Promise.all([
       _sbGet('work_orders', 'order=created_at.asc&limit=500'),
       _sbGet('line_items', 'order=id.asc&limit=5000'),
       _sbGet('trucks', 'order=id.asc'),
-      _sbGet('truck_stops', 'order=seq.asc&limit=1000')
+      _sbGet('truck_stops', 'order=seq.asc&limit=1000'),
+      _sbGet('coil_records', 'order=priority.asc&limit=500'),
+      _sbGet('admin_config', 'select=key,value')
     ]);
     if (!wosRaw) return false; // offline
 
@@ -1262,7 +1264,7 @@ async function sbLoadState() {
     const lisByWO = {};
     (lisRaw||[]).forEach(li => {
       if (!lisByWO[li.wo_id]) lisByWO[li.wo_id] = [];
-      lisByWO[li.wo_id].push(li); // keep raw row for now
+      lisByWO[li.wo_id].push(li);
     });
 
     const wos = (wosRaw||[]).map(row => {
@@ -1275,9 +1277,6 @@ async function sbLoadState() {
       });
       return _rowToWO(row, items);
     });
-    // Debug: log any Complete items
-    const completeItems = wos.flatMap(w=>w.items).filter(i=>i.status==='Complete');
-    console.log('[sbLoadState] Complete items:', completeItems.length, completeItems.map(i=>i._dbId+':'+i.status));
 
     // Build trucks with stops
     const stopsByTruck = {};
@@ -1295,9 +1294,42 @@ async function sbLoadState() {
       shipDate: t.ship_date||'', stops: stopsByTruck[t.id]||[]
     }));
 
-    // Apply to state
+    // Apply WOs and trucks to state
     if (wos.length) state.wos = wos;
     if (trucks.length) state.trucks = trucks;
+
+    // Load admin config from DB
+    if (configRaw && configRaw.length) {
+      if (!state.adminConfig) state.adminConfig = {};
+      configRaw.forEach(row => {
+        try {
+          const val = typeof row.value === 'string' ? JSON.parse(row.value) : row.value;
+          switch(row.key) {
+            case 'operators':        state.adminConfig.operators = val; break;
+            case 'stations':         state.adminConfig.stations = val; break;
+            case 'zones':            state.adminConfig.zones = val; break;
+            case 'station_defaults': state.adminConfig.stationDefaults = val; break;
+            case 'wrap_overrides':   state.adminConfig.wrapOverrides = val; break;
+            case 'mgmt_users':       state.adminConfig.mgmtUsers = val; break;
+            case 'rain_start_hour':  state.adminConfig.rainStartHour = val; break;
+          }
+        } catch(e) {}
+      });
+    }
+
+    // Load coil records from DB
+    if (coilsRaw && coilsRaw.length) {
+      if (!state.adminConfig) state.adminConfig = {};
+      state.adminConfig.coilRecords = {};
+      coilsRaw.forEach(row => {
+        state.adminConfig.coilRecords[row.coil_key] = {
+          gauge: row.gauge||'', size: row.size||'',
+          date: row.date||'', startWeight: row.start_weight||'',
+          priority: row.priority||1, expanded: row.expanded||false,
+          skids: row.cuts ? (typeof row.cuts === 'string' ? JSON.parse(row.cuts) : row.cuts) : []
+        };
+      });
+    }
 
     return true;
   } catch(e) {
