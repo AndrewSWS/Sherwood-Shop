@@ -1380,7 +1380,9 @@ function startSBPoll() {
           else if (state.activeView==='assign') {
             // Don't re-render if user is actively editing a WO
             if (window._editingWOId) return;
-            renderAssign('', c);
+            // Preserve the current search value so typing isn't interrupted
+            const searchVal = document.getElementById('assign-search')?.value || '';
+            renderAssign(searchVal, c);
           }
           else if (state.activeView==='queue') renderQueue(c);
           else if (state.activeView==='trucks') renderTrucks(c);
@@ -1693,7 +1695,7 @@ function updateBadges(){
 // ══════════════════════════════════════════════════════
 const VIEWS = {
   create:{title:'New Work Order',actions:'<div class="flex gap8"><button class="btn" onclick="triggerQBImport()">📥 Import from QuickBooks</button><button class="btn btn-primary no-print" onclick="saveWO()">💾 Save Work Order</button></div>'},
-  assign:{title:'Assign & Manage WOs',actions:'<div class="flex gap8" style="align-items:center"><input type="text" id="assign-search" placeholder="Search WO, customer..." oninput="renderAssign(this.value)" style="width:200px;padding:6px 10px;font-size:13px"><button id="assign-toggle" class="btn btn-sm" onclick="showAllAssign=!showAllAssign;updateAssignToggle();renderAssign(document.getElementById(\'assign-search\').value)">Show All</button></div>'},
+  assign:{title:'Assign & Manage WOs',actions:'<div class="flex gap8" style="align-items:center"><input type="text" id="assign-search" placeholder="Search WO, customer..." oninput="filterAssignInPlace(this.value)" style="width:200px;padding:6px 10px;font-size:13px"><button id="assign-toggle" class="btn btn-sm" onclick="showAllAssign=!showAllAssign;updateAssignToggle();renderAssign(document.getElementById(\'assign-search\').value)">Show All</button></div>'},
   queue:{title:'Shop Queue — Unassigned',actions:'<button id="queue-toggle" class="btn btn-sm" onclick="showAllQueue=!showAllQueue;updateQueueToggle();renderQueue()">Show All</button>'},
   myview:{title:'My Tasks',actions:''},
   truck:{title:'Truck Planner',actions:'<button class="btn btn-primary no-print" onclick="printTruck()">🖨 Print Load Sheet</button>'},
@@ -2326,6 +2328,17 @@ function saveWO(){
 // ══════════════════════════════════════════════════════
 // ASSIGN & MANAGE VIEW
 // ══════════════════════════════════════════════════════
+function filterAssignInPlace(q){
+  const lq=(q||'').toLowerCase();
+  // Show/hide WO cards without rebuilding the DOM
+  document.querySelectorAll('.wo-card[data-woid]').forEach(card=>{
+    const woNum=(card.dataset.wonum||'').toLowerCase();
+    const cust=(card.dataset.cust||'').toLowerCase();
+    const match=!lq||woNum.includes(lq)||cust.includes(lq);
+    card.style.display=match?'':'none';
+  });
+}
+
 function renderAssign(search='',c){
   if(!c)c=document.getElementById('content');
   const q=(search||'').toLowerCase();
@@ -2381,7 +2394,7 @@ function renderWOCard(wo){
   const pct=total?Math.round(done/total*100):0;
   const progCol=pct===100?'green':pct>=50?'blue':'amber';
   const totalW=wo.items.reduce((s,i)=>s+i.weight,0);
-  return`<div class="wo-row" id="wo-${wo.id}">
+  return`<div class="wo-row wo-card" id="wo-${wo.id}" data-woid="${wo.id}" data-wonum="${wo.woNum||''}" data-cust="${(wo.customer||'').replace(/"/g,'&quot;')}">
   <div style="cursor:pointer" onclick="toggleWO(${wo.id})">
     <div class="flex-between flex-wrap gap10 mb8">
       <div class="flex gap10 flex-wrap" style="align-items:center">
@@ -5417,6 +5430,18 @@ let custSearch_q='';
 let custSearch_zone='';
 let custEditName=null;
 
+function filterCustomersInPlace(q){
+  const lq=(q||'').toLowerCase();
+  document.querySelectorAll('.cust-card').forEach(card=>{
+    const name=card.dataset.custname||'';
+    const city=card.dataset.custcity||'';
+    const zone=card.dataset.custzone||'';
+    const matchQ=!lq||name.includes(lq)||city.includes(lq);
+    const matchZ=!custSearch_zone||custSearch_zone==='All Zones'||zone===custSearch_zone;
+    card.style.display=(matchQ&&matchZ)?'':'none';
+  });
+}
+
 function renderCustomers(c){
   if(!c)c=document.getElementById('content');
   initGroups();
@@ -5438,7 +5463,7 @@ function renderCustomers(c){
       <div class="card card-sm mb12">
         <div class="flex gap8 flex-wrap">
           <input type="text" placeholder="Search customers..." value="${custSearch_q}"
-            oninput="custSearch_q=this.value;renderCustomers()" style="flex:1;min-width:160px">
+            oninput="custSearch_q=this.value;filterCustomersInPlace(this.value)" style="flex:1;min-width:160px">
           <select onchange="custSearch_zone=this.value;renderCustomers()" style="width:160px">
             ${zones.map(z=>`<option${custSearch_zone===z?' selected':''}>${z}</option>`).join('')}
           </select>
@@ -5449,7 +5474,7 @@ function renderCustomers(c){
           const meta=getCustMeta(cu.name);
           const grp=getCustGroup(cu.name);
           const hasOpenWO=state.wos.some(w=>w.customer===cu.name&&woStatus(w)!=='Complete');
-          return`<div class="card card-sm mb8 ${custEditName===cu.name?'selected-card':''}"
+          return`<div class="card card-sm mb8 cust-card data-custname="${(cu.name||'').toLowerCase()}" data-custcity="${(cu.city||'').toLowerCase()}" data-custzone="${cu.zone||''} ${custEditName===cu.name?'selected-card':''}"
             style="cursor:pointer;border-color:${custEditName===cu.name?'var(--blue)':'var(--border)'}"
             onclick="selectCustEdit('${cu.name.replace(/'/g,"\'")}')">
             <div class="flex-between flex-wrap gap6">
