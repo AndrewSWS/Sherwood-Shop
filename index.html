@@ -1952,6 +1952,13 @@ function saveNewCustomer(){
     state.customerMeta[name]={contact,phone,email,groupId:'',notify:false,notes:''};
     saveState();
   }
+  // Sync to Supabase
+  _sbPost('customers', {
+    name: newCust.name, address: newCust.address||null,
+    city: newCust.city||null, state: newCust.state||null,
+    zip: newCust.zip||null, zone: newCust.zone||null,
+    contact: contact||null, phone: phone||null, email: email||null
+  }).catch(e=>console.warn('sbPost customer error',e));
 
   // Select into the WO form
   selectCust(newCust);
@@ -5595,8 +5602,7 @@ function deleteGroup(id){
 }
 
 function addNewCustomer(){
-  // Scroll to a simple add form at top — for now just open edit panel with blank
-  toast('Use the customer list to select and edit. New customer add coming soon.');
+  openAddCustomerModal();
 }
 
 // ── RENDER SUGGESTION PANEL (used in dashboard) ────────────────────────
