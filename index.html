@@ -4806,6 +4806,7 @@ function setWrapOverride(iso, val){
   if(val === null) delete state.adminConfig.wrapOverrides[iso];
   else state.adminConfig.wrapOverrides[iso] = val;
   saveState();
+  sbSaveAdminConfig('wrap_overrides', state.adminConfig.wrapOverrides).catch(e=>console.warn('sbSaveAdminConfig wrap error',e));
   renderDashboard();
 }
 
