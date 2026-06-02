@@ -1142,7 +1142,8 @@ function _rowToItem(row) {
     completedBy: row.completed_by, completedAt: row.completed_at,
     delivery: row.delivery, priority: row.priority,
     woNum: row.wo_num, customer: row.customer, woId: row.wo_id,
-    coilNum: row.coil_num||''
+    coilNum: row.coil_num||'',
+    skidSplits: row.skid_splits ? (typeof row.skid_splits === 'string' ? JSON.parse(row.skid_splits) : row.skid_splits) : []
   };
 }
 
@@ -1204,10 +1205,18 @@ async function sbUpdateLI(woId, itemId, fields) {
     assignee:'assignee', step1Op:'step1_op', step1Status:'step1_status',
     step1CompletedBy:'step1_completed_by', step2Op:'step2_op', step2Status:'step2_status',
     step2CompletedBy:'step2_completed_by', notes:'notes', priority:'priority',
-    weight:'weight', qty:'qty', delivery:'delivery', bundle:'bundle', coilNum:'coil_num'
+    weight:'weight', qty:'qty', delivery:'delivery', bundle:'bundle',
+    coilNum:'coil_num', skidSplits:'skid_splits'
   };
   for (const [k,v] of Object.entries(fields)) {
-    if (fieldMap[k]) dbFields[fieldMap[k]] = v===''?null:v||null;
+    if (fieldMap[k]) {
+      // For jsonb fields (arrays/objects), pass as-is; for strings, null empty
+      if (Array.isArray(v) || (v !== null && typeof v === 'object')) {
+        dbFields[fieldMap[k]] = v;
+      } else {
+        dbFields[fieldMap[k]] = v===''?null:v||null;
+      }
+    }
   }
   if (!Object.keys(dbFields).length) return;
 
@@ -4023,6 +4032,7 @@ function saveSplitSkids(woId, itemId){
   document.getElementById('split-modal')?.remove();
   renderQueue(document.getElementById('content'));
   toast(`✓ ${item.skidSplits.length} skid${item.skidSplits.length!==1?'s':''} saved for WO #${wo.woNum}`);
+  sbUpdateLI(parseInt(woId), item.id, {skidSplits: item.skidSplits}).catch(e=>console.warn('sbUpdateLI skidSplits error',e));
 }
 
 function saveCoilNum(woId, itemId, val){
