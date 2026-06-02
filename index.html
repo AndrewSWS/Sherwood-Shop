@@ -1832,6 +1832,10 @@ function custSearch(q){
     if(inp&&document.activeElement!==inp){const l=inp.value.length;inp.focus();inp.setSelectionRange(l,l);}
   },0);
 }
+function selectCust(c){
+  if(window._editingWOId){
+    // In edit mode — fill edit fields
+    const custEl=document.getElementById('e-cust');
     const addrEl=document.getElementById('e-addr');
     const citystEl=document.getElementById('e-cityst');
     const zoneEl=document.getElementById('e-zone');
