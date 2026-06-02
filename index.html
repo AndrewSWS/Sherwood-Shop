@@ -1368,7 +1368,8 @@ function startSBPoll() {
       // Don't re-render if a modal is open, user is editing a WO, or an input is focused
       const modalOpen = document.querySelector('#split-modal, #wo-modal, [id$="-modal"]');
       const inputFocused = document.activeElement && ['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName);
-      if (modalOpen || window._editingWOId || inputFocused) {
+      const dropOpen = document.querySelector('#cust-drop[style*="block"], .autocomplete-list[style*="block"]');
+      if (modalOpen || window._editingWOId || inputFocused || dropOpen) {
         updateBadges();
         return;
       }
@@ -1812,7 +1813,7 @@ function renderCreate(c){
 
 function custSearch(q){
   const drop=document.getElementById('cust-drop');
-  if(!q||q.length<2){drop.style.display='none';return}
+  if(!q||q.length<1){drop.style.display='none';return}
   const matches=getCustomers().filter(c=>c.name.toLowerCase().includes(q.toLowerCase())).slice(0,10);
   const addNew=`<div class="autocomplete-item" style="border-top:1px solid var(--border);color:var(--blue);font-weight:600"
     onclick="openAddCustomerModal('${q.replace(/'/g,"\'").replace(/"/g,"&quot;")}')">
@@ -1825,11 +1826,12 @@ function custSearch(q){
   drop.innerHTML=matches.map(c=>`<div class="autocomplete-item" onclick="selectCust(${JSON.stringify(c).replace(/"/g,'&quot;')})">
     ${c.name}<span class="zone-tag">${c.zone} · ${c.city}, ${c.state}</span></div>`).join('')+addNew;
   drop.style.display='block';
+  // Keep focus on the input — don't let dropdown steal it
+  setTimeout(()=>{
+    const inp=document.getElementById('f-cust')||document.getElementById('e-cust');
+    if(inp&&document.activeElement!==inp){const l=inp.value.length;inp.focus();inp.setSelectionRange(l,l);}
+  },0);
 }
-function selectCust(c){
-  if(window._editingWOId){
-    // In edit mode — fill edit fields
-    const custEl=document.getElementById('e-cust');
     const addrEl=document.getElementById('e-addr');
     const citystEl=document.getElementById('e-cityst');
     const zoneEl=document.getElementById('e-zone');
