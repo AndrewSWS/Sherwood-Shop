@@ -1203,7 +1203,7 @@ async function sbUpdateLI(woId, itemId, fields) {
     assignee:'assignee', step1Op:'step1_op', step1Status:'step1_status',
     step1CompletedBy:'step1_completed_by', step2Op:'step2_op', step2Status:'step2_status',
     step2CompletedBy:'step2_completed_by', notes:'notes', priority:'priority',
-    weight:'weight', qty:'qty', delivery:'delivery'
+    weight:'weight', qty:'qty', delivery:'delivery', bundle:'bundle'
   };
   for (const [k,v] of Object.entries(fields)) {
     if (fieldMap[k]) dbFields[fieldMap[k]] = v===''?null:v||null;
@@ -1323,11 +1323,21 @@ function startSBPoll() {
         return;
       }
       // Refresh whichever regular view is currently showing
+      // Don't re-render if a modal is open or user is editing
+      const modalOpen = document.querySelector('#split-modal, #wo-modal, [id$="-modal"]');
+      if (modalOpen || window._editingWOId) {
+        updateBadges();
+        return;
+      }
       console.log('[SB Poll] activeView:', state.activeView, '— refreshing');
       if (c) {
         try {
           if (state.activeView==='dashboard') renderDashboard(c);
-          else if (state.activeView==='assign') renderAssign('', c);
+          else if (state.activeView==='assign') {
+            // Don't re-render if user is actively editing a WO
+            if (window._editingWOId) return;
+            renderAssign('', c);
+          }
           else if (state.activeView==='queue') renderQueue(c);
           else if (state.activeView==='trucks') renderTrucks(c);
           else if (state.activeView==='truck') renderTruck(c);
@@ -1340,6 +1350,43 @@ function startSBPoll() {
 }
 
 // ══════════════════════════════════════════════════════
+// ── SUPABASE: Save admin config key ──
+async function sbSaveAdminConfig(key, value) {
+  await _sbPatch('admin_config', {key}, {value}).catch(async e => {
+    // If PATCH fails (row doesn't exist), try POST
+    await _sbPost('admin_config', {key, value}).catch(err=>console.warn('sbSaveAdminConfig error', err));
+  });
+}
+
+// ── SUPABASE: Save queue item priorities ──
+async function sbSavePriorities(items) {
+  // items is array of {woId, item} — save priority for each
+  for (const x of items) {
+    sbUpdateLI(x.woId, x.item.id, {priority: x.item.priority}).catch(e=>console.warn('sbSavePriority error',e));
+  }
+}
+
+// ── SUPABASE: Save coil record ──
+async function sbSaveCoilRecord(coilNum) {
+  const rec = state.adminConfig?.coilRecords?.[coilNum];
+  if (!rec) return;
+  // Upsert by coil_key
+  const existing = await _sbGet('coil_records', `coil_key=eq.${encodeURIComponent(coilNum)}&select=id`);
+  const row = {
+    coil_key: coilNum,
+    gauge: rec.gauge||null, size: rec.size||null,
+    date: rec.date||null,
+    start_weight: rec.startWeight?parseFloat(rec.startWeight):null,
+    priority: rec.priority||1, expanded: rec.expanded||false,
+    cuts: rec.skids ? JSON.stringify(rec.skids) : null
+  };
+  if (existing && existing.length) {
+    await _sbPatch('coil_records', {coil_key: coilNum}, row).catch(e=>console.warn('sbSaveCoil PATCH error',e));
+  } else {
+    await _sbPost('coil_records', row).catch(e=>console.warn('sbSaveCoil POST error',e));
+  }
+}
+
 // END SUPABASE SYNC LAYER
 // ══════════════════════════════════════════════════════
 
@@ -3535,6 +3582,7 @@ function writeQueuePriorities(allItems){
     }
   });
   saveState();
+  sbSavePriorities(allItems);
   renderQueue(document.getElementById('content'));
 }
 
@@ -3815,7 +3863,7 @@ function saveCoilField(coilNum, field, val){
   const rec = getCoilRecord(coilNum);
   rec[field] = val;
   saveState();
-  // Don't re-render to avoid losing focus
+  sbSaveCoilRecord(coilNum);
 }
 
 function toggleCoilDetails(coilNum){
@@ -3830,6 +3878,7 @@ function addCoilSkid(coilNum){
   if(!rec.skids) rec.skids = [];
   rec.skids.push({size:'', qty:'', type:'', bundle:''});
   saveState();
+  sbSaveCoilRecord(coilNum);
   renderQueue(document.getElementById('content'));
 }
 
@@ -3838,6 +3887,7 @@ function removeCoilSkid(coilNum, idx){
   if(!rec.skids) return;
   rec.skids.splice(idx, 1);
   saveState();
+  sbSaveCoilRecord(coilNum);
   renderQueue(document.getElementById('content'));
 }
 
@@ -3847,6 +3897,7 @@ function saveSkidField(coilNum, idx, field, val){
   if(!rec.skids || !rec.skids[i]) return;
   rec.skids[i][field] = val;
   saveState();
+  sbSaveCoilRecord(coilNum);
   // Highlight bundle field green on completion without re-render
   if(field === 'bundle'){
     event.target.style.background = val ? 'var(--green-l)' : '#fff';
@@ -3955,6 +4006,7 @@ function saveBundleQ(woId,itemId,val){
   const wo=state.wos.find(w=>w.id===woId);if(!wo)return;
   const item=wo.items.find(i=>i.id==itemId);if(!item)return;
   item.bundle=val;saveState();
+  sbUpdateLI(woId,itemId,{notes:item.notes}).catch(e=>console.warn('sbUpdateLI bundle error',e));
 }
 
 function printQueueSlip(woId,itemId){
@@ -4178,6 +4230,7 @@ function saveBundleInline(woId,itemId,val){
   const wo=state.wos.find(w=>w.id===woId);if(!wo)return;
   const item=wo.items.find(i=>i.id==itemId);if(!item)return;
   item.bundle=val;saveState();
+  sbUpdateLI(woId,itemId,{notes:item.notes}).catch(e=>console.warn('sbUpdateLI bundleInline error',e));
 }
 
 function markDoneFromMyView(woId,itemId){
@@ -4439,6 +4492,10 @@ function moveStop(tid,idx,dir){
   const ni=idx+dir;if(ni<0||ni>=t.stops.length)return;
   [t.stops[idx],t.stops[ni]]=[t.stops[ni],t.stops[idx]];
   saveState();renderTruck(document.getElementById('content'));
+  // Sync updated sequence to Supabase
+  t.stops.forEach((stop,seq)=>{
+    _sbPatch('truck_stops',{truck_id:tid,wo_id:stop.woId},{seq}).catch(e=>console.warn('sbPatch moveStop error',e));
+  });
 }
 function removeStop(tid,woId){
   const t=state.trucks.find(x=>x.id===tid);if(!t)return;
@@ -4571,6 +4628,7 @@ function calDrop(e, iso){
   saveState();
   toast(`WO #${wo.woNum} → ${fmtDate(iso)}`);
   renderDashboard(document.getElementById('content'));
+  sbUpdateWO(wo).catch(e=>console.warn('sbUpdateWO drag schedule error',e));
 }
 
 function unschDragOver(e){
@@ -4604,6 +4662,7 @@ function unschDrop(e){
   saveState();
   toast(`WO #${wo.woNum} moved to unscheduled`);
   renderDashboard(document.getElementById('content'));
+  sbUpdateWO(wo).catch(e=>console.warn('sbUpdateWO unschedule error',e));
 }
 
 
@@ -5736,6 +5795,7 @@ function addOperator(){
   if(getOperators().includes(name)){toast('Operator already exists');return;}
   state.adminConfig.operators.push(name);
   saveState();toast(`✓ ${name} added`);
+  sbSaveAdminConfig('operators', state.adminConfig.operators);
   renderSettings(document.getElementById('content'));
 }
 
@@ -5743,9 +5803,10 @@ function removeOperator(name){
   if(!confirm(`Remove ${name}? They will be unassigned from any line items.`))return;
   state.adminConfig.operators=state.adminConfig.operators.filter(o=>o!==name);
   delete state.adminConfig.stationDefaults[name];
-  // Remove mgmt if present
   state.adminConfig.mgmtUsers=state.adminConfig.mgmtUsers.filter(u=>u!==name);
   saveState();toast(`${name} removed`);
+  sbSaveAdminConfig('operators', state.adminConfig.operators);
+  sbSaveAdminConfig('mgmt_users', state.adminConfig.mgmtUsers);
   renderSettings(document.getElementById('content'));
 }
 
@@ -5754,7 +5815,7 @@ function setOperatorStation(op,station){
   if(station==='— None —')delete state.adminConfig.stationDefaults[op];
   else state.adminConfig.stationDefaults[op]=station;
   saveState();
-  // Refresh just the summary panel
+  sbSaveAdminConfig('station_defaults', state.adminConfig.stationDefaults);
   renderSettings(document.getElementById('content'));
 }
 
@@ -5830,12 +5891,15 @@ function addStation(){
   if(getStations().includes(name)){toast('Station already exists');return;}
   state.adminConfig.stations.push(name);
   saveState();toast(`✓ ${name} added`);
+  sbSaveAdminConfig('stations', state.adminConfig.stations);
   renderSettings(document.getElementById('content'));
 }
 
 function removeStation(name){
   state.adminConfig.stations=state.adminConfig.stations.filter(s=>s!==name);
-  saveState();renderSettings(document.getElementById('content'));
+  saveState();
+  sbSaveAdminConfig('stations', state.adminConfig.stations);
+  renderSettings(document.getElementById('content'));
 }
 
 function moveStation(idx,dir){
@@ -5843,7 +5907,9 @@ function moveStation(idx,dir){
   const ni=idx+dir;
   if(ni<0||ni>=arr.length)return;
   [arr[idx],arr[ni]]=[arr[ni],arr[idx]];
-  saveState();renderSettings(document.getElementById('content'));
+  saveState();
+  sbSaveAdminConfig('stations', state.adminConfig.stations);
+  renderSettings(document.getElementById('content'));
 }
 
 function addDualPair(){
