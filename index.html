@@ -4439,7 +4439,6 @@ function removeStop(tid,woId){
   _sbDelete('truck_stops',{truck_id:parseInt(tid),wo_id:parseInt(woId)}).catch(e=>console.warn('sbDelete stop error',e));
   if(wo) _sbPatch('work_orders',{id:wo.id},{truck:null}).catch(e=>console.warn('sbPatch wo truck error',e));
 }
-}
 function quickAddToTruck(){
   const woId=parseInt(document.getElementById('qa-wo').value);
   const tId=parseInt(document.getElementById('qa-truck').value);
