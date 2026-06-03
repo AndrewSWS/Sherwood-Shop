@@ -1200,7 +1200,7 @@ async function sbUpdateLI(woId, itemId, fields) {
     step1CompletedBy:'step1_completed_by', step2Op:'step2_op', step2Status:'step2_status',
     step2CompletedBy:'step2_completed_by', notes:'notes', priority:'priority',
     weight:'weight', qty:'qty', delivery:'delivery', bundle:'bundle',
-    coilNum:'coil_num', skidSplits:'skid_splits'
+    coilNum:'coil_num', skidSplits:'skid_splits', station:'station'
   };
   for (const [k,v] of Object.entries(fields)) {
     if (fieldMap[k]) {
@@ -3631,6 +3631,9 @@ function renderQueue(c){
           <select style="width:130px;font-size:12px" onchange="quickAssign(${item.woId},'${item.id}',this.value)">
             <option value="">Assign...</option>${getOperators().map(o=>`<option${item.assignee===o?' selected':''}>${o}</option>`).join('')}
           </select>
+          <select style="width:130px;font-size:12px" onchange="changeQueueStation(${item.woId},'${item.id}',this.value)" title="Move to different queue">
+            ${getStations().map(s=>`<option${item.station===s?' selected':''}>${s}</option>`).join('')}
+          </select>
           <button class="btn btn-xs" onclick="printQueueSlip(${item.woId},'${item.id}')" title="Print work slip">🖨</button>
           <button class="btn btn-xs btn-success" onclick="setLIStatusQ(${item.woId},'${item.id}','Complete')">✓ Done</button>
         </div>`:`<div class="flex gap6">
@@ -4278,6 +4281,19 @@ function saveCoilNum(woId, itemId, val){
   item.coilNum = val.trim();
   saveState();
   sbUpdateLI(parseInt(woId), item.id, {coilNum: item.coilNum}).catch(e=>console.warn('sbUpdateLI coilNum error',e));
+  renderQueue(document.getElementById('content'));
+}
+
+function changeQueueStation(woId, itemId, newStation){
+  const wo = state.wos.find(w=>w.id===woId);
+  if(!wo) return;
+  const item = wo.items.find(i=>i.id==itemId);
+  if(!item) return;
+  const oldStation = item.station;
+  item.station = newStation;
+  saveState();
+  sbUpdateLI(woId, itemId, {station: newStation}).catch(e=>console.warn('changeQueueStation error',e));
+  toast(`Moved to ${newStation}`);
   renderQueue(document.getElementById('content'));
 }
 
