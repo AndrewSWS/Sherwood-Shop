@@ -2308,7 +2308,6 @@ function saveWO(){
   const cust=document.getElementById('f-cust').value.trim();
   if(!woNum){toast('⚠ WO Number required');return}
   if(!cust){toast('⚠ Customer required');return}
-  if(state.wos.find(w=>w.woNum===woNum)){toast('⚠ WO # already exists');return}
   const items=getLIs();
   if(!items.length){toast('⚠ Add at least one line item');return}
   const wo={
@@ -2344,9 +2343,22 @@ function saveWO(){
 
 // ── DUPLICATE WO DETECTION ────────────────────────────────────────────────
 function showDupWOModal(existing, incoming){
-  const itemKey = i=>`${i.productCat}|${i.gauge}|${i.size}|${i.qty}|${i.station}`;
-  const existingKeys = new Set(existing.items.map(itemKey));
-  const newItems = incoming.items.filter(i=>!existingKeys.has(itemKey(i)));
+  const sizeKey = i=>`${i.gauge}|${i.size}`.toLowerCase().trim();
+  const existingBySize = {};
+  existing.items.forEach(i=>{ existingBySize[sizeKey(i)] = i; });
+
+  const newItems = incoming.items.filter(i=>!existingBySize[sizeKey(i)]);
+  const qtyChanges = incoming.items.filter(i=>{
+    const match = existingBySize[sizeKey(i)];
+    return match && String(match.qty) !== String(i.qty);
+  }).map(i=>({ incoming: i, existing: existingBySize[sizeKey(i)] }));
+
+  // Items in system but NOT in QB — possibly removed from order
+  const incomingBySize = {};
+  incoming.items.forEach(i=>{ incomingBySize[sizeKey(i)] = i; });
+  const removedItems = existing.items.filter(i=>!incomingBySize[sizeKey(i)]);
+
+  const hasChanges = newItems.length > 0 || qtyChanges.length > 0 || removedItems.length > 0;
 
   const newItemRows = newItems.map(i=>`
     <div style="display:flex;gap:8px;align-items:center;padding:6px 8px;background:var(--green-l);border:1px solid var(--green-m);border-radius:4px;font-size:12px">
@@ -2357,21 +2369,47 @@ function showDupWOModal(existing, incoming){
       <span style="color:var(--text3)">${i.station||''}</span>
     </div>`).join('');
 
+  const qtyChangeRows = qtyChanges.map(({incoming:i, existing:e})=>`
+    <div style="display:flex;gap:8px;align-items:center;padding:6px 8px;background:#EEF4FB;border:1px solid #5B9BD5;border-radius:4px;font-size:12px">
+      <span style="color:#185FA5;font-weight:700">⟳ QTY</span>
+      <span style="font-weight:600">${i.gauge||''} ${i.size||i.productCat||'—'}</span>
+      <span style="color:var(--text2)">×${e.qty} → <strong>×${i.qty}</strong></span>
+    </div>`).join('');
+
   const modal = document.createElement('div');
   modal.id = 'dup-wo-modal';
   modal.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:20px';
   modal.innerHTML = `
     <div style="background:#fff;border-radius:12px;padding:24px;max-width:580px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.3)">
       <div style="font-size:16px;font-weight:800;color:var(--red);margin-bottom:4px">⚠ Duplicate WO #${existing.woNum}</div>
-      <div style="font-size:13px;color:var(--text2);margin-bottom:16px">This WO number already exists for <strong>${existing.customer}</strong> with ${existing.items.length} line items.</div>
-      ${newItems.length ? `
-        <div style="font-weight:700;font-size:13px;margin-bottom:8px;color:var(--green)">✚ ${newItems.length} NEW line item${newItems.length!==1?'s':''} in incoming WO:</div>
-        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px">${newItemRows}</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:4px">This WO already exists for <strong>${existing.customer}</strong> with ${existing.items.length} line items.</div>
+      ${existing.delivery||existing.truck?`<div style="font-size:11px;color:var(--blue);margin-bottom:12px">📅 Scheduled: ${existing.delivery?fmtDate(existing.delivery):'No date'} ${existing.truck?'· Truck '+existing.truck:''} ${existing.delivered?'· ✓ Delivered':''} — will be preserved</div>`:`<div style="margin-bottom:12px"></div>`}
+      ${hasChanges ? `
+        ${newItems.length ? `
+          <div style="font-weight:700;font-size:13px;margin-bottom:8px;color:var(--green)">✚ ${newItems.length} NEW line item${newItems.length!==1?'s':''}:</div>
+          <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">${newItemRows}</div>` : ''}
+        ${qtyChanges.length ? `
+          <div style="font-weight:700;font-size:13px;margin-bottom:8px;color:#185FA5">⟳ ${qtyChanges.length} qty change${qtyChanges.length!==1?'s':''}:</div>
+          <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">${qtyChangeRows}</div>` : ''}
+        ${removedItems.length ? `
+          <div style="font-weight:700;font-size:13px;margin-bottom:8px;color:var(--amber)">⚠ ${removedItems.length} item${removedItems.length!==1?'s':''} in system but NOT in QB:</div>
+          <div style="font-size:11px;color:var(--text2);margin-bottom:8px">These may have been removed from the order. Review before deciding — do not remove if already in production.</div>
+          <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">
+            ${removedItems.map(i=>`
+            <div style="display:flex;gap:8px;align-items:center;padding:6px 8px;background:var(--amber-l);border:1px solid var(--amber);border-radius:4px;font-size:12px">
+              <span style="color:var(--amber);font-weight:700">− IN SYSTEM</span>
+              <span style="font-weight:600">${i.productCat||'—'}</span>
+              <span style="color:var(--text2)">${i.gauge||''} ${i.size||''}</span>
+              <span>Qty: ${i.qty||'—'}</span>
+              <span style="color:${i.status==='Complete'?'var(--green)':'var(--text3)'};margin-left:auto">${i.status}</span>
+              <button class="btn btn-xs" style="background:var(--red-l);color:var(--red,#c0392b);border:1px solid var(--red,#c0392b)" onclick="removeDupItem(${existing.id},${i.id})">${i.status==='Complete'?'Remove (done)':'Remove'}</button>
+            </div>`).join('')}
+          </div>` : ''}
         <div style="display:flex;gap:8px;margin-bottom:16px">
-          <button class="btn btn-primary" onclick="mergeDupWO(${existing.id})">✚ Merge ${newItems.length} New Item${newItems.length!==1?'s':''}</button>
+          <button class="btn btn-primary" onclick="mergeDupWO(${existing.id})">✓ Apply Changes to WO #${existing.woNum}</button>
           <button class="btn" onclick="document.getElementById('dup-wo-modal').remove()">Cancel</button>
         </div>` : `
-        <div style="color:var(--green);font-weight:600;margin-bottom:16px">✓ No new line items — incoming WO is identical to existing.</div>
+        <div style="color:var(--green);font-weight:600;margin-bottom:16px">✓ No changes — incoming WO matches existing.</div>
         <button class="btn" onclick="document.getElementById('dup-wo-modal').remove()">Close</button>`}
       <div style="border-top:1px solid var(--border);padding-top:12px">
         <div style="font-size:12px;font-weight:600;color:var(--text3);margin-bottom:8px">EXISTING WO — ${existing.items.length} items:</div>
@@ -2389,13 +2427,69 @@ function showDupWOModal(existing, incoming){
   document.body.appendChild(modal);
 }
 
+function removeDupItem(woId, itemId){
+  const wo = state.wos.find(w=>w.id===woId);
+  if(!wo) return;
+  const item = wo.items.find(i=>i.id==itemId);
+  const msg = item && item.status==='Complete'
+    ? 'This item is already marked Complete. Remove it anyway?'
+    : 'Remove this item from the WO? This cannot be undone.';
+  if(!confirm(msg)) return;
+  wo.items = wo.items.filter(i=>i.id!=itemId);
+  saveState();
+  // Delete from Supabase using _dbId if available
+  if(item && item._dbId){
+    _sbDelete('line_items', {id: item._dbId}).catch(e=>console.warn('removeDupItem delete error',e));
+  }
+  toast('Item removed');
+  // Refresh modal and QB list
+  document.getElementById('dup-wo-modal')?.remove();
+  if(window._dupIncomingWO) showDupWOModal(wo, window._dupIncomingWO);
+  const qbList = document.getElementById('qb-invoice-list');
+  if(qbList) qbList.innerHTML = renderQBList(_qbInvoices);
+  updateQBPillCount();
+}
+
 function mergeDupWO(existingId){
   const existing = state.wos.find(w=>w.id===existingId);
   const incoming = window._dupIncomingWO;
   if(!existing||!incoming) return;
-  const itemKey = i=>`${i.productCat}|${i.gauge}|${i.size}|${i.qty}|${i.station}`;
-  const existingKeys = new Set(existing.items.map(itemKey));
-  const newItems = incoming.items.filter(i=>!existingKeys.has(itemKey(i)));
+
+  // Match on gauge+size to find same items (ignore qty so we can update it)
+  const sizeKey = i=>`${i.gauge}|${i.size}`.toLowerCase().trim();
+  const existingBySize = {};
+  existing.items.forEach(i=>{ existingBySize[sizeKey(i)] = i; });
+
+  const newItems = [];
+  const qtyUpdated = [];
+
+  incoming.items.forEach(item=>{
+    const key = sizeKey(item);
+    const match = existingBySize[key];
+    if(!match){
+      newItems.push(item);
+    } else if(String(match.qty) !== String(item.qty)){
+      qtyUpdated.push({existing: match, newQty: item.qty});
+    }
+  });
+
+  // IMPORTANT: preserve existing WO scheduling — never overwrite with blank
+  // The incoming WO from QB import has no delivery date/truck/delivered info
+  // Existing WO may already be scheduled, on a truck, or delivered
+  const preservedFields = {
+    delivery:    existing.delivery    || incoming.delivery    || '',
+    truck:       existing.truck       || incoming.truck       || '',
+    delivered:   existing.delivered,
+    deliveredAt: existing.deliveredAt || '',
+    deliveredBy: existing.deliveredBy || '',
+    pickupDate:  existing.pickupDate  || '',
+    isPickup:    existing.isPickup    || incoming.isPickup    || false,
+  };
+
+  // Apply preserved fields back to existing WO (in case anything was blanked)
+  Object.assign(existing, preservedFields);
+
+  // Add new items
   newItems.forEach(item=>{
     existing.items.push(item);
     _sbPost('line_items',{
@@ -2404,14 +2498,33 @@ function mergeDupWO(existingId){
       gauge:item.gauge||null, size:item.size||null, qty:item.qty||null,
       weight:item.weight||null, station:item.station||null,
       status:'Pending', delivery:existing.delivery||null
-    }).catch(e=>console.warn('merge line item error',e));
+    }).catch(e=>console.warn('merge new item error',e));
   });
+
+  // Update qty on changed items
+  qtyUpdated.forEach(({existing: item, newQty})=>{
+    item.qty = newQty;
+    sbUpdateLI(existing.id, item.id, {qty: newQty}).catch(e=>console.warn('merge qty update error',e));
+  });
+
+  // Sync WO header to Supabase (preserves delivery date, truck etc)
+  sbUpdateWO(existing).catch(e=>console.warn('mergeDupWO sbUpdateWO error',e));
+
   saveState();
   document.getElementById('dup-wo-modal')?.remove();
   window._dupIncomingWO = null;
-  toast(`✓ Merged ${newItems.length} new item${newItems.length!==1?'s':''} into WO #${existing.woNum}`);
+
+  const parts = [];
+  if(newItems.length) parts.push(`${newItems.length} new item${newItems.length!==1?'s':''} added`);
+  if(qtyUpdated.length) parts.push(`${qtyUpdated.length} qty${qtyUpdated.length!==1?'s':''} updated`);
+  toast(`✓ WO #${existing.woNum}: ${parts.join(', ') || 'no changes'}`);
   renderCreate(document.getElementById('content'));
   updateBadges();
+
+  // Refresh QB selector so this invoice moves from Review Needed → No Changes
+  const qbList = document.getElementById('qb-invoice-list');
+  if(qbList) qbList.innerHTML = renderQBList(_qbInvoices);
+  updateQBPillCount();
 }
 
 // ══════════════════════════════════════════════════════
@@ -6768,6 +6881,16 @@ function parseQBWorkbook(wb, filename){
       if(!invoices[invNum]){
         invoices[invNum] = { invNum, customer, date: dateStr, items: [] };
       }
+
+      // If no item code and no memo, this is a QB continuation row —
+      // add its qty to the last item rather than creating a new one
+      const isContinuation = !itemRaw && !memo && invoices[invNum].items.length > 0;
+      if(isContinuation){
+        const lastItem = invoices[invNum].items[invoices[invNum].items.length - 1];
+        lastItem.qty = String(parseFloat(lastItem.qty||0) + qty);
+        continue;
+      }
+
       invoices[invNum].items.push({
         productCat, type, gauge, size,
         qty: String(qty), weight:0, wtUnit:0,
@@ -6871,15 +6994,80 @@ function renderQBList(invoices){
   const dupes = invoices.filter(inv=>existingWONums.has(inv.invNum));
   const fresh = invoices.filter(inv=>!existingWONums.has(inv.invNum));
 
+  const itemKey = i => `${i.gauge}|${i.size}|${i.qty}`.toLowerCase().trim();
+
   const renderCard = (inv, isDupe) => {
     const dupeBorder = isDupe ? 'border-color:#BA7517;background:#FFF8EC' : 'background:var(--page);border:1px solid var(--border)';
+
+    let diffHtml = '';
+    let newCount = 0;
+    if(isDupe){
+      const existing = state.wos.find(w=>String(w.woNum)===String(inv.invNum));
+      if(existing){
+        const sysQtys = existing.items.map(i=>String(i.qty).trim());
+        const qbQtys  = inv.items.map(i=>String(i.qty).trim());
+
+        // Count difference
+        const countDiff = inv.items.length - existing.items.length;
+
+        // For each system qty, check if it exists in QB qtys
+        const sysQtyPool = [...sysQtys];
+        const qbQtyPool  = [...qbQtys];
+        const unmatchedSys = [];
+        const unmatchedQB  = [...qbQtyPool];
+
+        sysQtyPool.forEach(q => {
+          const idx = unmatchedQB.indexOf(q);
+          if(idx > -1) unmatchedQB.splice(idx, 1);
+          else unmatchedSys.push(q);
+        });
+
+        newCount = countDiff !== 0 || unmatchedSys.length > 0 ? 1 : 0;
+
+        diffHtml = `<div style="margin-top:8px;border-top:1px solid #f0c060;padding-top:8px">`;
+
+        // Item counts
+        diffHtml += `<div style="display:flex;gap:16px;margin-bottom:8px;font-size:12px">`;
+        diffHtml += `<span>System: <strong>${existing.items.length} item${existing.items.length!==1?'s':''}</strong></span>`;
+        diffHtml += `<span style="color:${countDiff!==0?'#c0392b':'var(--green)'}">QB: <strong>${inv.items.length} item${inv.items.length!==1?'s':''}</strong>${countDiff>0?' ▲ '+countDiff+' more':countDiff<0?' ▼ '+Math.abs(countDiff)+' fewer':' ✓'}</span>`;
+        diffHtml += `</div>`;
+
+        // Qty comparison
+        diffHtml += `<div style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;margin-bottom:4px">System qtys:</div>`;
+        diffHtml += `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">`;
+        diffHtml += existing.items.map(i=>`<span style="background:#f0f0f0;border:1px solid #ccc;border-radius:4px;padding:2px 8px;font-size:11px;color:#555">${i.gauge?i.gauge+' ':''}${i.size||i.productCat||'item'}: <strong>×${i.qty}</strong>${i.status==='Complete'?' ✓':''}</span>`).join('');
+        diffHtml += `</div>`;
+
+        diffHtml += `<div style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;margin-bottom:4px">QB qtys:</div>`;
+        diffHtml += `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">`;
+        diffHtml += inv.items.map(i=>{
+          const matched = sysQtys.includes(String(i.qty).trim());
+          return `<span style="background:${matched?'#f0f0f0':'#FFF0F0'};border:1px solid ${matched?'#ccc':'#c0392b'};border-radius:4px;padding:2px 8px;font-size:11px;color:${matched?'#555':'#c0392b'};font-weight:${matched?'400':'700'}">${i.gauge?i.gauge+' ':''}${i.size||i.productCat||'item'}: ×${i.qty}${matched?'':' ⚠'}</span>`;
+        }).join('');
+        diffHtml += `</div>`;
+
+        if(unmatchedSys.length > 0){
+          diffHtml += `<div style="font-size:11px;color:#c0392b;font-weight:600">⚠ ${unmatchedSys.length} system qty${unmatchedSys.length!==1?'s':''} not found in QB: ${unmatchedSys.map(q=>'×'+q).join(', ')}</div>`;
+        } else if(countDiff === 0){
+          diffHtml += `<div style="font-size:11px;color:var(--green);font-weight:600">✓ All qtys match</div>`;
+        }
+        diffHtml += `</div>`;
+      }
+    }
+
+    const dupeLabel = isDupe && newCount > 0
+      ? `<span style="background:#c0392b;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px">⚠ DUPLICATE — REVIEW NEEDED</span>`
+      : isDupe
+      ? `<span style="background:#BA7517;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px">⚠ DUPLICATE — no changes</span>`
+      : '';
+
     return `
     <div id="qb-inv-${inv.invNum}" style="${dupeBorder};border-radius:var(--rad);padding:12px 14px;margin-bottom:8px;cursor:pointer;transition:border-color .15s"
       onmouseover="this.style.borderColor='${isDupe?'#BA7517':'var(--blue)'}'" onmouseout="this.style.borderColor='${isDupe?'#BA7517':'var(--border)'}'"
       onclick="importQBInvoice('${inv.invNum}')">
       <div class="flex-between flex-wrap gap8 mb6">
         <div class="flex gap8 flex-wrap" style="align-items:center">
-          ${isDupe?`<span style="background:#BA7517;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px">⚠ DUPLICATE</span>`:''}
+          ${dupeLabel}
           <span style="font-weight:700;font-size:14px">Invoice #${inv.invNum}</span>
           <span style="color:var(--blue);font-size:13px">${inv.customer}</span>
           <span class="badge badge-gray">📅 ${fmtDate(inv.date)}</span>
@@ -6893,27 +7081,53 @@ function renderQBList(invoices){
             : `<button class="btn btn-sm btn-primary" onclick="event.stopPropagation();importQBInvoice('${inv.invNum}')">Import →</button>`}
         </div>
       </div>
+      ${!isDupe ? `
       <div style="font-size:12px;color:var(--text2)">${inv.items.length} line item${inv.items.length!==1?'s':''} · ${[...new Set(inv.items.map(i=>i.productCat))].join(', ')}</div>
       <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">
-        ${inv.items.slice(0,6).map(item=>`<span class="badge badge-gray" style="font-size:10px">${item.gauge?item.gauge+' ':''}${item.size||item.productCat} ×${item.qty}</span>`).join('')}
+        ${inv.items.slice(0,6).map(item=>`<span class="badge badge-gray" style="font-size:10px">${item.gauge?item.gauge+' ':''} ${item.size||item.productCat} ×${item.qty}</span>`).join('')}
         ${inv.items.length>6?`<span style="font-size:11px;color:var(--text3)">+${inv.items.length-6} more</span>`:''}
-      </div>
+      </div>` : diffHtml}
     </div>`;
   };
 
   let html = '';
 
-  // Show duplicates first with a warning header
-  if(dupes.length){
-    html += `<div style="background:#FFF8EC;border:1px solid #BA7517;border-radius:var(--rad);padding:8px 12px;margin-bottom:10px;font-size:12px;color:#BA7517;font-weight:600">
-      ⚠ ${dupes.length} invoice${dupes.length!==1?'s':''} already exist as WOs — review before importing
-      <button class="btn btn-xs" style="margin-left:8px;background:#BA7517;color:#fff" onclick="dupes_delete_all()">Delete All Duplicates</button>
+  // Split dupes into needs-review and clean
+  const dupesNeedReview = dupes.filter(inv=>{
+    const existing = state.wos.find(w=>String(w.woNum)===String(inv.invNum));
+    if(!existing) return true;
+    const countDiff = inv.items.length - existing.items.length;
+    if(countDiff !== 0) return true;
+    const sysQtys = existing.items.map(i=>String(i.qty).trim());
+    const qbQtys = [...inv.items.map(i=>String(i.qty).trim())];
+    const unmatched = sysQtys.filter(q=>{ const idx=qbQtys.indexOf(q); if(idx>-1){qbQtys.splice(idx,1);return false;} return true; });
+    return unmatched.length > 0;
+  });
+  const dupesClean = dupes.filter(inv=>!dupesNeedReview.includes(inv));
+
+  // Section 1: Needs Review
+  if(dupesNeedReview.length){
+    html += `<div style="background:#FFF0F0;border:1px solid #c0392b;border-radius:var(--rad);padding:8px 12px;margin-bottom:10px;font-size:12px;color:#c0392b;font-weight:600;display:flex;align-items:center;justify-content:space-between">
+      <span>🔴 ${dupesNeedReview.length} invoice${dupesNeedReview.length!==1?'s':''} need review — count or qty differs from system</span>
     </div>`;
-    html += dupes.map(inv=>renderCard(inv,true)).join('');
-    if(fresh.length) html += `<div style="border-top:2px solid var(--border);margin:12px 0 8px;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text3);letter-spacing:.06em">New Invoices (${fresh.length})</div>`;
+    html += dupesNeedReview.map(inv=>renderCard(inv,true)).join('');
   }
 
-  html += fresh.map(inv=>renderCard(inv,false)).join('');
+  // Section 2: No Changes — can be bulk dismissed
+  if(dupesClean.length){
+    html += `<div style="background:#FFF8EC;border:1px solid #BA7517;border-radius:var(--rad);padding:8px 12px;margin-bottom:10px;font-size:12px;color:#BA7517;font-weight:600;display:flex;align-items:center;justify-content:space-between">
+      <span>🟡 ${dupesClean.length} duplicate${dupesClean.length!==1?'s':''} — no changes detected</span>
+      <button class="btn btn-xs" style="background:#BA7517;color:#fff" onclick="dupes_delete_clean()">Dismiss All</button>
+    </div>`;
+    html += dupesClean.map(inv=>renderCard(inv,true)).join('');
+  }
+
+  // Section 3: New invoices
+  if(fresh.length){
+    if(dupes.length) html += `<div style="border-top:2px solid var(--border);margin:12px 0 8px;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text3);letter-spacing:.06em">New Invoices (${fresh.length})</div>`;
+    html += fresh.map(inv=>renderCard(inv,false)).join('');
+  }
+
   return html || '<div style="text-align:center;padding:20px;color:var(--text3)">No invoices to show</div>';
 }
 
@@ -6924,6 +7138,25 @@ function dupes_delete_all(){
   const el = document.getElementById('qb-invoice-list');
   if(el) el.innerHTML = renderQBList(_qbInvoices);
   toast('✓ Duplicate invoices removed');
+}
+
+function dupes_delete_clean(){
+  const existingWONums = new Set(state.wos.map(w=>String(w.woNum)));
+  _qbInvoices = _qbInvoices.filter(inv=>{
+    if(!existingWONums.has(inv.invNum)) return true; // keep fresh
+    const existing = state.wos.find(w=>String(w.woNum)===String(inv.invNum));
+    if(!existing) return false;
+    const countDiff = inv.items.length - existing.items.length;
+    if(countDiff !== 0) return true; // keep review needed
+    const sysQtys = existing.items.map(i=>String(i.qty).trim());
+    const qbQtys = [...inv.items.map(i=>String(i.qty).trim())];
+    const unmatched = sysQtys.filter(q=>{ const idx=qbQtys.indexOf(q); if(idx>-1){qbQtys.splice(idx,1);return false;} return true; });
+    return unmatched.length > 0; // keep review needed
+  });
+  updateQBPillCount();
+  const el = document.getElementById('qb-invoice-list');
+  if(el) el.innerHTML = renderQBList(_qbInvoices);
+  toast('✓ Clean duplicates dismissed');
 }
 
 function filterQBList(q){
