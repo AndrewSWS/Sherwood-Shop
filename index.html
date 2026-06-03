@@ -6983,6 +6983,7 @@ async function launchApp(){
     document.getElementById('global-user').value=state.currentUser;
     setUser(state.currentUser);
   }
+  const _bootView = state.activeView || 'dashboard';
   const _bootNavEl = document.querySelector(`.nav-item[onclick*="${_bootView}"]`) || document.querySelector('.nav-item');
   nav(_bootView, _bootNavEl);
 }
