@@ -274,7 +274,7 @@ select{cursor:pointer}
 .board-subtitle{font-size:13px;color:#A8D5A8;margin-top:2px}
 .board-grid{
   display:grid;grid-template-columns:repeat(5,1fr);gap:2px;
-  overflow:hidden;padding:2px;padding-left:48px;
+  overflow:hidden;padding:2px;padding-left:24px;
   align-items:start;
 }
 .board-day{
@@ -299,8 +299,11 @@ select{cursor:pointer}
   padding:6px 10px;border-left:3px solid #444;
   margin:2px 4px;border-radius:0 4px 4px 0;
   background:#222;
+  width:100%;
+  box-sizing:border-box;
+  overflow:hidden;
 }
-.board-stop.done{opacity:0.45;}
+.board-stop-wo{font-size:10px;color:#666;margin-top:1px;display:flex;align-items:center;gap:6px;overflow:hidden;}
 .q-item.q-drag-over{border:2px dashed var(--blue);background:var(--blue-l);}
 .coil-block.coil-drag-over{border:2px dashed #f0a500 !important;background:var(--amber-l) !important;opacity:0.8;}
 .board-stop-cust{font-size:13px;font-weight:700;color:#fff;line-height:1.2}
@@ -2961,10 +2964,10 @@ function renderBoardView(){
 
       return '<div class="board-stop'+(delivered?' done':'')+'" style="border-left-color:'+color+'">'
         +'<div class="board-stop-cust">'+(delivered?'🚚 ':complete?'✓ ':'')+wo.customer+'</div>'
-        +'<div class="board-stop-wo" style="display:flex;justify-content:space-between;align-items:center;gap:6px">'
+        +'<div class="board-stop-wo">'
           +'<span style="white-space:nowrap;flex-shrink:0">WO #'+wo.woNum+(getWOWeight(wo.id)?' · '+getWOWeight(wo.id).toLocaleString()+' lbs':'')+'</span>'
-          +(itemSnippet?'<span style="font-size:9px;color:#aaa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0">'+itemSnippet+moreItems+'</span>':'')
-          +(completionStr?'<span style="font-size:10px;font-weight:700;color:'+completionColor+';flex-shrink:0">'+completionStr+'</span>':'')
+          +(itemSnippet?'<span style="font-size:9px;color:#aaa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;max-width:120px">'+itemSnippet+moreItems+'</span>':'')
+          +(completionStr?'<span style="font-size:10px;font-weight:700;color:'+completionColor+';flex-shrink:0;margin-left:auto">'+completionStr+'</span>':'')
         +'</div>'
         +(delivered?'<div class="board-stop-done">🚚 Delivered</div>':complete?'<div class="board-stop-done" style="color:#f0a500">✓ Ready to Ship</div>':'')
         +'</div>';        +'</div>';
