@@ -1316,6 +1316,7 @@ async function sbLoadState() {
             case 'wrap_overrides':   state.adminConfig.wrapOverrides = val; break;
             case 'mgmt_users':       state.adminConfig.mgmtUsers = val; break;
             case 'rain_start_hour':  state.adminConfig.rainStartHour = val; break;
+            case 'acknowledged_gaps': state.adminConfig.acknowledgedGaps = val; break;
           }
         } catch(e) {}
       });
@@ -1392,10 +1393,14 @@ function startSBPoll() {
 // ══════════════════════════════════════════════════════
 // ── SUPABASE: Save admin config key ──
 async function sbSaveAdminConfig(key, value) {
-  await _sbPatch('admin_config', {key}, {value}).catch(async e => {
-    // If PATCH fails (row doesn't exist), try POST
-    await _sbPost('admin_config', {key, value}).catch(err=>console.warn('sbSaveAdminConfig error', err));
-  });
+  try {
+    const r = await fetch(`${_SB_URL}/rest/v1/admin_config`, {
+      method: 'POST',
+      headers: { ..._SB_HDR, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify({key, value})
+    });
+    if (!r.ok) console.warn('sbSaveAdminConfig error', key, await r.text());
+  } catch(e) { console.warn('sbSaveAdminConfig error', e); }
 }
 
 // ── SUPABASE: Save queue item priorities ──
@@ -1769,7 +1774,7 @@ function renderCreate(c){
   <div class="card mb16">
     <div class="section-head">Order Header</div>
     <div class="grid3 mb12">
-      <div class="field"><label class="lbl">WO Number *</label><input type="text" id="f-wonum" placeholder="e.g. 1042"></div>
+      <div class="field"><label class="lbl">WO Number *</label><input type="text" id="f-wonum" placeholder="e.g. 1042" oninput="checkWONumGapInline(this.value)"><div id="wonum-gap-warn" style="display:none;margin-top:6px;padding:8px 12px;background:#FFF8EC;border:2px solid var(--amber);border-radius:6px;font-size:12px;font-weight:600;color:#BA7517"></div></div>
       <div class="field"><label class="lbl">PO Number</label><input type="text" id="f-po" placeholder="Customer PO #"></div>
       <div class="field"><label class="lbl">Order Date</label><input type="date" id="f-date" value="${todayISO()}"></div>
     </div>
@@ -2335,6 +2340,8 @@ function saveWO(){
     return;
   }
 
+  // Capture current max BEFORE pushing new WO for gap check
+  const _prevMax = Math.max(...state.wos.map(w=>parseInt(w.woNum)).filter(n=>!isNaN(n)), 0);
   state.wos.push(wo);saveState();
   sbCreateWO(wo).catch(e=>console.warn('sbCreateWO error',e));
   toast(`✓ WO #${woNum} saved — ${items.length} line items`);
@@ -6086,53 +6093,34 @@ function renderSettings(c){
 
 // ── DATA TAB ──────────────────────────────────────────────────────────────
 function renderSettingsAudit(){
-  // Get all WO numbers as integers, sorted
-  const nums = state.wos
-    .map(w=>parseInt(w.woNum))
-    .filter(n=>!isNaN(n))
-    .sort((a,b)=>a-b);
-
+  const nums = state.wos.map(w=>parseInt(w.woNum)).filter(n=>!isNaN(n)).sort((a,b)=>a-b);
   if(nums.length < 2) return '<div class="card">Not enough WOs to analyze.</div>';
+  const min=nums[0], max=nums[nums.length-1], numSet=new Set(nums);
+  if(!state.adminConfig.acknowledgedGaps) state.adminConfig.acknowledgedGaps=[];
+  const acked=new Set(state.adminConfig.acknowledgedGaps.map(n=>parseInt(n)));
+  const activeGaps=[], ackedGaps=[];
+  for(let n=min;n<=max;n++) if(!numSet.has(n)){ if(acked.has(n)) ackedGaps.push(n); else activeGaps.push(n); }
+  const seen={}, dups=[];
+  state.wos.forEach(wo=>{ if(seen[wo.woNum]) dups.push(wo.woNum); else seen[wo.woNum]=true; });
+  const recent=[...state.wos].filter(w=>parseInt(w.woNum)).sort((a,b)=>parseInt(b.woNum)-parseInt(a.woNum)).slice(0,20);
 
-  const min = nums[0];
-  const max = nums[nums.length-1];
-  const numSet = new Set(nums);
+  const activeGapHtml = activeGaps.length===0
+    ? '<div style="color:var(--green);font-weight:600">✓ No unacknowledged gaps</div>'
+    : `<div style="margin-bottom:8px;color:var(--amber);font-weight:600">⚠ ${activeGaps.length} gap${activeGaps.length!==1?'s':''} need attention</div>`
+      +`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">`
+      +activeGaps.map(n=>`<span style="display:inline-flex;align-items:center;gap:4px;background:var(--amber-l);border:1px solid var(--amber);border-radius:4px;padding:3px 6px;font-size:12px;font-weight:700">#${n}<button onclick="acknowledgeGap(${n})" style="background:none;border:none;cursor:pointer;font-size:10px;color:var(--amber);padding:0" title="Mark as intentional skip">✓ ack</button></span>`).join('')
+      +`</div><button class="btn btn-sm" onclick="acknowledgeAllGaps()">✓ Acknowledge All Gaps</button>
+       <div style="font-size:11px;color:var(--text3);margin-top:6px">Acknowledging means that WO number was skipped or cancelled — it won't be flagged again.</div>`;
 
-  // Find gaps
-  const gaps = [];
-  for(let n=min; n<=max; n++){
-    if(!numSet.has(n)) gaps.push(n);
-  }
+  const ackedGapHtml = ackedGaps.length===0 ? '' :
+    `<div style="font-size:11px;color:var(--text3);margin-top:8px">+ ${ackedGaps.length} acknowledged gap${ackedGaps.length!==1?'s':''} hidden from view</div>`;
 
-  // Find duplicates
-  const seen = {};
-  const dups = [];
-  state.wos.forEach(wo=>{
-    const n = wo.woNum;
-    if(seen[n]) dups.push(n);
-    else seen[n] = true;
-  });
-
-  // Recent WOs (last 20)
-  const recent = [...state.wos]
-    .filter(w=>parseInt(w.woNum))
-    .sort((a,b)=>parseInt(b.woNum)-parseInt(a.woNum))
-    .slice(0,20);
-
-  const gapHtml = gaps.length === 0
-    ? '<div style="color:var(--green);font-weight:600">✓ No gaps detected — all WO numbers are sequential</div>'
-    : `<div style="margin-bottom:8px;color:var(--amber);font-weight:600">⚠ ${gaps.length} missing WO number${gaps.length!==1?'s':''} detected</div>`
-      + `<div style="display:flex;flex-wrap:wrap;gap:6px">`
-      + gaps.map(n=>`<span style="background:var(--amber-l);border:1px solid var(--amber);border-radius:4px;padding:3px 8px;font-size:12px;font-weight:700">#${n}</span>`).join('')
-      + `</div>`;
-
-  const dupHtml = dups.length === 0
-    ? '<div style="color:var(--green);font-weight:600">✓ No duplicate WO numbers found</div>'
-    : `<div style="color:var(--red);font-weight:600">⚠ Duplicate WO numbers: ${dups.map(n=>'#'+n).join(', ')}</div>`;
+  const dupHtml = dups.length===0
+    ? '<div style="color:var(--green);font-weight:600">✓ No duplicate WO numbers</div>'
+    : `<div style="color:var(--red);font-weight:600">⚠ Duplicates: ${dups.map(n=>'#'+n).join(', ')}</div>`;
 
   const recentHtml = recent.map(wo=>{
-    const st = woStatus(wo);
-    const stColor = st==='Complete'?'var(--green)':st==='In Process'?'var(--amber)':'var(--text3)';
+    const st=woStatus(wo), stColor=st==='Complete'?'var(--green)':st==='In Process'?'var(--amber)':'var(--text3)';
     return `<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px">
       <span style="font-weight:700;min-width:60px">#${wo.woNum}</span>
       <span style="flex:1;color:var(--text2)">${wo.customer||'—'}</span>
@@ -6145,25 +6133,102 @@ function renderSettingsAudit(){
   return `
   <div class="card mb16" style="max-width:720px">
     <div style="font-weight:700;font-size:14px;margin-bottom:4px">📊 WO Range</div>
-    <div style="font-size:13px;color:var(--text2)">
-      ${nums.length} work orders · WO #${min} → #${max} · ${max-min+1} numbers in range
-    </div>
+    <div style="font-size:13px;color:var(--text2)">${nums.length} work orders · WO #${min} → #${max} · ${max-min+1} in range · ${activeGaps.length} unacknowledged gap${activeGaps.length!==1?'s':''}</div>
   </div>
-
   <div class="card mb16" style="max-width:720px">
     <div style="font-weight:700;font-size:14px;margin-bottom:12px">🔍 Gap Analysis</div>
-    ${gapHtml}
+    ${activeGapHtml}${ackedGapHtml}
   </div>
-
   <div class="card mb16" style="max-width:720px">
     <div style="font-weight:700;font-size:14px;margin-bottom:12px">🔁 Duplicate Check</div>
     ${dupHtml}
   </div>
-
   <div class="card" style="max-width:720px">
     <div style="font-weight:700;font-size:14px;margin-bottom:12px">🕐 Most Recent WOs</div>
     ${recentHtml}
   </div>`;
+}
+function acknowledgeGap(n){
+  if(!state.adminConfig.acknowledgedGaps) state.adminConfig.acknowledgedGaps=[];
+  if(!state.adminConfig.acknowledgedGaps.includes(n)) state.adminConfig.acknowledgedGaps.push(n);
+  saveState();
+  sbSaveAdminConfig('acknowledged_gaps', state.adminConfig.acknowledgedGaps).catch(e=>console.warn('ack gap error',e));
+  renderSettings(document.getElementById('content'));
+}
+
+function acknowledgeAllGaps(){
+  const nums=state.wos.map(w=>parseInt(w.woNum)).filter(n=>!isNaN(n)).sort((a,b)=>a-b);
+  const numSet=new Set(nums);
+  if(!state.adminConfig.acknowledgedGaps) state.adminConfig.acknowledgedGaps=[];
+  const acked=new Set(state.adminConfig.acknowledgedGaps.map(n=>parseInt(n)));
+  const min=nums[0], max=nums[nums.length-1];
+  for(let n=min;n<=max;n++) if(!numSet.has(n)&&!acked.has(n)) state.adminConfig.acknowledgedGaps.push(n);
+  saveState();
+  sbSaveAdminConfig('acknowledged_gaps', state.adminConfig.acknowledgedGaps).catch(e=>console.warn('ack all gaps error',e));
+  renderSettings(document.getElementById('content'));
+  toast('✓ All gaps acknowledged');
+}
+
+function unacknowledgeGap(n){
+  if(!state.adminConfig.acknowledgedGaps) return;
+  state.adminConfig.acknowledgedGaps=state.adminConfig.acknowledgedGaps.filter(x=>parseInt(x)!==parseInt(n));
+  saveState();
+  sbSaveAdminConfig('acknowledged_gaps', state.adminConfig.acknowledgedGaps).catch(e=>console.warn('unack gap error',e));
+  renderSettings(document.getElementById('content'));
+}
+
+// Real-time gap check — call after saving a new WO or QB import batch
+function checkWONumGapInline(val){
+  const warn = document.getElementById('wonum-gap-warn');
+  if(!warn) return;
+  const n = parseInt(val);
+  if(isNaN(n) || val.length < 4){ warn.style.display='none'; return; }
+
+  const nums = state.wos.map(w=>parseInt(w.woNum)).filter(x=>!isNaN(x));
+  if(nums.length < 1){ warn.style.display='none'; return; }
+  const max = Math.max(...nums);
+  const acked = new Set((state.adminConfig.acknowledgedGaps||[]).map(x=>parseInt(x)));
+
+  // Check if this WO already exists
+  if(state.wos.find(w=>w.woNum===val)){
+    warn.style.display='block';
+    warn.style.borderColor='var(--amber)';
+    warn.style.color='#BA7517';
+    warn.innerHTML='⚠ WO #'+val+' already exists in the system';
+    return;
+  }
+
+  // Check for gap
+  if(n > max+1){
+    const skipped = [];
+    for(let i=max+1; i<n; i++) if(!acked.has(i)) skipped.push(i);
+    if(skipped.length > 0){
+      warn.style.display='block';
+      warn.style.borderColor='var(--amber)';
+      warn.style.color='#BA7517';
+      warn.innerHTML='⚠ Gap detected — WO'+( skipped.length===1?' #'+skipped[0]:'s #'+skipped[0]+(skipped.length>1?'–#'+skipped[skipped.length-1]:''))+' skipped. Current highest is #'+max+'. Is this correct?';
+      return;
+    }
+  }
+
+  warn.style.display='none';
+}
+
+function checkNewWOGap(newWoNum, prevMax){
+  const n = parseInt(newWoNum);
+  if(isNaN(n)) return;
+  const nums = state.wos.map(w=>parseInt(w.woNum)).filter(x=>!isNaN(x));
+  if(nums.length < 2) return;
+  const max = prevMax != null ? prevMax : Math.max(...nums.filter(x=>x!==n));
+  if(n <= max) return; // not a new high
+  const acked = new Set((state.adminConfig.acknowledgedGaps||[]).map(x=>parseInt(x)));
+  const skipped = [];
+  for(let i=max+1; i<n; i++) if(!acked.has(i)) skipped.push(i);
+  if(skipped.length > 0){
+    setTimeout(()=>{
+      toast(`⚠ WO gap: ${skipped.map(x=>'#'+x).join(', ')} skipped — check Settings → WO Audit`, 6000);
+    }, 0);
+  }
 }
 
 function saveShopPassword(){
@@ -6907,6 +6972,16 @@ function parseQBWorkbook(wb, filename){
     const list = Object.values(invoices);
     if(!list.length){ toast('⚠ No invoices found — check this is a Sales by Customer Detail export'); return; }
     _qbInvoices = list;
+    // Check for gaps in new invoice numbers vs current system
+    const maxSys = Math.max(...state.wos.map(w=>parseInt(w.woNum)).filter(n=>!isNaN(n)), 0);
+    const acked = new Set((state.adminConfig.acknowledgedGaps||[]).map(n=>parseInt(n)));
+    const newNums = list.map(inv=>parseInt(inv.invNum)).filter(n=>!isNaN(n)&&n>maxSys).sort((a,b)=>a-b);
+    if(newNums.length > 0){
+      const skipped = [];
+      let prev = maxSys;
+      newNums.forEach(n=>{ for(let i=prev+1;i<n;i++) if(!acked.has(i)) skipped.push(i); prev=n; });
+      if(skipped.length > 0) toast(`⚠ QB import: ${skipped.length} WO number${skipped.length!==1?'s':''} may be missing: ${skipped.slice(0,5).map(n=>'#'+n).join(', ')}${skipped.length>5?'…':''} — check Settings → WO Audit`);
+    }
     showQBSelector(list);
   } catch(err){ toast('⚠ Parse error: '+err.message); console.error(err); }
 }
