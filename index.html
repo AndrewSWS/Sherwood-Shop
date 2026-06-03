@@ -2328,10 +2328,90 @@ function saveWO(){
       t.stops.push({woId:wo.id,woNum,customer:cust,address:wo.address,cityst:wo.cityst,zone:wo.zone,delivery:wo.delivery,notes:wo.notes});
     }
   }
+  // Check for duplicate WO number
+  const existing = state.wos.find(w=>w.woNum===woNum);
+  if(existing){
+    // Show diff modal
+    showDupWOModal(existing, wo);
+    return;
+  }
+
   state.wos.push(wo);saveState();
   sbCreateWO(wo).catch(e=>console.warn('sbCreateWO error',e));
   toast(`✓ WO #${woNum} saved — ${items.length} line items`);
   renderCreate(document.getElementById('content'));updateBadges();
+}
+
+// ── DUPLICATE WO DETECTION ────────────────────────────────────────────────
+function showDupWOModal(existing, incoming){
+  const itemKey = i=>`${i.productCat}|${i.gauge}|${i.size}|${i.qty}|${i.station}`;
+  const existingKeys = new Set(existing.items.map(itemKey));
+  const newItems = incoming.items.filter(i=>!existingKeys.has(itemKey(i)));
+
+  const newItemRows = newItems.map(i=>`
+    <div style="display:flex;gap:8px;align-items:center;padding:6px 8px;background:var(--green-l);border:1px solid var(--green-m);border-radius:4px;font-size:12px">
+      <span style="color:var(--green);font-weight:700">+ NEW</span>
+      <span style="font-weight:600">${i.productCat||'—'}</span>
+      <span style="color:var(--text2)">${i.gauge||''} ${i.size||''}</span>
+      <span>Qty: ${i.qty||'—'}</span>
+      <span style="color:var(--text3)">${i.station||''}</span>
+    </div>`).join('');
+
+  const modal = document.createElement('div');
+  modal.id = 'dup-wo-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:12px;padding:24px;max-width:580px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.3)">
+      <div style="font-size:16px;font-weight:800;color:var(--red);margin-bottom:4px">⚠ Duplicate WO #${existing.woNum}</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:16px">This WO number already exists for <strong>${existing.customer}</strong> with ${existing.items.length} line items.</div>
+      ${newItems.length ? `
+        <div style="font-weight:700;font-size:13px;margin-bottom:8px;color:var(--green)">✚ ${newItems.length} NEW line item${newItems.length!==1?'s':''} in incoming WO:</div>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px">${newItemRows}</div>
+        <div style="display:flex;gap:8px;margin-bottom:16px">
+          <button class="btn btn-primary" onclick="mergeDupWO(${existing.id})">✚ Merge ${newItems.length} New Item${newItems.length!==1?'s':''}</button>
+          <button class="btn" onclick="document.getElementById('dup-wo-modal').remove()">Cancel</button>
+        </div>` : `
+        <div style="color:var(--green);font-weight:600;margin-bottom:16px">✓ No new line items — incoming WO is identical to existing.</div>
+        <button class="btn" onclick="document.getElementById('dup-wo-modal').remove()">Close</button>`}
+      <div style="border-top:1px solid var(--border);padding-top:12px">
+        <div style="font-size:12px;font-weight:600;color:var(--text3);margin-bottom:8px">EXISTING WO — ${existing.items.length} items:</div>
+        ${existing.items.map(i=>`
+          <div style="font-size:11px;padding:4px 8px;background:var(--gray-l);border-radius:4px;display:flex;gap:8px;margin-bottom:3px">
+            <span style="font-weight:600">${i.productCat||'—'}</span>
+            <span style="color:var(--text2)">${i.gauge||''} ${i.size||''}</span>
+            <span>Qty: ${i.qty||'—'}</span>
+            <span style="color:var(--text3)">${i.station||''}</span>
+            <span style="margin-left:auto;color:${i.status==='Complete'?'var(--green)':'var(--text3)'}">${i.status}</span>
+          </div>`).join('')}
+      </div>
+    </div>`;
+  window._dupIncomingWO = incoming;
+  document.body.appendChild(modal);
+}
+
+function mergeDupWO(existingId){
+  const existing = state.wos.find(w=>w.id===existingId);
+  const incoming = window._dupIncomingWO;
+  if(!existing||!incoming) return;
+  const itemKey = i=>`${i.productCat}|${i.gauge}|${i.size}|${i.qty}|${i.station}`;
+  const existingKeys = new Set(existing.items.map(itemKey));
+  const newItems = incoming.items.filter(i=>!existingKeys.has(itemKey(i)));
+  newItems.forEach(item=>{
+    existing.items.push(item);
+    _sbPost('line_items',{
+      wo_id:existing.id, wo_num:existing.woNum, customer:existing.customer,
+      product_cat:item.productCat||null, type:item.type||null,
+      gauge:item.gauge||null, size:item.size||null, qty:item.qty||null,
+      weight:item.weight||null, station:item.station||null,
+      status:'Pending', delivery:existing.delivery||null
+    }).catch(e=>console.warn('merge line item error',e));
+  });
+  saveState();
+  document.getElementById('dup-wo-modal')?.remove();
+  window._dupIncomingWO = null;
+  toast(`✓ Merged ${newItems.length} new item${newItems.length!==1?'s':''} into WO #${existing.woNum}`);
+  renderCreate(document.getElementById('content'));
+  updateBadges();
 }
 
 // ══════════════════════════════════════════════════════
@@ -5875,6 +5955,7 @@ function renderSettings(c){
     {id:'stations',  label:'⚙ Stations'},
     {id:'materials', label:'🔩 Material Types'},
     {id:'products',  label:'📦 Product Catalog'},
+    {id:'audit',     label:'🔍 WO Audit'},
     {id:'data',      label:'💾 Data'}
   ];
   const tabBar=tabs.map(t=>`<div class="tab${settingsTab===t.id?' active':''}" onclick="settingsTab='${t.id}';renderSettings()">${t.label}</div>`).join('');
@@ -5884,12 +5965,94 @@ function renderSettings(c){
   else if(settingsTab==='stations') body=renderSettingsStations();
   else if(settingsTab==='materials') body=renderSettingsMaterials();
   else if(settingsTab==='products') body=renderSettingsProducts();
+  else if(settingsTab==='audit') body=renderSettingsAudit();
   else if(settingsTab==='data') body=renderSettingsData();
 
   c.innerHTML=`<div class="tabs">${tabBar}</div>${body}`;
 }
 
 // ── DATA TAB ──────────────────────────────────────────────────────────────
+function renderSettingsAudit(){
+  // Get all WO numbers as integers, sorted
+  const nums = state.wos
+    .map(w=>parseInt(w.woNum))
+    .filter(n=>!isNaN(n))
+    .sort((a,b)=>a-b);
+
+  if(nums.length < 2) return '<div class="card">Not enough WOs to analyze.</div>';
+
+  const min = nums[0];
+  const max = nums[nums.length-1];
+  const numSet = new Set(nums);
+
+  // Find gaps
+  const gaps = [];
+  for(let n=min; n<=max; n++){
+    if(!numSet.has(n)) gaps.push(n);
+  }
+
+  // Find duplicates
+  const seen = {};
+  const dups = [];
+  state.wos.forEach(wo=>{
+    const n = wo.woNum;
+    if(seen[n]) dups.push(n);
+    else seen[n] = true;
+  });
+
+  // Recent WOs (last 20)
+  const recent = [...state.wos]
+    .filter(w=>parseInt(w.woNum))
+    .sort((a,b)=>parseInt(b.woNum)-parseInt(a.woNum))
+    .slice(0,20);
+
+  const gapHtml = gaps.length === 0
+    ? '<div style="color:var(--green);font-weight:600">✓ No gaps detected — all WO numbers are sequential</div>'
+    : `<div style="margin-bottom:8px;color:var(--amber);font-weight:600">⚠ ${gaps.length} missing WO number${gaps.length!==1?'s':''} detected</div>`
+      + `<div style="display:flex;flex-wrap:wrap;gap:6px">`
+      + gaps.map(n=>`<span style="background:var(--amber-l);border:1px solid var(--amber);border-radius:4px;padding:3px 8px;font-size:12px;font-weight:700">#${n}</span>`).join('')
+      + `</div>`;
+
+  const dupHtml = dups.length === 0
+    ? '<div style="color:var(--green);font-weight:600">✓ No duplicate WO numbers found</div>'
+    : `<div style="color:var(--red);font-weight:600">⚠ Duplicate WO numbers: ${dups.map(n=>'#'+n).join(', ')}</div>`;
+
+  const recentHtml = recent.map(wo=>{
+    const st = woStatus(wo);
+    const stColor = st==='Complete'?'var(--green)':st==='In Process'?'var(--amber)':'var(--text3)';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px">
+      <span style="font-weight:700;min-width:60px">#${wo.woNum}</span>
+      <span style="flex:1;color:var(--text2)">${wo.customer||'—'}</span>
+      <span style="font-size:11px;color:${stColor};font-weight:600">${st}</span>
+      <span style="font-size:11px;color:var(--text3)">${wo.items?.length||0} items</span>
+      ${wo.delivery?`<span style="font-size:11px;color:var(--blue)">${fmtDate(wo.delivery)}</span>`:''}
+    </div>`;
+  }).join('');
+
+  return `
+  <div class="card mb16" style="max-width:720px">
+    <div style="font-weight:700;font-size:14px;margin-bottom:4px">📊 WO Range</div>
+    <div style="font-size:13px;color:var(--text2)">
+      ${nums.length} work orders · WO #${min} → #${max} · ${max-min+1} numbers in range
+    </div>
+  </div>
+
+  <div class="card mb16" style="max-width:720px">
+    <div style="font-weight:700;font-size:14px;margin-bottom:12px">🔍 Gap Analysis</div>
+    ${gapHtml}
+  </div>
+
+  <div class="card mb16" style="max-width:720px">
+    <div style="font-weight:700;font-size:14px;margin-bottom:12px">🔁 Duplicate Check</div>
+    ${dupHtml}
+  </div>
+
+  <div class="card" style="max-width:720px">
+    <div style="font-weight:700;font-size:14px;margin-bottom:12px">🕐 Most Recent WOs</div>
+    ${recentHtml}
+  </div>`;
+}
+
 function saveShopPassword(){
   const pw = (document.getElementById('new-shop-pw')?.value||'').trim();
   if(!pw){toast('⚠ Enter a new password');return;}
