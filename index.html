@@ -2941,11 +2941,33 @@ function renderBoardView(){
       const color = grp?grp.color:'#444';
       const complete = woStatus(wo)==='Complete';
       const delivered = wo.delivered||false;
+
+      // Build compact item snippet with completion count
+      const items = wo.items||[];
+      const doneCount = items.filter(i=>i.status==='Complete').length;
+      const totalCount = items.length;
+      const completionColor = doneCount===totalCount?'#4CAF7D':doneCount>0?'#f0a500':'#888';
+      const completionStr = totalCount>0 ? doneCount+'/'+totalCount : '';
+
+      const itemSnippet = items.slice(0,4).map(i=>{
+        const parts = [];
+        if(i.gauge) parts.push(i.gauge);
+        if(i.size) parts.push(i.size);
+        else if(i.productCat) parts.push(i.productCat.replace('Other / Hardware','Hdwr').replace('Flat Sheet','Flat'));
+        if(i.qty) parts.push('×'+i.qty);
+        return parts.join(' ');
+      }).filter(Boolean).join(' · ');
+      const moreItems = items.length > 4 ? '...' : '';
+
       return '<div class="board-stop'+(delivered?' done':'')+'" style="border-left-color:'+color+'">'
         +'<div class="board-stop-cust">'+(delivered?'🚚 ':complete?'✓ ':'')+wo.customer+'</div>'
-        +'<div class="board-stop-wo">WO #'+wo.woNum+(getWOWeight(wo.id)?' · '+getWOWeight(wo.id).toLocaleString()+' lbs':'')+'</div>'
+        +'<div class="board-stop-wo" style="display:flex;justify-content:space-between;align-items:center">'
+          +'<span>WO #'+wo.woNum+(getWOWeight(wo.id)?' · '+getWOWeight(wo.id).toLocaleString()+' lbs':'')+'</span>'
+          +(completionStr?'<span style="font-size:10px;font-weight:700;color:'+completionColor+'">'+completionStr+'</span>':'')
+        +'</div>'
+        +(itemSnippet?'<div style="font-size:9px;color:#aaa;margin-top:2px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px">'+itemSnippet+moreItems+'</div>':'')
         +(delivered?'<div class="board-stop-done">🚚 Delivered</div>':complete?'<div class="board-stop-done" style="color:#f0a500">✓ Ready to Ship</div>':'')
-        +'</div>';
+        +'</div>';        +'</div>';
     };
 
     const truckSection = (label, color, wos)=>{
