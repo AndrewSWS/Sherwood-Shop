@@ -2496,6 +2496,13 @@ function mergeDupWO(existingId){
     isPickup:    existing.isPickup    || incoming.isPickup    || false,
   };
 
+  // Update customer name from QB if incoming has one (fixes wrong customer assignments)
+  const customerChanged = incoming.customer && incoming.customer !== existing.customer;
+  if(customerChanged){
+    preservedFields.customer = incoming.customer;
+    console.log(`[merge] Customer updated: "${existing.customer}" → "${incoming.customer}" on WO #${existing.woNum}`);
+  }
+
   // Apply preserved fields back to existing WO (in case anything was blanked)
   Object.assign(existing, preservedFields);
 
@@ -6944,26 +6951,20 @@ function parseQBWorkbook(wb, filename){
 
     // Parse invoices
     const invoices = {};
-    let lastCustomer = '';
 
     for(let i = hdrIdx+1; i < rows.length; i++){
       const row = rows[i];
       if(!row) continue;
 
-      // Customer group header row — e.g. ['5 Star Sheet Metal, LLC', null, null...]
-      // These rows have a value in col 0 but null in col 1 (Type)
-      if(row[0] && !row[C_TYPE]){
-        const v = String(row[0]).trim();
-        if(!v.startsWith('Total ')) lastCustomer = v;
-        continue;
-      }
+      // Skip customer group header rows (all null after compacting) and Total rows
+      if(!row[C_TYPE]) continue;
 
       // Only process Invoice rows
       const rowType = String(row[C_TYPE]||'').trim();
       if(rowType !== 'Invoice') continue;
 
       const invNum   = String(row[C_NUM]||'').trim();
-      const customer = String(row[C_NAME]||lastCustomer||'').trim();
+      const customer = String(row[C_NAME]||'').trim();
       const itemRaw  = String(row[C_ITEM]||'').trim();
       const memo     = String(row[C_MEMO]||'').trim();
       const qty      = parseFloat(row[C_QTY])||0;
@@ -7144,27 +7145,29 @@ function renderQBList(invoices){
     if(isDupe){
       const existing = state.wos.find(w=>String(w.woNum)===String(inv.invNum));
       if(existing){
-        const sysQtys = existing.items.map(i=>String(i.qty).trim());
-        const qbQtys  = inv.items.map(i=>String(i.qty).trim());
-
         // Count difference
         const countDiff = inv.items.length - existing.items.length;
 
-        // For each system qty, check if it exists in QB qtys
-        const sysQtyPool = [...sysQtys];
-        const qbQtyPool  = [...qbQtys];
+        // Compare qty pools (sorted) — most reliable cross-system comparison
+        const sysQtyPool = existing.items.map(i=>String(i.qty).trim()).sort();
+        const qbQtyPool  = inv.items.map(i=>String(i.qty).trim()).sort();
+        const qtyMismatch = JSON.stringify(sysQtyPool) !== JSON.stringify(qbQtyPool);
+
+        // Find unmatched qtys for display
         const unmatchedSys = [];
-        const unmatchedQB  = [...qbQtyPool];
+        const unmatchedQB = [];
+        const qbPool = [...qbQtyPool];
+        sysQtyPool.forEach(q=>{ const idx=qbPool.indexOf(q); if(idx>-1) qbPool.splice(idx,1); else unmatchedSys.push(q); });
+        const sysPool = [...sysQtyPool];
+        qbQtyPool.forEach(q=>{ const idx=sysPool.indexOf(q); if(idx>-1) sysPool.splice(idx,1); else unmatchedQB.push(q); });
 
-        sysQtyPool.forEach(q => {
-          const idx = unmatchedQB.indexOf(q);
-          if(idx > -1) unmatchedQB.splice(idx, 1);
-          else unmatchedSys.push(q);
-        });
-
-        newCount = countDiff !== 0 || unmatchedSys.length > 0 ? 1 : 0;
+        newCount = countDiff !== 0 || qtyMismatch ? 1 : 0;
 
         diffHtml = `<div style="margin-top:8px;border-top:1px solid #f0c060;padding-top:8px">`;
+        // Show customer mismatch if different
+        if(existing.customer !== inv.customer){
+          diffHtml += `<div style="font-size:11px;margin-bottom:8px;padding:4px 8px;background:#FFF0F0;border:1px solid #c0392b;border-radius:4px;color:#c0392b;font-weight:600">⚠ Customer mismatch — System: "${existing.customer}" · QB: "${inv.customer}"</div>`;
+        }
 
         // Item counts
         diffHtml += `<div style="display:flex;gap:16px;margin-bottom:8px;font-size:12px">`;
@@ -7173,23 +7176,30 @@ function renderQBList(invoices){
         diffHtml += `</div>`;
 
         // Qty comparison
-        diffHtml += `<div style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;margin-bottom:4px">System qtys:</div>`;
+        diffHtml += `<div style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;margin-bottom:4px">System (${existing.items.length} items):</div>`;
         diffHtml += `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">`;
-        diffHtml += existing.items.map(i=>`<span style="background:#f0f0f0;border:1px solid #ccc;border-radius:4px;padding:2px 8px;font-size:11px;color:#555">${i.gauge?i.gauge+' ':''}${i.size||i.productCat||'item'}: <strong>×${i.qty}</strong>${i.status==='Complete'?' ✓':''}</span>`).join('');
-        diffHtml += `</div>`;
-
-        diffHtml += `<div style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;margin-bottom:4px">QB qtys:</div>`;
-        diffHtml += `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">`;
-        diffHtml += inv.items.map(i=>{
-          const matched = sysQtys.includes(String(i.qty).trim());
-          return `<span style="background:${matched?'#f0f0f0':'#FFF0F0'};border:1px solid ${matched?'#ccc':'#c0392b'};border-radius:4px;padding:2px 8px;font-size:11px;color:${matched?'#555':'#c0392b'};font-weight:${matched?'400':'700'}">${i.gauge?i.gauge+' ':''}${i.size||i.productCat||'item'}: ×${i.qty}${matched?'':' ⚠'}</span>`;
+        diffHtml += existing.items.map(i=>{
+          const inQB = qbQtyPool.includes(String(i.qty).trim());
+          return `<span style="background:${inQB?'#f0f0f0':'#FFF0F0'};border:1px solid ${inQB?'#ccc':'#c0392b'};border-radius:4px;padding:2px 8px;font-size:11px;color:${inQB?'#555':'#c0392b'};font-weight:${inQB?'400':'700'}">${i.gauge?i.gauge+' ':''}${i.size||i.productCat||'item'} ×${i.qty}${i.status==='Complete'?' ✓':''}</span>`;
         }).join('');
         diffHtml += `</div>`;
 
-        if(unmatchedSys.length > 0){
-          diffHtml += `<div style="font-size:11px;color:#c0392b;font-weight:600">⚠ ${unmatchedSys.length} system qty${unmatchedSys.length!==1?'s':''} not found in QB: ${unmatchedSys.map(q=>'×'+q).join(', ')}</div>`;
-        } else if(countDiff === 0){
+        diffHtml += `<div style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;margin-bottom:4px">QB (${inv.items.length} items):</div>`;
+        diffHtml += `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">`;
+        diffHtml += inv.items.map(i=>{
+          const inSys = sysQtyPool.includes(String(i.qty).trim());
+          const bg2=inSys?'#f0f0f0':'#d4edda', bd2=inSys?'#ccc':'#5cb85c', cl2=inSys?'#555':'#2d6a2d', fw2=inSys?'400':'700';
+          return '<span style="background:'+bg2+';border:1px solid '+bd2+';border-radius:4px;padding:2px 8px;font-size:11px;color:'+cl2+';font-weight:'+fw2+'">'+(i.gauge?i.gauge+' ':'')+(i.size||i.productCat||'item')+' ×'+i.qty+(inSys?'':' +')+'</span>';
+        }).join('');
+        diffHtml += `</div>`;
+
+        if(newCount === 0){
           diffHtml += `<div style="font-size:11px;color:var(--green);font-weight:600">✓ All qtys match</div>`;
+        } else if(qtyMismatch){
+          const missing = unmatchedSys.map(q=>'×'+q).join(', ');
+          const added = unmatchedQB.map(q=>'×'+q).join(', ');
+          if(missing) diffHtml += `<div style="font-size:11px;color:#c0392b;font-weight:600">⚠ In system but not QB: ${missing}</div>`;
+          if(added) diffHtml += `<div style="font-size:11px;color:var(--green);font-weight:600">+ In QB but not system: ${added}</div>`;
         }
         diffHtml += `</div>`;
       }
@@ -7238,17 +7248,25 @@ function renderQBList(invoices){
     if(!existing) return true;
     const countDiff = inv.items.length - existing.items.length;
     if(countDiff !== 0) return true;
-    const sysQtys = existing.items.map(i=>String(i.qty).trim());
-    const qbQtys = [...inv.items.map(i=>String(i.qty).trim())];
-    const unmatched = sysQtys.filter(q=>{ const idx=qbQtys.indexOf(q); if(idx>-1){qbQtys.splice(idx,1);return false;} return true; });
-    return unmatched.length > 0;
+    if(existing.customer !== inv.customer) return true; // wrong customer
+    // Check if all QB qtys exist in system qtys (order doesn't matter)
+    const sysQtyPool = existing.items.map(i=>String(i.qty).trim()).sort();
+    const qbQtyPool  = inv.items.map(i=>String(i.qty).trim()).sort();
+    return JSON.stringify(sysQtyPool) !== JSON.stringify(qbQtyPool);
   });
   const dupesClean = dupes.filter(inv=>!dupesNeedReview.includes(inv));
 
   // Section 1: Needs Review
   if(dupesNeedReview.length){
-    html += `<div style="background:#FFF0F0;border:1px solid #c0392b;border-radius:var(--rad);padding:8px 12px;margin-bottom:10px;font-size:12px;color:#c0392b;font-weight:600;display:flex;align-items:center;justify-content:space-between">
-      <span>🔴 ${dupesNeedReview.length} invoice${dupesNeedReview.length!==1?'s':''} need review — count or qty differs from system</span>
+    // Count how many have wrong customer
+    const wrongCustCount = dupesNeedReview.filter(inv=>{
+      const ex = state.wos.find(w=>String(w.woNum)===String(inv.invNum));
+      return ex && ex.customer !== inv.customer;
+    }).length;
+
+    html += `<div style="background:#FFF0F0;border:1px solid #c0392b;border-radius:var(--rad);padding:8px 12px;margin-bottom:10px;font-size:12px;color:#c0392b;font-weight:600;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <span>🔴 ${dupesNeedReview.length} invoice${dupesNeedReview.length!==1?'s':''} need review — count or qty differs, or wrong customer</span>
+      ${wrongCustCount>0?`<button class="btn btn-xs" style="background:#c0392b;color:#fff" onclick="fixAllCustomerNames()">Fix ${wrongCustCount} Wrong Customer${wrongCustCount!==1?'s':''}</button>`:''}
     </div>`;
     html += dupesNeedReview.map(inv=>renderCard(inv,true)).join('');
   }
@@ -7271,6 +7289,32 @@ function renderQBList(invoices){
   return html || '<div style="text-align:center;padding:20px;color:var(--text3)">No invoices to show</div>';
 }
 
+function fixAllCustomerNames(){
+  if(!_qbInvoices || !_qbInvoices.length) return;
+  let fixed = 0;
+  _qbInvoices.forEach(inv=>{
+    const wo = state.wos.find(w=>String(w.woNum)===String(inv.invNum));
+    if(!wo || !inv.customer || wo.customer === inv.customer) return;
+    console.log(`[fixAllCustomers] WO #${wo.woNum}: "${wo.customer}" → "${inv.customer}"`);
+    wo.customer = inv.customer;
+    // Also update line items customer field
+    wo.items.forEach(item=>{ item.customer = inv.customer; });
+    // Sync to Supabase
+    sbUpdateWO(wo).catch(e=>console.warn('fixAllCustomers sbUpdateWO error',e));
+    fixed++;
+  });
+  if(fixed > 0){
+    saveState();
+    toast(`✓ Fixed ${fixed} customer name${fixed!==1?'s':''} from QB`);
+    // Refresh QB list
+    const el = document.getElementById('qb-invoice-list');
+    if(el) el.innerHTML = renderQBList(_qbInvoices);
+    updateQBPillCount();
+  } else {
+    toast('No customer name differences found');
+  }
+}
+
 function dupes_delete_all(){
   const existingWONums = new Set(state.wos.map(w=>String(w.woNum)));
   _qbInvoices = _qbInvoices.filter(inv=>!existingWONums.has(inv.invNum));
@@ -7288,10 +7332,10 @@ function dupes_delete_clean(){
     if(!existing) return false;
     const countDiff = inv.items.length - existing.items.length;
     if(countDiff !== 0) return true; // keep review needed
-    const sysQtys = existing.items.map(i=>String(i.qty).trim());
-    const qbQtys = [...inv.items.map(i=>String(i.qty).trim())];
-    const unmatched = sysQtys.filter(q=>{ const idx=qbQtys.indexOf(q); if(idx>-1){qbQtys.splice(idx,1);return false;} return true; });
-    return unmatched.length > 0; // keep review needed
+    if(existing.customer !== inv.customer) return true; // wrong customer
+    const sysQP = existing.items.map(i=>String(i.qty).trim()).sort();
+    const qbQP  = inv.items.map(i=>String(i.qty).trim()).sort();
+    return JSON.stringify(sysQP) !== JSON.stringify(qbQP); // keep if qty mismatch
   });
   updateQBPillCount();
   const el = document.getElementById('qb-invoice-list');
