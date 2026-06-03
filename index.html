@@ -261,6 +261,7 @@ select{cursor:pointer}
   display:none;position:fixed;inset:0;z-index:9999;
   background:#111;color:#fff;flex-direction:column;
   font-family:inherit;
+  padding-bottom:48px;
 }
 #board-overlay.active{display:flex;flex-direction:column;}
 #board-scaler{flex:1;min-height:0;overflow:hidden;position:relative;}
@@ -7031,14 +7032,15 @@ if("serviceWorker" in navigator){
     display:flex;
     align-items:center;
     gap:12px;
-    overflow-x:auto;
-    height:36px;
-    max-height:36px;
+    overflow-x:hidden;
+    overflow-y:auto;
+    max-height:72px;
+    min-height:36px;
   ">
     <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#f0a500;white-space:nowrap;flex-shrink:0">
       📦 Pick Ups
     </div>
-    <div id="board-pickup-items" style="display:flex;gap:8px;flex-wrap:nowrap;align-items:center"></div>
+    <div id="board-pickup-items" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"></div>
   </div>
 </div>
 </body>
