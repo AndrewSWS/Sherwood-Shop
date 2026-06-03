@@ -5165,8 +5165,8 @@ function renderDashboard(c){
   const pickups=state.wos.filter(w=>{
     if(!w.isPickup) return false;
     if(woStatus(w)==='Complete') return false;
-    // Hide if pickup date is in the past
-    if(w.pickupDate && w.pickupDate < todayStr) return false;
+    // Hide if pickup date has been set (already picked up or scheduled)
+    if(w.pickupDate) return false;
     return true;
   });
 
@@ -5950,11 +5950,19 @@ function schedulePickup(woId, dateVal){
     item.status='Complete';
     item.completedBy=state.currentUser||'Pick Up';
     item.completedAt=new Date().toISOString();
+    // Sync each line item to Supabase
+    sbUpdateLI(woId, item.id, {
+      status:'Complete',
+      completedBy: item.completedBy,
+      completedAt: item.completedAt
+    }).catch(e=>console.warn('schedulePickup sbUpdateLI error',e));
   });
   wo.pickupDate = dateVal;
-  wo.delivery = ''; // pickup orders don't have delivery dates
-  wo.isPickup = true; // keep flag so history shows it was a pickup
+  wo.delivery = '';
+  wo.isPickup = true;
   saveState();
+  // Sync WO to Supabase
+  sbUpdateWO(wo).catch(e=>console.warn('schedulePickup sbUpdateWO error',e));
   renderDashboard(document.getElementById('content'));
   updateBadges();
   toast('✓ WO #'+wo.woNum+' picked up on '+fmtDate(dateVal)+' — marked complete');
