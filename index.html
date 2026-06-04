@@ -2925,6 +2925,65 @@ function exitBoardView(){
   if(_wakeLock){ _wakeLock.release(); _wakeLock = null; }
 }
 
+function showBoardWODetail(woId){
+  const wo = state.wos.find(w=>w.id===woId);
+  if(!wo) return;
+  document.getElementById('board-detail-modal')?.remove();
+
+  const items = wo.items||[];
+  const doneCount = items.filter(i=>i.status==='Complete').length;
+  const grp = getCustGroup(wo.customer);
+  const color = grp?grp.color:'#4CAF7D';
+
+  const itemRows = items.map(i=>{
+    const done = i.status==='Complete';
+    const inProgress = i.status==='In Process';
+    const dot = done?'🟢':inProgress?'🟡':'⚪';
+    const label = [i.gauge, i.size||i.productCat].filter(Boolean).join(' ');
+    return `<div style="padding:8px 0;border-bottom:1px solid #333;font-size:13px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span>${dot}</span>
+        <span style="flex:1;color:#fff;font-weight:600">${label||'—'}</span>
+        <span style="color:#aaa">×${i.qty||'—'}</span>
+        <span style="color:#666;font-size:11px">${i.station||''}</span>
+        ${i.assignee?'<span style="color:#5B9BD5;font-size:11px">'+i.assignee+'</span>':''}
+        ${done?'<span style="color:#4CAF7D;font-size:11px">✓ '+(i.completedBy||'')+'</span>':''}
+      </div>
+      ${i.notes?'<div style="font-size:11px;color:#999;margin-top:4px;margin-left:26px;line-height:1.4">'+i.notes+'</div>':''}
+      ${i.bundle?'<div style="font-size:11px;color:#f0a500;margin-top:2px;margin-left:26px">Bundle: '+i.bundle+'</div>':''}
+      ${i.skidSplits&&i.skidSplits.length?'<div style="font-size:10px;color:#888;margin-top:2px;margin-left:26px">Skids: '+i.skidSplits.map(s=>(s.qty||'?')+'×'+(s.size||s.type||'?')).join(' · ')+'</div>':''}
+    </div>`;
+  }).join('');
+
+  const modal = document.createElement('div');
+  modal.id = 'board-detail-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.innerHTML = `
+    <div style="background:#1a1a1a;border:2px solid ${color};border-radius:12px;padding:24px;max-width:560px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.8)">
+      <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:16px">
+        <div>
+          <div style="font-size:18px;font-weight:800;color:#fff">${wo.customer}</div>
+          <div style="font-size:13px;color:#888;margin-top:2px">WO #${wo.woNum} · ${getWOWeight(wo.id)?getWOWeight(wo.id).toLocaleString()+' lbs':'—'}</div>
+          ${wo.delivery?'<div style="font-size:12px;color:#5B9BD5;margin-top:2px">📅 '+fmtDate(wo.delivery)+'</div>':''}
+          ${wo.address?'<div style="font-size:11px;color:#666;margin-top:2px">'+wo.address+(wo.cityst?' · '+wo.cityst:'')+'</div>':''}
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:22px;font-weight:800;color:${doneCount===items.length?'#4CAF7D':doneCount>0?'#f0a500':'#888'}">${doneCount}/${items.length}</div>
+          <div style="font-size:10px;color:#666">complete</div>
+          <button onclick="document.getElementById('board-detail-modal').remove()" style="margin-top:8px;background:#333;color:#aaa;border:none;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:12px">✕ Close</button>
+        </div>
+      </div>
+      ${wo.notes?'<div style="font-size:12px;color:#f0a500;margin-bottom:12px;padding:6px 10px;background:#2a2a1a;border-radius:4px">📝 '+wo.notes+'</div>':''}
+      <div style="border-top:1px solid #333;padding-top:12px">
+        ${itemRows||'<div style="color:#666;font-style:italic">No line items</div>'}
+      </div>
+      ${wo.delivered?'<div style="margin-top:12px;padding:8px 12px;background:#1a2a1a;border-radius:6px;color:#4CAF7D;font-weight:700;font-size:13px">🚚 Delivered'+( wo.deliveredBy?' by '+wo.deliveredBy:'')+'</div>':''}
+    </div>`;
+
+  modal.addEventListener('click', e=>{ if(e.target===modal) modal.remove(); });
+  document.body.appendChild(modal);
+}
+
 function renderBoardView(){
   // getWeekDays returns Date objects — convert to {iso, label}
   const rawDays = getWeekDays();
@@ -2969,7 +3028,7 @@ function renderBoardView(){
       }).filter(Boolean).join(' · ');
       const moreItems = items.length > 4 ? '...' : '';
 
-      return '<div class="board-stop'+(delivered?' done':'')+'" style="border-left-color:'+color+'">'
+      return '<div class="board-stop'+(delivered?' done':'')+'" style="border-left-color:'+color+';cursor:pointer" onclick="showBoardWODetail('+wo.id+')">'
         +'<div class="board-stop-cust">'+(delivered?'🚚 ':complete?'✓ ':'')+wo.customer+'</div>'
         +'<div class="board-stop-wo">'
           +'<span style="white-space:nowrap;flex-shrink:0">WO #'+wo.woNum+(getWOWeight(wo.id)?' · '+getWOWeight(wo.id).toLocaleString()+' lbs':'')+'</span>'
@@ -2977,7 +3036,7 @@ function renderBoardView(){
           +(completionStr?'<span style="font-size:10px;font-weight:700;color:'+completionColor+';flex-shrink:0;margin-left:auto">'+completionStr+'</span>':'')
         +'</div>'
         +(delivered?'<div class="board-stop-done">🚚 Delivered</div>':complete?'<div class="board-stop-done" style="color:#f0a500">✓ Ready to Ship</div>':'')
-        +'</div>';        +'</div>';
+        +'</div>';
     };
 
     const truckSection = (label, color, wos)=>{
