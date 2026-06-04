@@ -1203,7 +1203,8 @@ async function sbUpdateLI(woId, itemId, fields) {
     step1CompletedBy:'step1_completed_by', step2Op:'step2_op', step2Status:'step2_status',
     step2CompletedBy:'step2_completed_by', notes:'notes', priority:'priority',
     weight:'weight', qty:'qty', delivery:'delivery', bundle:'bundle',
-    coilNum:'coil_num', skidSplits:'skid_splits', station:'station'
+    coilNum:'coil_num', skidSplits:'skid_splits', station:'station',
+    productCat:'product_cat', gauge:'gauge', size:'size', type:'type'
   };
   for (const [k,v] of Object.entries(fields)) {
     if (fieldMap[k]) {
@@ -1381,6 +1382,17 @@ function startSBPoll() {
             // Preserve the current search value so typing isn't interrupted
             const searchVal = document.getElementById('assign-search')?.value || '';
             renderAssign(searchVal, c);
+            // Restore open WO card if one was open
+            if(_openWOId){
+              const det = document.getElementById(`wo-detail-${_openWOId}`);
+              const row = document.getElementById(`wo-${_openWOId}`);
+              if(det && row){
+                const wo = state.wos.find(w=>w.id===_openWOId);
+                if(wo){ det.innerHTML=renderWODetail(wo); det.style.display='block'; row.classList.add('open'); }
+              } else {
+                _openWOId = null; // WO no longer in view
+              }
+            }
           }
           else if (state.activeView==='queue') renderQueue(c);
           else if (state.activeView==='trucks') renderTrucks(c);
@@ -1713,7 +1725,7 @@ function updateBadges(){
 const VIEWS = {
   create:{title:'New Work Order',actions:'<div class="flex gap8"><button class="btn" onclick="triggerQBImport()">📥 Import from QuickBooks</button><button class="btn btn-primary no-print" onclick="saveWO()">💾 Save Work Order</button></div>'},
   assign:{title:'Assign & Manage WOs',actions:'<div class="flex gap8" style="align-items:center"><input type="text" id="assign-search" placeholder="Search WO, customer..." oninput="filterAssignInPlace(this.value)" style="width:200px;padding:6px 10px;font-size:13px"><button id="assign-toggle" class="btn btn-sm" onclick="showAllAssign=!showAllAssign;updateAssignToggle();renderAssign(document.getElementById(\'assign-search\').value)">Show All</button></div>'},
-  queue:{title:'Shop Queue — Unassigned',actions:'<button id="queue-toggle" class="btn btn-sm" onclick="showAllQueue=!showAllQueue;updateQueueToggle();renderQueue()">Show All</button>'},
+  queue:{title:'Shop Queue — Unassigned',actions:'<div class="flex gap8"><button id="queue-toggle" class="btn btn-sm" onclick="showAllQueue=!showAllQueue;updateQueueToggle();renderQueue()">Show All</button><button class="btn btn-sm" onclick="resetQueuePriorities()" title="Clear manual priorities — revert to delivery date order">↺ Reset Order</button></div>'},
   myview:{title:'My Tasks',actions:''},
   truck:{title:'Truck Planner',actions:'<button class="btn btn-primary no-print" onclick="printTruck()">🖨 Print Load Sheet</button>'},
   dashboard:{title:'Master Dashboard',actions:'<button class="btn" onclick="enterBoardView()" style="background:#1C2E1C;color:#fff;border:none">📺 Board View</button>'},
@@ -2353,22 +2365,33 @@ function saveWO(){
 
 // ── DUPLICATE WO DETECTION ────────────────────────────────────────────────
 function showDupWOModal(existing, incoming){
-  const sizeKey = i=>`${i.gauge}|${i.size}`.toLowerCase().trim();
-  const existingBySize = {};
-  existing.items.forEach(i=>{ existingBySize[sizeKey(i)] = i; });
+  // Match by QTY only — category/gauge/size may have been changed in system
+  // This is consistent with the review-needed check
+  const qtyKey = i=>String(i.qty).trim();
+  const existingByQty = {};
+  existing.items.forEach(i=>{ existingByQty[qtyKey(i)] = i; });
 
-  const newItems = incoming.items.filter(i=>!existingBySize[sizeKey(i)]);
-  const qtyChanges = incoming.items.filter(i=>{
-    const match = existingBySize[sizeKey(i)];
-    return match && String(match.qty) !== String(i.qty);
-  }).map(i=>({ incoming: i, existing: existingBySize[sizeKey(i)] }));
+  const newItems = incoming.items.filter(i=>!existingByQty[qtyKey(i)]);
+  const qtyChanges = []; // can't have qty changes if we match by qty
 
-  // Items in system but NOT in QB — possibly removed from order
-  const incomingBySize = {};
-  incoming.items.forEach(i=>{ incomingBySize[sizeKey(i)] = i; });
-  const removedItems = existing.items.filter(i=>!incomingBySize[sizeKey(i)]);
+  // Items in system but NOT in QB (by qty)
+  const incomingByQty = {};
+  incoming.items.forEach(i=>{ incomingByQty[qtyKey(i)] = i; });
+  const removedItems = existing.items.filter(i=>!incomingByQty[qtyKey(i)]);
 
-  const hasChanges = newItems.length > 0 || qtyChanges.length > 0 || removedItems.length > 0;
+  // Check for notes changes using pool matching (handles duplicate qtys)
+  const sysNotesPool = existing.items.map(i=>(i.notes||'').trim().toLowerCase());
+  const notesChanges = incoming.items.filter(qbItem=>{
+    if(!qbItem.notes) return false;
+    const qbNote = qbItem.notes.trim().toLowerCase();
+    // If QB note already exists anywhere in system, no change needed
+    if(sysNotesPool.includes(qbNote)) return false;
+    // Flag if system has no note for this item
+    const sysItem = existingByQty[qtyKey(qbItem)];
+    return !sysItem || !(sysItem.notes||'').trim();
+  }).map(qbItem=>({ qbItem, sysItem: existingByQty[qtyKey(qbItem)] }));
+
+  const hasChanges = newItems.length > 0 || qtyChanges.length > 0 || removedItems.length > 0 || notesChanges.length > 0;
 
   const newItemRows = newItems.map(i=>`
     <div style="display:flex;gap:8px;align-items:center;padding:6px 8px;background:var(--green-l);border:1px solid var(--green-m);border-radius:4px;font-size:12px">
@@ -2401,6 +2424,16 @@ function showDupWOModal(existing, incoming){
         ${qtyChanges.length ? `
           <div style="font-weight:700;font-size:13px;margin-bottom:8px;color:#185FA5">⟳ ${qtyChanges.length} qty change${qtyChanges.length!==1?'s':''}:</div>
           <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">${qtyChangeRows}</div>` : ''}
+        ${notesChanges.length ? `
+          <div style="font-weight:700;font-size:13px;margin-bottom:8px;color:#8B4513">📝 ${notesChanges.length} packing note${notesChanges.length!==1?'s':''} to update:</div>
+          <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">
+            ${notesChanges.map(({qbItem,sysItem})=>`
+            <div style="background:#FFF5E6;border:1px solid #f0a500;border-radius:4px;padding:6px 10px;font-size:12px">
+              <div style="color:#888;margin-bottom:2px">Qty ×${qbItem.qty}</div>
+              ${sysItem.notes?`<div style="color:#c0392b;text-decoration:line-through;margin-bottom:2px">${sysItem.notes}</div>`:'<div style="color:#aaa;margin-bottom:2px">(none in system)</div>'}
+              <div style="color:#2d6a2d;font-weight:600">→ ${qbItem.notes}</div>
+            </div>`).join('')}
+          </div>` : ''}
         ${removedItems.length ? `
           <div style="font-weight:700;font-size:13px;margin-bottom:8px;color:var(--amber)">⚠ ${removedItems.length} item${removedItems.length!==1?'s':''} in system but NOT in QB:</div>
           <div style="font-size:11px;color:var(--text2);margin-bottom:8px">These may have been removed from the order. Review before deciding — do not remove if already in production.</div>
@@ -2419,8 +2452,12 @@ function showDupWOModal(existing, incoming){
           <button class="btn btn-primary" onclick="mergeDupWO(${existing.id})">✓ Apply Changes to WO #${existing.woNum}</button>
           <button class="btn" onclick="document.getElementById('dup-wo-modal').remove()">Cancel</button>
         </div>` : `
-        <div style="color:var(--green);font-weight:600;margin-bottom:16px">✓ No changes — incoming WO matches existing.</div>
-        <button class="btn" onclick="document.getElementById('dup-wo-modal').remove()">Close</button>`}
+        <div style="color:var(--green);font-weight:600;margin-bottom:8px">✓ No changes — incoming WO matches existing.</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:12px">QB may have packing notes to sync even if items match.</div>
+        <div style="display:flex;gap:8px;margin-bottom:16px">
+          <button class="btn btn-primary" onclick="mergeDupWO(${existing.id})">📝 Sync Notes from QB</button>
+          <button class="btn" onclick="document.getElementById('dup-wo-modal').remove()">Close</button>
+        </div>`}
       <div style="border-top:1px solid var(--border);padding-top:12px">
         <div style="font-size:12px;font-weight:600;color:var(--text3);margin-bottom:8px">EXISTING WO — ${existing.items.length} items:</div>
         ${existing.items.map(i=>`
@@ -2465,23 +2502,13 @@ function mergeDupWO(existingId){
   const incoming = window._dupIncomingWO;
   if(!existing||!incoming) return;
 
-  // Match on gauge+size to find same items (ignore qty so we can update it)
-  const sizeKey = i=>`${i.gauge}|${i.size}`.toLowerCase().trim();
-  const existingBySize = {};
-  existing.items.forEach(i=>{ existingBySize[sizeKey(i)] = i; });
+  // Match by qty — category/gauge/size may have been changed in system
+  const qtyKey2 = i=>String(i.qty).trim();
+  const existingByQty2 = {};
+  existing.items.forEach(i=>{ existingByQty2[qtyKey2(i)] = i; });
 
-  const newItems = [];
-  const qtyUpdated = [];
-
-  incoming.items.forEach(item=>{
-    const key = sizeKey(item);
-    const match = existingBySize[key];
-    if(!match){
-      newItems.push(item);
-    } else if(String(match.qty) !== String(item.qty)){
-      qtyUpdated.push({existing: match, newQty: item.qty});
-    }
-  });
+  const newItems = incoming.items.filter(item=>!existingByQty2[qtyKey2(item)]);
+  const qtyUpdated = []; // matched by qty so no qty changes possible
 
   // IMPORTANT: preserve existing WO scheduling — never overwrite with blank
   // The incoming WO from QB import has no delivery date/truck/delivered info
@@ -2514,8 +2541,24 @@ function mergeDupWO(existingId){
       product_cat:item.productCat||null, type:item.type||null,
       gauge:item.gauge||null, size:item.size||null, qty:item.qty||null,
       weight:item.weight||null, station:item.station||null,
+      notes:item.notes||null,
       status:'Pending', delivery:existing.delivery||null
     }).catch(e=>console.warn('merge new item error',e));
+  });
+
+  // Update notes on existing items where QB has notes and system doesn't (or they differ)
+  const notesUpdated = [];
+  incoming.items.forEach(qbItem=>{
+    if(!qbItem.notes) return;
+    const sysItem = existing.items.find(s=>String(s.qty).trim()===String(qbItem.qty).trim());
+    if(!sysItem) return;
+    const qbNote = qbItem.notes.trim();
+    const sysNote = (sysItem.notes||'').trim();
+    if(qbNote !== sysNote){
+      sysItem.notes = qbNote;
+      notesUpdated.push(sysItem);
+      sbUpdateLI(existing.id, sysItem.id, {notes: qbNote}).catch(e=>console.warn('merge notes error',e));
+    }
   });
 
   // Update qty on changed items
@@ -2534,6 +2577,7 @@ function mergeDupWO(existingId){
   const parts = [];
   if(newItems.length) parts.push(`${newItems.length} new item${newItems.length!==1?'s':''} added`);
   if(qtyUpdated.length) parts.push(`${qtyUpdated.length} qty${qtyUpdated.length!==1?'s':''} updated`);
+  if(notesUpdated.length) parts.push(`${notesUpdated.length} note${notesUpdated.length!==1?'s':''} updated`);
   toast(`✓ WO #${existing.woNum}: ${parts.join(', ') || 'no changes'}`);
   renderCreate(document.getElementById('content'));
   updateBadges();
@@ -2642,17 +2686,33 @@ function renderWOCard(wo){
 </div>`;
 }
 
+let _openWOId = null;
+
 function toggleWO(id){
   const row=document.getElementById(`wo-${id}`);
   const det=document.getElementById(`wo-detail-${id}`);
   if(!row||!det)return;
   const open=det.style.display!=='none'&&det.innerHTML!=='';
-  if(open){det.style.display='none';det.innerHTML='';row.classList.remove('open');return}
+  if(open){
+    det.style.display='none';
+    det.innerHTML='';
+    row.classList.remove('open');
+    _openWOId = null;
+    return;
+  }
+  // Close any other open card first
+  if(_openWOId && _openWOId !== id){
+    const prevDet=document.getElementById(`wo-detail-${_openWOId}`);
+    const prevRow=document.getElementById(`wo-${_openWOId}`);
+    if(prevDet){prevDet.style.display='none';prevDet.innerHTML='';}
+    if(prevRow) prevRow.classList.remove('open');
+  }
   row.classList.add('open');
   const wo=state.wos.find(w=>w.id===id);
   if(!wo)return;
   det.innerHTML=renderWODetail(wo);
   det.style.display='block';
+  _openWOId = id;
 }
 
 function renderWODetail(wo){
@@ -3408,6 +3468,24 @@ function saveEditWO(id){
   window._editingWOId=null;
   saveState();updateBadges();
   sbUpdateWO(wo).catch(e=>console.warn('sbUpdateWO error',e));
+  // Sync each line item to Supabase — captures notes, gauge, size, category changes
+  newItems.forEach(item=>{
+    sbUpdateLI(wo.id, item.id, {
+      notes:      item.notes||null,
+      assignee:   item.assignee||null,
+      station:    item.station||null,
+      qty:        item.qty||null,
+      weight:     item.weight||null,
+      bundle:     item.bundle||null,
+      delivery:   item.delivery||wo.delivery||null,
+      status:     item.status||'Pending',
+      completedBy: item.completedBy||null,
+      completedAt: item.completedAt||null,
+      priority:   item.priority||null,
+      skidSplits: item.skidSplits||null,
+      coilNum:    item.coilNum||null
+    }).catch(e=>console.warn('saveEditWO sbUpdateLI error',e));
+  });
   toast('WO #'+wo.woNum+' updated');
   nav('assign',document.querySelector('.nav-item[onclick*=assign]'));
 }
@@ -3457,11 +3535,7 @@ function printQueueList(station){
     });
   });
   // Sort by existing priority, then assign clean sequential priorities
-  rawItems.sort((a,b)=>{ const pa=a.item.priority??99999; const pb=b.item.priority??99999; if(pa!==pb)return pa-pb; return (a.woNum||0)-(b.woNum||0); });
-  rawItems.forEach((x,i)=>{
-    const wo = state.wos.find(w=>String(w.id)===String(x.woId));
-    if(wo){ const si = wo.items.find(it=>String(it.id)===String(x.item.id)); if(si) si.priority = i+1; }
-  });
+  rawItems.sort(queueSort);
   const items = rawItems.map(x=>({...x.item, woNum:x.woNum, customer:x.customer, delivery:x.delivery, woId:x.woId}));
 
   const now = new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
@@ -3632,6 +3706,30 @@ ${content || '<p style="color:#888">No open items in this queue.</p>'}
   win.document.close();
 }
 
+
+// Queue sort: manual priority overrides delivery date default
+// Items with no delivery date go to bottom
+function queueSort(a, b){
+  const pa = a.item.priority;
+  const pb = b.item.priority;
+  const hasA = pa != null && pa > 0;
+  const hasB = pb != null && pb > 0;
+  // If both have manual priority, use that
+  if(hasA && hasB) return pa - pb;
+  // If only one has manual priority, it goes first
+  if(hasA) return -1;
+  if(hasB) return 1;
+  // No delivery date goes to bottom
+  const da = a.item.delivery || a.delivery || '';
+  const db = b.item.delivery || b.delivery || '';
+  if(!da && !db) return (parseInt(a.item.woNum||a.woNum)||0) - (parseInt(b.item.woNum||b.woNum)||0);
+  if(!da) return 1;  // a has no date → goes to bottom
+  if(!db) return -1; // b has no date → goes to bottom
+  // Sort by delivery date ascending, then WO number
+  if(da !== db) return da < db ? -1 : 1;
+  return (parseInt(a.item.woNum||a.woNum)||0) - (parseInt(b.item.woNum||b.woNum)||0);
+}
+
 function renderQueue(c){
   if(!c)c=document.getElementById('content');
   const today=new Date();today.setHours(0,0,0,0);
@@ -3669,13 +3767,9 @@ function renderQueue(c){
       }
     });
   });
-  stationAllItems.sort((a,b)=>{ const pa=a.item.priority??99999; const pb=b.item.priority??99999; if(pa!==pb)return pa-pb; return (a.item.woNum||0)-(b.item.woNum||0); });
-  // Write clean sequential priorities back to state so print always matches
-  stationAllItems.forEach((x,i)=>{
-    const wo = state.wos.find(w=>String(w.id)===String(x.woId));
-    if(wo){ const si = wo.items.find(it=>String(it.id)===String(x.item.id)); if(si) si.priority = i+1; }
-  });
-  saveState();
+  stationAllItems.sort(queueSort);
+  // Only preserve existing manual priorities — don't auto-assign new ones
+  // Items without priority will sort by delivery date by default
   const items = stationAllItems.map(x=>x.item);
   const hiddenNote=hiddenWOs?`<div style="font-size:12px;color:var(--text3);padding:6px 10px;background:var(--gray-l);border-radius:var(--rad);margin-bottom:8px">${hiddenWOs} past WO${hiddenWOs!==1?'s':''} hidden · <button class="btn btn-xs" onclick="showAllQueue=true;updateQueueToggle();renderQueue()">Show All</button></div>`:'';
   // IOWA: group by coil number
@@ -3922,7 +4016,8 @@ function renderQueue(c){
     ${totalUnassigned?`<div style="background:var(--red-l);border:1px solid #f09595;border-radius:var(--rad);padding:8px 16px;font-size:13px;font-weight:600;color:var(--red)">
       ⚠ ${totalUnassigned} unassigned
     </div>`:'<div style="background:var(--green-l);border:1px solid #c0dd97;border-radius:var(--rad);padding:8px 16px;font-size:13px;font-weight:600;color:var(--green)">✓ All items assigned</div>'}
-    <button data-station="${activeQStation}" onclick="printQueueList(this.dataset.station)" class="btn btn-sm" style="margin-left:auto">🖨 Print ${activeQStation} Queue</button>
+    <button onclick="resetQueuePriorities()" class="btn btn-sm" style="margin-left:auto" title="Clear manual priorities — revert to delivery date order">↺ Reset Order</button>
+    <button data-station="${activeQStation}" onclick="printQueueList(this.dataset.station)" class="btn btn-sm">🖨 Print ${activeQStation} Queue</button>
   </div>
   <div class="station-tab">${tabs}</div>${_rows}`;
 }
@@ -3940,21 +4035,37 @@ function getQueueItems(){
     });
   });
   // Sort first, then assign clean sequential priorities
-  allItems.sort((a,b)=>{ const pa=a.item.priority??99999; const pb=b.item.priority??99999; if(pa!==pb)return pa-pb; return (a.item.woNum||0)-(b.item.woNum||0); });
-  allItems.forEach((x,i)=>{ x.item.priority = i+1; });
+  allItems.sort(queueSort);
   return allItems;
 }
 
 function writeQueuePriorities(allItems){
-  allItems.forEach(x=>{
+  allItems.forEach((x,i)=>{
     const wo = state.wos.find(w=>String(w.id)===String(x.woId));
     if(wo){
       const stateItem = wo.items.find(it=>String(it.id)===String(x.item.id));
-      if(stateItem) stateItem.priority = x.item.priority;
+      if(stateItem) stateItem.priority = i+1; // manual priority = sequential position
     }
   });
   saveState();
   sbSavePriorities(allItems);
+  renderQueue(document.getElementById('content'));
+}
+
+function resetQueuePriorities(){
+  // Clear all manual priorities — queue will revert to delivery date sort
+  state.wos.forEach(wo=>{
+    wo.items.forEach(item=>{ item.priority = null; });
+  });
+  saveState();
+  // Sync to Supabase
+  const updates = [];
+  state.wos.forEach(wo=>{
+    wo.items.forEach(item=>{
+      sbUpdateLI(wo.id, item.id, {priority: null}).catch(e=>console.warn('resetPriority error',e));
+    });
+  });
+  toast('✓ Queue reset to delivery date order');
   renderQueue(document.getElementById('content'));
 }
 
@@ -7252,8 +7363,38 @@ function renderQBList(invoices){
         }).join('');
         diffHtml += `</div>`;
 
+        // Check for notes/packing description changes
+        // Match QB items to system items by qty, compare notes
+        const notesChanged = [];
+        inv.items.forEach(qbItem=>{
+          const qbQty = String(qbItem.qty).trim();
+          const sysMatch = existing.items.find(s=>String(s.qty).trim()===qbQty);
+          if(sysMatch && qbItem.notes && sysMatch.notes){
+            const qbNote = qbItem.notes.trim().toLowerCase();
+            const sysNote = sysMatch.notes.trim().toLowerCase();
+            if(qbNote !== sysNote){
+              notesChanged.push({sys: sysMatch.notes, qb: qbItem.notes, qty: qbItem.qty});
+            }
+          } else if(sysMatch && qbItem.notes && !sysMatch.notes){
+            // QB has notes but system doesn't
+            notesChanged.push({sys: '(none)', qb: qbItem.notes, qty: qbItem.qty});
+          }
+        });
+
+        if(notesChanged.length > 0){
+          newCount = 1; // flag as needs review
+          diffHtml += `<div style="font-size:10px;font-weight:700;color:#8B4513;text-transform:uppercase;margin-bottom:4px;margin-top:6px">📝 ${notesChanged.length} packing note${notesChanged.length!==1?'s':''} changed:</div>`;
+          notesChanged.forEach(n=>{
+            diffHtml += `<div style="background:#FFF5E6;border:1px solid #f0a500;border-radius:4px;padding:4px 8px;font-size:10px;margin-bottom:4px">
+              <div style="color:#888">Qty ×${n.qty}</div>
+              <div style="color:#c0392b;text-decoration:line-through">${n.sys}</div>
+              <div style="color:#2d6a2d;font-weight:600">→ ${n.qb}</div>
+            </div>`;
+          });
+        }
+
         if(newCount === 0){
-          diffHtml += `<div style="font-size:11px;color:var(--green);font-weight:600">✓ All qtys match</div>`;
+          diffHtml += `<div style="font-size:11px;color:var(--green);font-weight:600">✓ All qtys and notes match</div>`;
         } else if(qtyMismatch){
           const missing = unmatchedSys.map(q=>'×'+q).join(', ');
           const added = unmatchedQB.map(q=>'×'+q).join(', ');
@@ -7305,13 +7446,24 @@ function renderQBList(invoices){
   const dupesNeedReview = dupes.filter(inv=>{
     const existing = state.wos.find(w=>String(w.woNum)===String(inv.invNum));
     if(!existing) return true;
-    const countDiff = inv.items.length - existing.items.length;
-    if(countDiff !== 0) return true;
-    if(existing.customer !== inv.customer) return true; // wrong customer
-    // Check if all QB qtys exist in system qtys (order doesn't matter)
-    const sysQtyPool = existing.items.map(i=>String(i.qty).trim()).sort();
-    const qbQtyPool  = inv.items.map(i=>String(i.qty).trim()).sort();
-    return JSON.stringify(sysQtyPool) !== JSON.stringify(qbQtyPool);
+    // Only flag on: customer, item count, qty pool, packing notes
+    if(existing.customer !== inv.customer) return true;
+    if(inv.items.length !== existing.items.length) return true;
+    const sysQtys = existing.items.map(i=>String(i.qty).trim()).sort();
+    const qbQtys  = inv.items.map(i=>String(i.qty).trim()).sort();
+    if(JSON.stringify(sysQtys) !== JSON.stringify(qbQtys)) return true;
+    // Check packing notes — if QB has a note, check if it exists anywhere in system notes
+    // Use pool matching for duplicate qtys (multiple items with same qty)
+    const sysNotePool = existing.items.map(i=>(i.notes||'').trim().toLowerCase());
+    return inv.items.some(qbItem=>{
+      if(!qbItem.notes) return false;
+      const qbNote = qbItem.notes.trim().toLowerCase();
+      // If this QB note already exists in system note pool, it's fine
+      if(sysNotePool.includes(qbNote)) return false;
+      // If system has no notes at all for this qty, flag it
+      const sysMatch = existing.items.find(s=>String(s.qty).trim()===String(qbItem.qty).trim());
+      return !sysMatch || !(sysMatch.notes||'').trim();
+    });
   });
   const dupesClean = dupes.filter(inv=>!dupesNeedReview.includes(inv));
 
@@ -7392,9 +7544,19 @@ function dupes_delete_clean(){
     const countDiff = inv.items.length - existing.items.length;
     if(countDiff !== 0) return true; // keep review needed
     if(existing.customer !== inv.customer) return true; // wrong customer
+    if(existing.customer !== inv.customer) return true;
+    if(inv.items.length !== existing.items.length) return true;
     const sysQP = existing.items.map(i=>String(i.qty).trim()).sort();
     const qbQP  = inv.items.map(i=>String(i.qty).trim()).sort();
-    return JSON.stringify(sysQP) !== JSON.stringify(qbQP); // keep if qty mismatch
+    if(JSON.stringify(sysQP) !== JSON.stringify(qbQP)) return true;
+    const sysNotePool2 = existing.items.map(i=>(i.notes||'').trim().toLowerCase());
+    return inv.items.some(qbItem=>{
+      if(!qbItem.notes) return false;
+      const qbNote = qbItem.notes.trim().toLowerCase();
+      if(sysNotePool2.includes(qbNote)) return false;
+      const sysMatch = existing.items.find(s=>String(s.qty).trim()===String(qbItem.qty).trim());
+      return !sysMatch || !(sysMatch.notes||'').trim();
+    });
   });
   updateQBPillCount();
   const el = document.getElementById('qb-invoice-list');
