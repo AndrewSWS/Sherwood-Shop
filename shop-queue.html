@@ -297,6 +297,37 @@ async function sbPatch(table, match, body) {
   if (!r.ok) throw new Error(`SB PATCH ${table} ${r.status}`);
 }
 
+// ── LOG BUNDLE USAGE ────────────────────────────────────────────────────────
+async function sbLogBundleUsage(item) {
+  if (!item || item.status !== 'Complete') return;
+  if (!item.productCat && !item.gauge && !item.bundle && !item.coilNum) return;
+  const record = {
+    wo_id:         item.woId || null,
+    wo_num:        item.woNum || null,
+    customer:      item.customer || null,
+    delivery_date: item.delivery || null,
+    line_item_id:  item._dbId || null,
+    product_cat:   item.productCat || null,
+    gauge:         item.gauge || null,
+    size:          item.size || null,
+    qty:           item.qty ? String(item.qty) : null,
+    weight:        item.weight || null,
+    coil_num:      item.coilNum || null,
+    bundle:        item.bundle || null,
+    skid_splits:   item.skidSplits && item.skidSplits.length ? item.skidSplits : null,
+    station:       item.station || null,
+    completed_by:  item.completedBy || null,
+    completed_at:  item.completedAt || null,
+    notes:         item.notes || null
+  };
+  const r = await fetch(`${SB_URL}/rest/v1/bundle_usage`, {
+    method: 'POST',
+    headers: { ...HDR, 'Prefer': 'return=minimal' },
+    body: JSON.stringify(record)
+  });
+  if (!r.ok) throw new Error(`bundle_usage log failed ${r.status}`);
+}
+
 // ── DATA LOAD ────────────────────────────────────────────────────────────────
 async function loadData() {
   setSyncState('syncing');
@@ -625,6 +656,9 @@ async function updateStatus(dbId, woId, newStatus) {
   renderTiles();
   toast(newStatus === 'Complete' ? '✓ Marked complete' : newStatus === 'In Process' ? '▶ Started' : 'Reopened');
 
+  // Log bundle usage when completing
+  if (newStatus === 'Complete') sbLogBundleUsage(item).catch(e => console.warn('bundle log error', e));
+
   // Patch to DB
   try {
     const patch = {
@@ -675,6 +709,8 @@ async function updateDualStep(dbId, woId, step, newStatus) {
 
   renderTiles();
   toast(newStatus === 'Complete' ? '✓ Step done' : newStatus === 'In Process' ? '▶ Step started' : 'Reset');
+
+  if (item.status === 'Complete') sbLogBundleUsage(item).catch(e => console.warn('bundle log dual error', e));
 
   try {
     await sbPatch('line_items', { id: dbId }, {

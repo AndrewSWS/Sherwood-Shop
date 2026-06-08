@@ -348,6 +348,9 @@ select{cursor:pointer}
     <div class="nav-item" onclick="nav('settings',this)">
       <span class="icon">⚙</span> Settings
     </div>
+    <div class="nav-item" onclick="nav('bundlelog',this)">
+      <span class="icon">📦</span> Bundle History
+    </div>
   </div>
   <div class="nav-section">
     <div class="nav-label">Delivery</div>
@@ -1244,6 +1247,39 @@ async function sbUpdateLI(woId, itemId, fields) {
   await _sbPatch('line_items', {id: rows[idx].id}, dbFields);
 }
 
+// ── SUPABASE: Log bundle/coil usage when item is completed ──
+async function sbLogBundleUsage(woId, item) {
+  if (!item || item.status !== 'Complete') return;
+  // Only log items that have meaningful product data
+  if (!item.productCat && !item.gauge && !item.bundle && !item.coilNum) return;
+  const wo = state.wos.find(w => w.id === woId);
+  const record = {
+    wo_id:         woId,
+    wo_num:        item.woNum || wo?.woNum || null,
+    customer:      item.customer || wo?.customer || null,
+    delivery_date: item.delivery || wo?.delivery || null,
+    line_item_id:  item._dbId || null,
+    product_cat:   item.productCat || null,
+    gauge:         item.gauge || null,
+    size:          item.size || null,
+    qty:           item.qty ? String(item.qty) : null,
+    weight:        item.weight || null,
+    coil_num:      item.coilNum || null,
+    bundle:        item.bundle || null,
+    skid_splits:   item.skidSplits && item.skidSplits.length ? item.skidSplits : null,
+    station:       item.station || null,
+    completed_by:  item.completedBy || null,
+    completed_at:  item.completedAt || null,
+    notes:         item.notes || null
+  };
+  try {
+    await _sbPost('bundle_usage', record);
+    console.log('[sbLogBundleUsage] logged for item', item._dbId, item.productCat);
+  } catch(e) {
+    console.warn('[sbLogBundleUsage] error', e);
+  }
+}
+
 // ── SUPABASE: Delete a work order ──
 async function sbDeleteWO(woId) {
   await _sbDelete('truck_stops', {wo_id: woId});
@@ -1731,6 +1767,7 @@ function updateBadges(){
 // ══════════════════════════════════════════════════════
 const VIEWS = {
   create:{title:'New Work Order',actions:'<div class="flex gap8"><button class="btn" onclick="triggerQBImport()">📥 Import from QuickBooks</button><button class="btn btn-primary no-print" onclick="saveWO()">💾 Save Work Order</button></div>'},
+  bundlelog:{title:'Bundle Usage History',actions:'<div class="flex gap8"><button class="btn btn-sm" onclick="exportBundleCSV()">⬇ Export CSV</button></div>'},
   assign:{title:'Assign & Manage WOs',actions:'<div class="flex gap8" style="align-items:center"><input type="text" id="assign-search" placeholder="Search WO, customer..." oninput="filterAssignInPlace(this.value)" style="width:200px;padding:6px 10px;font-size:13px"><button id="assign-toggle" class="btn btn-sm" onclick="showAllAssign=!showAllAssign;updateAssignToggle();renderAssign(document.getElementById(\'assign-search\').value)">Show All</button></div>'},
   queue:{title:'Shop Queue — Unassigned',actions:'<div class="flex gap8"><button id="queue-toggle" class="btn btn-sm" onclick="showAllQueue=!showAllQueue;updateQueueToggle();renderQueue()">Show All</button><button class="btn btn-sm" onclick="resetQueuePriorities()" title="Clear manual priorities — revert to delivery date order">↺ Reset Order</button></div>'},
   myview:{title:'My Tasks',actions:''},
@@ -1761,6 +1798,7 @@ function nav(view,el){
   document.getElementById('topbar-actions').innerHTML=VIEWS[view].actions||'';
   const c=document.getElementById('content');
   if(view==='create')renderCreate(c);
+  else if(view==='bundlelog')renderBundleLog(c);
   else if(view==='assign')renderAssign('',c);
   else if(view==='queue')renderQueue(c);
   else if(view==='myview')renderMyView(c);
@@ -2862,6 +2900,7 @@ function updateLIStep(woId,itemId,field,val){
     step2Op: item.step2Op, step2Status: item.step2Status, step2CompletedBy: item.step2CompletedBy,
     status: item.status, completedBy: item.completedBy, completedAt: item.completedAt
   }).catch(e=>console.warn('sbUpdateLI step error',e));
+  if(item.status==='Complete') sbLogBundleUsage(woId, item).catch(e=>console.warn('sbLogBundleUsage step error',e));
   // Refresh the detail
   const det=document.getElementById('wo-detail-'+woId);
   if(det&&det.style.display!=='none'){
@@ -2903,6 +2942,7 @@ function setLIStatus(woId,itemId,status){
   saveState();toast(`Item marked ${status}`);
   console.log('[setLIStatus] item._dbId:', item._dbId, 'itemId:', itemId, 'status:', status);
   sbUpdateLI(woId, itemId, {status, completedBy: item.completedBy, completedAt: item.completedAt}).catch(e=>console.warn('sbUpdateLI error',e));
+  if(status==='Complete') sbLogBundleUsage(woId, item).catch(e=>console.warn('sbLogBundleUsage error',e));
   const wo2=state.wos.find(w=>w.id===woId);
   // Re-render detail panel only (keep it open)
   const det=document.getElementById(`wo-detail-${woId}`);
@@ -3030,6 +3070,7 @@ function boardToggleLI(woId, itemId, newStatus){
     step1Status: item.step1Status||null,
     step2Status: item.step2Status||null
   }).catch(e=>console.warn('boardToggleLI sync error',e));
+  if(newStatus==='Complete') sbLogBundleUsage(woId, item).catch(e=>console.warn('sbLogBundleUsage board error',e));
   // Refresh the modal in-place
   showBoardWODetail(woId);
   // Also refresh the assign view detail panel if it's open
@@ -3802,6 +3843,188 @@ function queueSort(a, b){
   return (parseInt(a.item.woNum||a.woNum)||0) - (parseInt(b.item.woNum||b.woNum)||0);
 }
 
+
+// ══════════════════════════════════════════════════════════════════════════════
+// BUNDLE USAGE HISTORY VIEW
+// ══════════════════════════════════════════════════════════════════════════════
+let _bundleLogData = [];
+let _bundleLogFilters = { customer: '', coilNum: '', bundle: '', dateFrom: '', dateTo: '', station: '' };
+
+async function renderBundleLog(c) {
+  c.innerHTML = `<div style="padding:20px;max-width:1200px;margin:0 auto">
+    <div id="bl-filters" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;margin-bottom:18px;background:var(--surface);border-radius:var(--rad);padding:16px;border:1px solid var(--border)">
+      <div>
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:4px">Customer</div>
+        <input id="bl-cust"    type="text" placeholder="Filter…" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px" oninput="blFilter()">
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:4px">Coil #</div>
+        <input id="bl-coil"   type="text" placeholder="Filter…" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px" oninput="blFilter()">
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:4px">Bundle #</div>
+        <input id="bl-bundle" type="text" placeholder="Filter…" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px" oninput="blFilter()">
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:4px">Station</div>
+        <input id="bl-station" type="text" placeholder="Filter…" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px" oninput="blFilter()">
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:4px">From Date</div>
+        <input id="bl-from"   type="date" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px" onchange="blFilter()">
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:4px">To Date</div>
+        <input id="bl-to"     type="date" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px" onchange="blFilter()">
+      </div>
+      <div style="display:flex;align-items:flex-end">
+        <button class="btn btn-sm" onclick="blClearFilters()" style="width:100%">✕ Clear</button>
+      </div>
+    </div>
+    <div id="bl-summary" style="margin-bottom:12px"></div>
+    <div id="bl-table" style="overflow-x:auto"></div>
+  </div>`;
+
+  document.getElementById('bl-table').innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)">Loading…</div>';
+
+  try {
+    const rows = await _sbGet('bundle_usage', 'order=recorded_at.desc&limit=1000');
+    _bundleLogData = rows || [];
+    blRender();
+  } catch(e) {
+    document.getElementById('bl-table').innerHTML = '<div style="padding:20px;color:var(--red)">Failed to load — check connection</div>';
+  }
+}
+
+function blFilter() {
+  _bundleLogFilters.customer  = (document.getElementById('bl-cust')?.value    || '').toLowerCase();
+  _bundleLogFilters.coilNum   = (document.getElementById('bl-coil')?.value    || '').toLowerCase();
+  _bundleLogFilters.bundle    = (document.getElementById('bl-bundle')?.value  || '').toLowerCase();
+  _bundleLogFilters.station   = (document.getElementById('bl-station')?.value || '').toLowerCase();
+  _bundleLogFilters.dateFrom  = document.getElementById('bl-from')?.value || '';
+  _bundleLogFilters.dateTo    = document.getElementById('bl-to')?.value   || '';
+  blRender();
+}
+
+function blClearFilters() {
+  ['bl-cust','bl-coil','bl-bundle','bl-station','bl-from','bl-to'].forEach(id => {
+    const el = document.getElementById(id); if(el) el.value = '';
+  });
+  _bundleLogFilters = { customer:'', coilNum:'', bundle:'', dateFrom:'', dateTo:'', station:'' };
+  blRender();
+}
+
+function blRender() {
+  const f = _bundleLogFilters;
+  let rows = _bundleLogData.filter(r => {
+    if (f.customer && !(r.customer||'').toLowerCase().includes(f.customer)) return false;
+    if (f.coilNum  && !(r.coil_num||'').toLowerCase().includes(f.coilNum))  return false;
+    if (f.bundle   && !(r.bundle||'').toLowerCase().includes(f.bundle))     return false;
+    if (f.station  && !(r.station||'').toLowerCase().includes(f.station))   return false;
+    if (f.dateFrom) {
+      const d = (r.completed_at||r.recorded_at||'').slice(0,10);
+      if (d < f.dateFrom) return false;
+    }
+    if (f.dateTo) {
+      const d = (r.completed_at||r.recorded_at||'').slice(0,10);
+      if (d > f.dateTo) return false;
+    }
+    return true;
+  });
+
+  // Summary bar
+  const customers = new Set(rows.map(r=>r.customer).filter(Boolean));
+  const coils     = new Set(rows.map(r=>r.coil_num).filter(Boolean));
+  const bundles   = new Set(rows.map(r=>r.bundle).filter(Boolean));
+  document.getElementById('bl-summary').innerHTML = `
+    <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--text2)">
+      <span><strong style="color:var(--text)">${rows.length}</strong> records</span>
+      <span><strong style="color:var(--text)">${customers.size}</strong> customers</span>
+      <span><strong style="color:var(--text)">${coils.size}</strong> coils</span>
+      <span><strong style="color:var(--text)">${bundles.size}</strong> bundles</span>
+    </div>`;
+
+  if (!rows.length) {
+    document.getElementById('bl-table').innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)">No records match your filters</div>';
+    return;
+  }
+
+  const tbl = `<table style="width:100%;border-collapse:collapse;font-size:13px">
+    <thead>
+      <tr style="background:var(--surface);text-align:left">
+        ${['Date','WO #','Customer','Product','Gauge','Size','Qty','Weight','Coil #','Bundle #','Station','Done By','Skids'].map(h=>
+          `<th style="padding:8px 10px;font-size:10px;font-weight:800;text-transform:uppercase;color:var(--text3);white-space:nowrap;border-bottom:2px solid var(--border)">${h}</th>`
+        ).join('')}
+      </tr>
+    </thead>
+    <tbody>
+      ${rows.map((r,i) => {
+        const dt = r.completed_at ? new Date(r.completed_at).toLocaleDateString([],{month:'short',day:'numeric',year:'2-digit'}) : '—';
+        const skids = r.skid_splits && r.skid_splits.length
+          ? `<span title="${r.skid_splits.map(s=>`${s.qty||'?'}×${s.size||s.type||'?'}`).join(', ')}" style="cursor:help;color:var(--blue)">${r.skid_splits.length} skid${r.skid_splits.length!==1?'s':''}</span>`
+          : '—';
+        const bg = i%2===0 ? 'transparent' : 'rgba(255,255,255,.02)';
+        return `<tr style="background:${bg};border-bottom:1px solid var(--border)">
+          <td style="padding:8px 10px;white-space:nowrap;color:var(--text2)">${dt}</td>
+          <td style="padding:8px 10px;font-weight:700">${r.wo_num||'—'}</td>
+          <td style="padding:8px 10px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.customer||'—'}</td>
+          <td style="padding:8px 10px;color:var(--text2)">${r.product_cat||'—'}</td>
+          <td style="padding:8px 10px;text-align:center">${r.gauge||'—'}</td>
+          <td style="padding:8px 10px">${r.size||'—'}</td>
+          <td style="padding:8px 10px;text-align:right">${r.qty||'—'}</td>
+          <td style="padding:8px 10px;text-align:right;color:var(--text2)">${r.weight?Number(r.weight).toLocaleString()+' lbs':'—'}</td>
+          <td style="padding:8px 10px;font-family:monospace;font-size:12px;color:var(--amber)">${r.coil_num||'—'}</td>
+          <td style="padding:8px 10px;font-weight:700;color:var(--green)">${r.bundle||'—'}</td>
+          <td style="padding:8px 10px;color:var(--text2)">${r.station||'—'}</td>
+          <td style="padding:8px 10px;color:var(--blue)">${r.completed_by||'—'}</td>
+          <td style="padding:8px 10px">${skids}</td>
+        </tr>`;
+      }).join('')}
+    </tbody>
+  </table>`;
+
+  document.getElementById('bl-table').innerHTML = tbl;
+}
+
+function exportBundleCSV() {
+  const f = _bundleLogFilters;
+  let rows = _bundleLogData.filter(r => {
+    if (f.customer && !(r.customer||'').toLowerCase().includes(f.customer)) return false;
+    if (f.coilNum  && !(r.coil_num||'').toLowerCase().includes(f.coilNum))  return false;
+    if (f.bundle   && !(r.bundle||'').toLowerCase().includes(f.bundle))     return false;
+    if (f.station  && !(r.station||'').toLowerCase().includes(f.station))   return false;
+    if (f.dateFrom) { const d=(r.completed_at||r.recorded_at||'').slice(0,10); if(d<f.dateFrom) return false; }
+    if (f.dateTo)   { const d=(r.completed_at||r.recorded_at||'').slice(0,10); if(d>f.dateTo)   return false; }
+    return true;
+  });
+  const headers = ['Date','WO#','Customer','Delivery Date','Product Cat','Gauge','Size','Qty','Weight (lbs)','Coil #','Bundle #','Station','Completed By','Skids'];
+  const csvRows = [headers.join(',')];
+  rows.forEach(r => {
+    const skidStr = r.skid_splits ? r.skid_splits.map(s=>`${s.qty||''}x${s.size||s.type||''}`).join('; ') : '';
+    csvRows.push([
+      (r.completed_at||r.recorded_at||'').slice(0,10),
+      r.wo_num||'',
+      '"'+(r.customer||'').replace(/"/g,'""')+'"',
+      r.delivery_date||'',
+      '"'+(r.product_cat||'').replace(/"/g,'""')+'"',
+      r.gauge||'',
+      r.size||'',
+      r.qty||'',
+      r.weight||'',
+      r.coil_num||'',
+      r.bundle||'',
+      r.station||'',
+      r.completed_by||'',
+      '"'+skidStr.replace(/"/g,'""')+'"'
+    ].join(','));
+  });
+  const blob = new Blob([csvRows.join('\n')], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'bundle-history-'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+}
+// ══════════════════════════════════════════════════════════════════════════════
 function renderQueue(c){
   if(!c)c=document.getElementById('content');
   const today=new Date();today.setHours(0,0,0,0);
