@@ -903,7 +903,7 @@ select{cursor:pointer}
 
 const OPERATORS = ['Joel','Dan','Ed','Evril','Nick W','Julio','Andrew','Nick C','Chris'];
 const STATION_DEFAULTS = {Joel:'IOWA',Dan:'SHEAR',Ed:'SLIP / DRIVE',Evril:'PLENUMS'};
-const STATIONS = ['IOWA','SHEAR','IOWA → SHEAR','SLIP','DRIVE','SLIP / DRIVE','BREAK','SHEAR → BREAK','PLENUMS','PICK / PULL','STANDING S','RETURN AIR FRAMES','ROLLERS','OTHER'];
+const STATIONS = ['IOWA','SHEAR','IOWA → SHEAR','IOWA → SHEAR → BREAK','SLIP','DRIVE','BREAK','SHEAR → BREAK','PLENUMS','PICK / PULL','STANDING S','RETURN AIR FRAMES','ROLLERS','OTHER'];
 const TYPES = ['Stainless','Galvanized','Galvaneel','Aluminum'];
 
 // ── PRODUCT CATALOG from Cheat Sheet ──────────────────
@@ -1369,6 +1369,11 @@ function startSBPoll() {
       const inputFocused = document.activeElement && ['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName);
       const dropOpen = document.querySelector('#cust-drop[style*="block"], .autocomplete-list[style*="block"]');
       if (modalOpen || window._editingWOId || inputFocused || dropOpen) {
+        updateBadges();
+        return;
+      }
+      // Suppress poll briefly after saving new WO so Supabase write completes first
+      if (window._suppressPoll && Date.now() < window._suppressPoll) {
         updateBadges();
         return;
       }
@@ -2358,6 +2363,7 @@ function saveWO(){
   // Capture current max BEFORE pushing new WO for gap check
   const _prevMax = Math.max(...state.wos.map(w=>parseInt(w.woNum)).filter(n=>!isNaN(n)), 0);
   state.wos.push(wo);saveState();
+  window._suppressPoll = Date.now() + 15000; // block poll for 15s while Supabase writes
   sbCreateWO(wo).catch(e=>console.warn('sbCreateWO error',e));
   toast(`✓ WO #${woNum} saved — ${items.length} line items`);
   renderCreate(document.getElementById('content'));updateBadges();
@@ -2379,16 +2385,16 @@ function showDupWOModal(existing, incoming){
   incoming.items.forEach(i=>{ incomingByQty[qtyKey(i)] = i; });
   const removedItems = existing.items.filter(i=>!incomingByQty[qtyKey(i)]);
 
-  // Check for notes changes using pool matching (handles duplicate qtys)
-  const sysNotesPool = existing.items.map(i=>(i.notes||'').trim().toLowerCase());
+  // Match notes by QB item code (e.g. GlvSht:263696) — survives category/size edits
+  const extractCode = n=>{ if(!n) return null; const m = n.match(/^[A-Za-z]+:([A-Za-z0-9.]+)/); return m ? m[1].toLowerCase() : null; };
+  const sysQtySetM = new Set(existing.items.map(i=>String(i.qty).trim()));
+  const sysCodeSetM = new Set(existing.items.map(i=>extractCode(i.notes)).filter(Boolean));
   const notesChanges = incoming.items.filter(qbItem=>{
     if(!qbItem.notes) return false;
-    const qbNote = qbItem.notes.trim().toLowerCase();
-    // If QB note already exists anywhere in system, no change needed
-    if(sysNotesPool.includes(qbNote)) return false;
-    // Flag if system has no note for this item
-    const sysItem = existingByQty[qtyKey(qbItem)];
-    return !sysItem || !(sysItem.notes||'').trim();
+    if(!sysQtySetM.has(String(qbItem.qty).trim())) return false;
+    const qbCode = extractCode(qbItem.notes);
+    if(!qbCode) return false;
+    return !sysCodeSetM.has(qbCode); // only flag if code completely absent from system
   }).map(qbItem=>({ qbItem, sysItem: existingByQty[qtyKey(qbItem)] }));
 
   const hasChanges = newItems.length > 0 || qtyChanges.length > 0 || removedItems.length > 0 || notesChanges.length > 0;
@@ -2430,7 +2436,7 @@ function showDupWOModal(existing, incoming){
             ${notesChanges.map(({qbItem,sysItem})=>`
             <div style="background:#FFF5E6;border:1px solid #f0a500;border-radius:4px;padding:6px 10px;font-size:12px">
               <div style="color:#888;margin-bottom:2px">Qty ×${qbItem.qty}</div>
-              ${sysItem.notes?`<div style="color:#c0392b;text-decoration:line-through;margin-bottom:2px">${sysItem.notes}</div>`:'<div style="color:#aaa;margin-bottom:2px">(none in system)</div>'}
+              ${sysItem&&sysItem.notes?`<div style="color:#c0392b;text-decoration:line-through;margin-bottom:2px">${sysItem.notes}</div>`:'<div style="color:#aaa;margin-bottom:2px">(none in system)</div>'}
               <div style="color:#2d6a2d;font-weight:600">→ ${qbItem.notes}</div>
             </div>`).join('')}
           </div>` : ''}
@@ -2546,11 +2552,21 @@ function mergeDupWO(existingId){
     }).catch(e=>console.warn('merge new item error',e));
   });
 
-  // Update notes on existing items where QB has notes and system doesn't (or they differ)
+  // Update notes on existing items using QB item code matching
+  // This avoids wrong-item assignment when multiple items share the same qty
+  const extractCode = n=>{ if(!n) return null; const m=n.match(/^[A-Za-z]+:([A-Za-z0-9.]+)/); return m?m[1].toLowerCase():null; };
   const notesUpdated = [];
   incoming.items.forEach(qbItem=>{
     if(!qbItem.notes) return;
-    const sysItem = existing.items.find(s=>String(s.qty).trim()===String(qbItem.qty).trim());
+    const qbCode = extractCode(qbItem.notes);
+    // Find system item that either has this exact code or has no note yet
+    let sysItem = qbCode
+      ? existing.items.find(s=>extractCode(s.notes)===qbCode)  // exact code match
+      : null;
+    // Fallback: find system item with same qty and no note
+    if(!sysItem){
+      sysItem = existing.items.find(s=>String(s.qty).trim()===String(qbItem.qty).trim() && !(s.notes||'').trim());
+    }
     if(!sysItem) return;
     const qbNote = qbItem.notes.trim();
     const sysNote = (sysItem.notes||'').trim();
@@ -3330,7 +3346,11 @@ function stoplightDot(wo){
 }
 
 // Dual-station detection
-const DUAL_STATIONS={'IOWA → SHEAR':['IOWA','SHEAR'],'SHEAR → BREAK':['SHEAR','BREAK'],'SLIP / DRIVE':['SLIP','DRIVE']};
+const DUAL_STATIONS={
+  'IOWA → SHEAR':['IOWA','SHEAR'],
+  'SHEAR → BREAK':['SHEAR','BREAK'],
+  'IOWA → SHEAR → BREAK':['IOWA','SHEAR','BREAK']
+};
 function isDualStation(station){return!!DUAL_STATIONS[station];}
 function syncTruckWeights(wo){saveState();} // weight now always live — no-op kept for compat
 
@@ -3501,7 +3521,7 @@ function cancelEdit(){
 // ── ADMIN CONFIG HELPERS — always read live, fallback to hard-coded ──────
 function getCustomers(){ return(state.adminConfig&&state.adminConfig.customers)||[]; }
 function getOperators(){ return(state.adminConfig&&state.adminConfig.operators)||['Joel','Dan','Ed','Evril','Nick W','Julio','Andrew','Nick C','Chris']; }
-function getStations(){ return(state.adminConfig&&state.adminConfig.stations)||['IOWA','SHEAR','IOWA → SHEAR','SLIP','DRIVE','SLIP / DRIVE','BREAK','SHEAR → BREAK','PLENUMS','PICK / PULL','STANDING S','RETURN AIR FRAMES','ROLLERS','OTHER']; }
+function getStations(){ return(state.adminConfig&&state.adminConfig.stations)||['IOWA','SHEAR','IOWA → SHEAR','IOWA → SHEAR → BREAK','SLIP','DRIVE','BREAK','SHEAR → BREAK','PLENUMS','PICK / PULL','STANDING S','RETURN AIR FRAMES','ROLLERS','OTHER']; }
 function getTypes(){ return(state.adminConfig&&state.adminConfig.types)||['Stainless','Galvanized','Galvaneel','Aluminum']; }
 function getStationDefault(op){ const d=(state.adminConfig&&state.adminConfig.stationDefaults)||{Joel:'IOWA',Dan:'SHEAR',Ed:'SLIP / DRIVE',Evril:'PLENUMS'}; return d[op]||''; }
 function getMgmtUsers(){ return(state.adminConfig&&state.adminConfig.mgmtUsers)||['Andrew','Nick C','Chris']; }
@@ -3509,7 +3529,7 @@ function initAdminConfig(){
   if(!state.adminConfig)state.adminConfig={};
   if(!state.adminConfig.operators)state.adminConfig.operators=['Joel','Dan','Ed','Evril','Nick W','Julio','Andrew','Nick C','Chris'];
   if(!state.adminConfig.stationDefaults)state.adminConfig.stationDefaults={Joel:'IOWA',Dan:'SHEAR',Ed:'SLIP / DRIVE',Evril:'PLENUMS'};
-  if(!state.adminConfig.stations)state.adminConfig.stations=['IOWA','SHEAR','IOWA → SHEAR','SLIP','DRIVE','SLIP / DRIVE','BREAK','SHEAR → BREAK','PLENUMS','PICK / PULL','STANDING S','RETURN AIR FRAMES','ROLLERS','OTHER'];
+  if(!state.adminConfig.stations)state.adminConfig.stations=['IOWA','SHEAR','IOWA → SHEAR','IOWA → SHEAR → BREAK','SLIP','DRIVE','BREAK','SHEAR → BREAK','PLENUMS','PICK / PULL','STANDING S','RETURN AIR FRAMES','ROLLERS','OTHER'];
   if(!state.adminConfig.types)state.adminConfig.types=['Stainless','Galvanized','Galvaneel','Aluminum'];
   if(!state.adminConfig.mgmtUsers)state.adminConfig.mgmtUsers=['Andrew','Nick C','Chris'];
   // Customers now live in adminConfig — seeded from snap on first load
@@ -3518,7 +3538,7 @@ function initAdminConfig(){
   }
 }
 
-const Q_STATIONS=['IOWA','SHEAR','IOWA → SHEAR','SLIP / DRIVE','SLIP','DRIVE','BREAK','SHEAR → BREAK','PLENUMS','PICK / PULL','STANDING S','RETURN AIR FRAMES','ROLLERS','OTHER'];
+const Q_STATIONS=['IOWA','SHEAR','SLIP','DRIVE','BREAK','PLENUMS','PICK / PULL','STANDING S','RETURN AIR FRAMES','ROLLERS','OTHER'];
 let activeQStation=Q_STATIONS[0];
 
 function printQueueList(station){
@@ -3747,18 +3767,23 @@ function renderQueue(c){
   const totalOpen=allItems.length;
   const totalUnassigned=allItems.filter(i=>!i.assignee).length;
   const tabs=Q_STATIONS.map(s=>{
-    const cnt=allItems.filter(i=>i.station===s).length;
+    // Count items whose current active step matches this station
+    const cnt=allItems.filter(i=>{
+      const activeStep = getActiveStep(i.item||i);
+      return activeStep===s;
+    }).length;
     return`<div class="stab${activeQStation===s?' active':''}" onclick="switchQStation('${s}',this)">${s}${cnt?` <span style="opacity:.7">(${cnt})</span>`:''}
     </div>`;
   }).join('');
-  // Get items for active station, normalize priorities and write back to state immediately
+  // Get items for active station using getActiveStep
   const stationAllItems = [];
   state.wos.forEach(wo=>{
     const isPastQ = wo.delivery && new Date(wo.delivery+'T00:00:00') < today;
     if(isPastQ && !showAllQueue) return;
     wo.items.forEach(item=>{
-      if(item.status!=='Complete' && item.station===activeQStation){
-        // Attach wo-level fields to item so renderQueueItem can display them
+      if(item.status==='Complete') return;
+      const activeStep = getActiveStep(item);
+      if(activeStep===activeQStation){
         item.woNum = wo.woNum;
         item.customer = wo.customer;
         item.delivery = wo.delivery;
@@ -3804,7 +3829,11 @@ function renderQueue(c){
           <strong style="font-size:13px">WO #${item.woNum}</strong>
           <span style="font-size:13px;color:var(--blue)">${item.customer}</span>
           ${item.delivery?`<span class="badge badge-amber">📅 ${fmtDate(item.delivery)}</span>`:''}
-          ${item.isDual?`<span class="badge badge-purple">⚡ ${item.station}</span>`:
+          ${item.isDual?(()=>{
+            const steps=DUAL_STATIONS[item.station]||[];
+            const onStep = item.step1Status!=='Complete'?1:item.step2Status!=='Complete'?2:3;
+            return `<span class="badge badge-purple">⚡ Step ${onStep}/${steps.length}: ${steps[onStep-1]||''}</span>`;
+          })():
             item.assignee?`<span class="badge badge-blue">${item.assignee}</span>`:'<span class="badge badge-red">Unassigned</span>'}
         </div>
         <div style="font-size:12px;color:var(--text2)">${item.productCat||item.type||''}${item.gauge?' · '+item.gauge:''}${item.size?' · '+item.size:''}${item.qty?' · Qty '+item.qty:''}${item.bundle?' · Bundle '+item.bundle:''}</div>
@@ -3822,7 +3851,16 @@ function renderQueue(c){
           <button class="btn btn-xs" onclick="printQueueSlip(${item.woId},'${item.id}')" title="Print work slip">🖨</button>
           <button class="btn btn-xs btn-success" onclick="setLIStatusQ(${item.woId},'${item.id}','Complete')">✓ Done</button>
         </div>`:`<div class="flex gap6">
-          <button class="btn btn-xs" onclick="printQueueSlip(${item.woId},'${item.id}')" title="Print work slip">🖨</button>
+          ${(()=>{
+            const steps = DUAL_STATIONS[item.station]||[];
+            const currentStep = item.step1Status!=='Complete' ? 1 : item.step2Status!=='Complete' ? 2 : 3;
+            const stepName = steps[currentStep-1]||'';
+            const nextName = steps[currentStep]||'';
+            return `<button class="btn btn-xs" onclick="printQueueSlip(${item.woId},'${item.id}')" title="Print work slip">🖨</button>
+            <button class="btn btn-xs btn-success" onclick="completeQueueStep(${item.woId},'${item.id}',${currentStep})">
+              ✓ Done ${stepName}${nextName?' → '+nextName:''}
+            </button>`;
+          })()}
         </div>`}
         <div class="flex gap6" style="align-items:center">
           <span style="font-size:11px;color:var(--text3);white-space:nowrap">Bundle #:</span>
@@ -4022,6 +4060,19 @@ function renderQueue(c){
   <div class="station-tab">${tabs}</div>${_rows}`;
 }
 
+// Get the current active queue station for a multi-step item
+function getActiveStep(item){
+  if(!isDualStation(item.station)) return item.station;
+  const steps = DUAL_STATIONS[item.station];
+  // Step through each — find first incomplete step
+  if(item.step1Status !== 'Complete') return steps[0];
+  if(steps.length < 3) return item.step2Status !== 'Complete' ? steps[1] : null;
+  // 3-step
+  if(item.step2Status !== 'Complete') return steps[1];
+  if((item.step3Status||'') !== 'Complete') return steps[2];
+  return null;
+}
+
 function getQueueItems(){
   const today = new Date(); today.setHours(0,0,0,0);
   const allItems = [];
@@ -4029,12 +4080,13 @@ function getQueueItems(){
     const isPast = wo.delivery && new Date(wo.delivery+'T00:00:00') < today;
     if(isPast && !showAllQueue) return;
     wo.items.forEach(item=>{
-      if(item.status !== 'Complete' && item.station === activeQStation){
+      if(item.status === 'Complete') return;
+      const activeStep = getActiveStep(item);
+      if(activeStep === activeQStation){
         allItems.push({woId: wo.id, item});
       }
     });
   });
-  // Sort first, then assign clean sequential priorities
   allItems.sort(queueSort);
   return allItems;
 }
@@ -4247,6 +4299,49 @@ function quickAssign(woId,itemId,val){
   item.assignee=val;item.status=val?'In Process':'Pending';
   saveState();updateBadges();toast(val?`Assigned to ${val}`:'Unassigned');
   sbUpdateLI(woId, itemId, {assignee: val, status: item.status}).catch(e=>console.warn('sbUpdateLI assignee error',e));
+}
+
+function completeQueueStep(woId, itemId, stepNum){
+  const wo = state.wos.find(w=>w.id===woId);
+  if(!wo) return;
+  const item = wo.items.find(i=>i.id==itemId);
+  if(!item) return;
+  const steps = DUAL_STATIONS[item.station]||[];
+  const op = state.currentUser||'';
+  const nextStep = steps[stepNum]||'';
+
+  if(stepNum===1){
+    item.step1Status='Complete';
+    item.step1CompletedBy=op;
+    toast(`✓ ${steps[0]} done${nextStep?' — moving to '+nextStep:''}`);
+  } else if(stepNum===2){
+    item.step2Status='Complete';
+    item.step2CompletedBy=op;
+    if(nextStep){
+      toast(`✓ ${steps[1]} done — moving to ${nextStep}`);
+    } else {
+      item.status='Complete';
+      item.completedBy=op;
+      item.completedAt=new Date().toISOString();
+      toast(`✓ ${steps[1]} done — item complete`);
+    }
+  } else if(stepNum===3){
+    item.step3Status='Complete';
+    item.step3CompletedBy=op;
+    item.status='Complete';
+    item.completedBy=op;
+    item.completedAt=new Date().toISOString();
+    toast(`✓ ${steps[2]} done — item complete`);
+  }
+
+  saveState();
+  sbUpdateLI(woId, itemId, {
+    step1Status: item.step1Status, step1CompletedBy: item.step1CompletedBy,
+    step2Status: item.step2Status, step2CompletedBy: item.step2CompletedBy,
+    status: item.status, completedBy: item.completedBy, completedAt: item.completedAt
+  }).catch(e=>console.warn('completeQueueStep error',e));
+  updateBadges();
+  renderQueue(document.getElementById('content'));
 }
 
 function setLIStatusQ(woId,itemId,status){
@@ -6996,8 +7091,8 @@ function removeHardwareItem(i){
 const QB_CAT_MAP = {
   'GlvSht':    'Flat Sheet',
   'NonGlvSht': 'Flat Sheet',
-  'GlvCoil':   'Coil Stock (1x120)',
-  'GVNLCoil':  'Coil Stock (1x120)',
+  'GlvCoil':   'Other / Hardware',
+  'GVNLCoil':  'Other / Hardware',
   'Blank':     'Flat Sheet',
   'HVACAcsry': 'Other / Hardware',
   'Plenums':   'PLENUMS',
@@ -7017,27 +7112,41 @@ function qbMaterial(cat, desc){
 // Parse "26 Ga. 48\" x 96\" Galv" → {gauge:'26', size:'48x96'}
 function qbParseDesc(desc){
   const d=desc||'';
-  // Gauge: "26 Ga." or "26ga" or ".040" (aluminum)
   const gaMatch=d.match(/^(\d+)\s*[Gg]a/);
-  const alMatch=d.match(/^\.(\d+)/); // e.g. .040 aluminum
+  const alMatch=d.match(/^\.(\d+)/);
   const gauge=gaMatch?gaMatch[1]:alMatch?'.'+alMatch[1]:'';
-  // Size: "48" x 96"" or "48x96"
-  const sizeMatch=d.match(/(\d+(?:\.\d+)?)["”]?\s*[xX×]\s*(\d+(?:\.\d+)?)["”]?/);
-  const size=sizeMatch?sizeMatch[1]+'x'+sizeMatch[2]:'';
-  return{gauge,size};
+  const sizeMatch=d.match(/(\d+(?:\.\d+)?)["]?\s*[xX×]\s*(\d+(?:\.\d+)?)["]?/);
+  if(sizeMatch) return{gauge, size:sizeMatch[1]+'x'+sizeMatch[2]};
+  const slipMatch=d.match(/(\d+(?:\.\d+)?)['"\u2019]\s*(Slip|Drive|Return Air|Standing)/i);
+  if(slipMatch) return{gauge, size:slipMatch[1]+"' "+slipMatch[2]};
+  return{gauge, size:''};
 }
 
 // Auto-detect station from QB category + description
+// IOWA and SHEAR are set manually — not auto-assigned
 function qbStation(cat, desc){
   const d=(desc||'').toLowerCase();
-  if(d.includes('slip')&&d.includes('drive'))return'SLIP / DRIVE';
+  if(d.includes('standing-s')||d.includes('standing s'))return'STANDING S';
+  if(d.includes('slip')&&d.includes('drive'))return'SLIP';
   if(d.includes('slip'))return'SLIP';
   if(d.includes('drive'))return'DRIVE';
-  if(d.includes('standing-s')||d.includes('standing s'))return'STANDING S';
   if(d.includes('plenum')||cat==='Plenums')return'PLENUMS';
-  if(d.includes('coil'))return'IOWA';
-  if(cat==='GlvSht'||cat==='NonGlvSht'||cat==='Blank')return'SHEAR';
+  // 1x120 coil stock → SHEAR
+  if((cat==='GlvCoil'||cat==='GVNLCoil')&&(d.includes('1x120')||d.includes('1" x 120')||d.includes("1' x 120")))return'SHEAR';
+  if(d.includes('coil')||cat==='GlvCoil'||cat==='GVNLCoil')return'OTHER';
+  if(cat==='GlvSht'||cat==='NonGlvSht'||cat==='Blank')return'PICK / PULL';
   return'PICK / PULL';
+}
+
+// Auto-detect product category override for slip/drive/standing s/coil items
+function qbProductCat(cat, desc){
+  const d=(desc||'').toLowerCase();
+  if(d.includes('standing-s')||d.includes('standing s')) return'Standing S';
+  if(d.includes('slip')) return'Slip';
+  if(d.includes('drive')) return'Drive';
+  // 1x120 coil stock → Coil Stock (1x120)
+  if((cat==='GlvCoil'||cat==='GVNLCoil')&&(d.includes('1x120')||d.includes('1" x 120')||d.includes("1' x 120"))) return'Coil Stock (1x120)';
+  return QB_CAT_MAP[cat] || 'Other / Hardware';
 }
 
 let _qbInvoices = []; // parsed invoices waiting for selection
@@ -7166,7 +7275,7 @@ function parseQBWorkbook(wb, filename){
       const desc   = itemMatch ? itemMatch[3] : (memo || itemRaw);
 
       const {gauge, size} = qbParseDesc(desc);
-      const productCat = QB_CAT_MAP[qbCat] || 'Other / Hardware';
+      const productCat = qbProductCat(qbCat, desc);
       const type       = qbMaterial(qbCat, desc);
       const station    = qbStation(qbCat, desc);
 
@@ -7452,17 +7561,21 @@ function renderQBList(invoices){
     const sysQtys = existing.items.map(i=>String(i.qty).trim()).sort();
     const qbQtys  = inv.items.map(i=>String(i.qty).trim()).sort();
     if(JSON.stringify(sysQtys) !== JSON.stringify(qbQtys)) return true;
-    // Check packing notes — if QB has a note, check if it exists anywhere in system notes
-    // Use pool matching for duplicate qtys (multiple items with same qty)
-    const sysNotePool = existing.items.map(i=>(i.notes||'').trim().toLowerCase());
+    // Skip notes check if WO is complete — no point flagging finished orders
+    const allDone = existing.items.every(i=>i.status==='Complete');
+    if(allDone) return false;
+    // Check notes: verify every QB code that exists in system is accounted for
+    // Build both pools and check set equality (order independent)
+    const extractQBCode = n=>{ if(!n) return null; const m = n.match(/^[A-Za-z]+:([A-Za-z0-9.]+)/); return m ? m[1].toLowerCase() : null; };
+    const sysCodeSet1 = new Set(existing.items.map(i=>extractQBCode(i.notes)).filter(Boolean));
+    // Only flag if QB has a code that's completely absent from system
+    const sysQtySet1 = new Set(existing.items.map(i=>String(i.qty).trim()));
     return inv.items.some(qbItem=>{
       if(!qbItem.notes) return false;
-      const qbNote = qbItem.notes.trim().toLowerCase();
-      // If this QB note already exists in system note pool, it's fine
-      if(sysNotePool.includes(qbNote)) return false;
-      // If system has no notes at all for this qty, flag it
-      const sysMatch = existing.items.find(s=>String(s.qty).trim()===String(qbItem.qty).trim());
-      return !sysMatch || !(sysMatch.notes||'').trim();
+      if(!sysQtySet1.has(String(qbItem.qty).trim())) return false; // new item
+      const qbCode = extractQBCode(qbItem.notes);
+      if(!qbCode) return false;
+      return !sysCodeSet1.has(qbCode); // code completely missing from system
     });
   });
   const dupesClean = dupes.filter(inv=>!dupesNeedReview.includes(inv));
@@ -7549,13 +7662,17 @@ function dupes_delete_clean(){
     const sysQP = existing.items.map(i=>String(i.qty).trim()).sort();
     const qbQP  = inv.items.map(i=>String(i.qty).trim()).sort();
     if(JSON.stringify(sysQP) !== JSON.stringify(qbQP)) return true;
-    const sysNotePool2 = existing.items.map(i=>(i.notes||'').trim().toLowerCase());
+    const allDone2 = existing.items.every(i=>i.status==='Complete');
+    if(allDone2) return false;
+    const extractQBCode2 = n=>{ if(!n) return null; const m = n.match(/^[A-Za-z]+:([A-Za-z0-9.]+)/); return m ? m[1].toLowerCase() : null; };
+    const sysCodeSet2 = new Set(existing.items.map(i=>extractQBCode2(i.notes)).filter(Boolean));
+    const sysQtySet2 = new Set(existing.items.map(i=>String(i.qty).trim()));
     return inv.items.some(qbItem=>{
       if(!qbItem.notes) return false;
-      const qbNote = qbItem.notes.trim().toLowerCase();
-      if(sysNotePool2.includes(qbNote)) return false;
-      const sysMatch = existing.items.find(s=>String(s.qty).trim()===String(qbItem.qty).trim());
-      return !sysMatch || !(sysMatch.notes||'').trim();
+      if(!sysQtySet2.has(String(qbItem.qty).trim())) return false;
+      const qbCode = extractQBCode2(qbItem.notes);
+      if(!qbCode) return false;
+      return !sysCodeSet2.has(qbCode);
     });
   });
   updateQBPillCount();
