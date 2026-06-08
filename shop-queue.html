@@ -242,6 +242,7 @@
 <div id="header">
   <h1>🏭 Shop Queue</h1>
   <button onclick="changeUser()" style="background:var(--surface);border:1px solid var(--border);color:var(--text2);padding:6px 14px;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer" id="user-label">—</button>
+  <button onclick="toggleShowDone()" id="show-done-btn" style="background:var(--surface);border:1px solid var(--border);color:var(--text2);padding:6px 14px;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer">☑ Done</button>
   <button onclick="loadData()" style="background:var(--surface);border:1px solid var(--border);color:var(--text2);padding:6px 14px;border-radius:20px;font-size:13px;cursor:pointer">↻</button>
 </div>
 
@@ -276,6 +277,7 @@ let allItems = []; // flat list of line items with wo info attached
 let operators = ['Joel','Dan','Ed','Evril','Nick W','Julio','Andrew','Nick C','Chris'];
 let stations = [];
 let pollTimer = null;
+let showDone = false;
 
 // ── SUPABASE HELPERS ─────────────────────────────────────────────────────────
 async function sbGet(table, params = '') {
@@ -328,7 +330,7 @@ async function loadData() {
         woId:        li.wo_id,
         woNum:       li.wo_num || woMap[li.wo_id]?.wo_num || '—',
         customer:    li.customer || woMap[li.wo_id]?.customer || '—',
-        delivery:    woMap[li.wo_id]?.delivery_date || '',
+        delivery:    woMap[li.wo_id]?.delivery || '',
         station:     li.station || 'OTHER',
         productCat:  li.product_cat || '',
         type:        li.type || '',
@@ -406,6 +408,9 @@ function renderTiles() {
   let items = activeStation === 'ALL'
     ? allItems
     : allItems.filter(i => i.station === activeStation);
+
+  // Hide completed items unless showDone is toggled on
+  if (!showDone) items = items.filter(i => i.status !== 'Complete');
 
   // Sort: In Process first, then Pending by priority/delivery, then Complete
   items = [...items].sort((a, b) => {
@@ -705,6 +710,16 @@ function toast(msg) {
   el.classList.add('show');
   clearTimeout(_toastTimer);
   _toastTimer = setTimeout(() => el.classList.remove('show'), 2000);
+}
+
+// ── TOGGLE DONE ──────────────────────────────────────────────────────────────
+function toggleShowDone() {
+  showDone = !showDone;
+  const btn = document.getElementById('show-done-btn');
+  btn.style.background = showDone ? '#1a3a25' : 'var(--surface)';
+  btn.style.color = showDone ? '#4CAF7D' : 'var(--text2)';
+  btn.style.borderColor = showDone ? '#4CAF7D' : 'var(--border)';
+  renderTiles();
 }
 
 // ── BOOT ──────────────────────────────────────────────────────────────────────
