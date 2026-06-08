@@ -186,6 +186,47 @@
   @keyframes spin { to { transform: rotate(360deg); } }
   #loading-screen p { color: var(--text2); font-size: 15px; }
 
+  /* ── BUNDLE PROMPT MODAL ── */
+  #bundle-modal {
+    position: fixed; inset: 0; background: rgba(0,0,0,.88);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 9999; padding: 24px;
+  }
+  #bundle-modal .box {
+    background: var(--card); border-radius: 20px; padding: 28px 24px;
+    max-width: 380px; width: 100%; border: 2px solid var(--amber);
+    box-shadow: 0 0 40px rgba(240,165,0,.2);
+  }
+  #bundle-modal h2 { font-size: 20px; font-weight: 800; margin-bottom: 4px; }
+  #bundle-modal .sub { font-size: 13px; color: var(--text2); margin-bottom: 20px; line-height: 1.4; }
+  #bundle-modal .item-preview {
+    background: var(--surface); border-radius: 10px; padding: 12px 14px;
+    margin-bottom: 18px; font-size: 14px; border: 1px solid var(--border);
+  }
+  #bundle-modal .item-preview strong { color: var(--text); display: block; font-size: 16px; margin-bottom: 2px; }
+  #bundle-modal .item-preview span { color: var(--text2); font-size: 12px; }
+  #bundle-input {
+    width: 100%; padding: 14px 16px; font-size: 22px; font-weight: 800;
+    background: var(--surface); color: var(--text);
+    border: 2px solid var(--amber); border-radius: 12px;
+    text-align: center; letter-spacing: 2px; margin-bottom: 14px;
+    -webkit-appearance: none;
+  }
+  #bundle-input::placeholder { font-size: 16px; font-weight: 400; letter-spacing: 0; color: var(--text3); }
+  #bundle-modal .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  #bundle-modal .btn-confirm {
+    padding: 14px; border-radius: 12px; border: none;
+    background: var(--green); color: #000; font-size: 16px; font-weight: 800;
+    cursor: pointer; -webkit-appearance: none;
+  }
+  #bundle-modal .btn-skip {
+    padding: 14px; border-radius: 12px; border: 2px solid var(--border);
+    background: transparent; color: var(--text2); font-size: 15px; font-weight: 700;
+    cursor: pointer; -webkit-appearance: none;
+  }
+  #bundle-modal .btn-confirm:active { opacity: .8; }
+  #bundle-modal .btn-skip:active { opacity: .8; }
+
   /* ── USER PICKER MODAL ── */
   #user-modal {
     position: fixed; inset: 0; background: rgba(0,0,0,.85);
@@ -229,6 +270,22 @@
 <div id="loading-screen">
   <div class="spinner"></div>
   <p>Loading shop queue…</p>
+</div>
+
+<div id="bundle-modal" style="display:none">
+  <div class="box">
+    <h2>📦 Bundle Number</h2>
+    <div class="sub">Which bundle are these sheets being pulled from? This gets recorded for inventory tracking.</div>
+    <div class="item-preview" id="bundle-item-preview">
+      <strong id="bundle-preview-spec">—</strong>
+      <span id="bundle-preview-sub">—</span>
+    </div>
+    <input id="bundle-input" type="text" inputmode="numeric" placeholder="Enter bundle #" autocomplete="off">
+    <div class="btn-row">
+      <button class="btn-skip" onclick="bundleModalSkip()">Skip</button>
+      <button class="btn-confirm" onclick="bundleModalConfirm()">✓ Confirm</button>
+    </div>
+  </div>
 </div>
 
 <div id="user-modal" style="display:none">
@@ -582,7 +639,7 @@ function renderActions(item) {
       onclick="updateStatus(${item._dbId},'${escAttr(item.woId)}','${inProg ? 'Pending' : 'In Process'}')">
       ${inProg ? '⏸ Pause' : '▶ Start'}
     </button>
-    <button class="btn-action btn-done" onclick="updateStatus(${item._dbId},'${escAttr(item.woId)}','Complete')">
+    <button class="btn-action btn-done" onclick="requestComplete(${item._dbId},'${escAttr(item.woId)}')">
       ✓ Done
     </button>
   </div>`;
@@ -629,6 +686,68 @@ function renderDualSteps(item) {
 }
 
 // ── ACTIONS ──────────────────────────────────────────────────────────────────
+// ── BUNDLE PROMPT FOR PICK/PULL ─────────────────────────────────────────────
+let _pendingComplete = null; // { dbId, woId }
+
+function requestComplete(dbId, woId) {
+  const item = allItems.find(i => i._dbId == dbId);
+  if (!item) return;
+
+  const isPickPull = (item.station || '').toUpperCase().includes('PICK');
+
+  // If not Pick/Pull, or bundle already filled in, go straight to complete
+  if (!isPickPull || item.bundle) {
+    updateStatus(dbId, woId, 'Complete');
+    return;
+  }
+
+  // Show bundle prompt
+  _pendingComplete = { dbId, woId };
+  const spec = [item.gauge, item.size || item.productCat].filter(Boolean).join(' · ') || item.productCat || '—';
+  document.getElementById('bundle-preview-spec').textContent = spec;
+  document.getElementById('bundle-preview-sub').textContent = `WO #${item.woNum} · ${item.customer} · ×${item.qty||'?'}`;
+  document.getElementById('bundle-input').value = '';
+  document.getElementById('bundle-modal').style.display = 'flex';
+  setTimeout(() => document.getElementById('bundle-input').focus(), 100);
+}
+
+async function bundleModalConfirm() {
+  const bundleNum = (document.getElementById('bundle-input').value || '').trim();
+  document.getElementById('bundle-modal').style.display = 'none';
+  if (!_pendingComplete) return;
+
+  const { dbId, woId } = _pendingComplete;
+  _pendingComplete = null;
+
+  // Save bundle number to the item + Supabase before completing
+  if (bundleNum) {
+    const item = allItems.find(i => i._dbId == dbId);
+    if (item) {
+      item.bundle = bundleNum;
+      try {
+        await sbPatch('line_items', { id: dbId }, { bundle: bundleNum });
+      } catch(e) { console.warn('bundle save error', e); }
+    }
+  }
+
+  updateStatus(dbId, woId, 'Complete');
+}
+
+function bundleModalSkip() {
+  document.getElementById('bundle-modal').style.display = 'none';
+  if (!_pendingComplete) return;
+  const { dbId, woId } = _pendingComplete;
+  _pendingComplete = null;
+  updateStatus(dbId, woId, 'Complete');
+}
+
+// Allow Enter key to confirm
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.getElementById('bundle-modal').style.display !== 'none') {
+    bundleModalConfirm();
+  }
+});
+
 async function updateStatus(dbId, woId, newStatus) {
   const item = allItems.find(i => i._dbId == dbId);
   if (!item) return;
