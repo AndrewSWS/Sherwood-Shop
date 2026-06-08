@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Shop Queue</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --card: #1f2333;
+    --border: #2d3248;
+    --green: #4CAF7D;
+    --green-d: #2e7d52;
+    --amber: #f0a500;
+    --amber-d: #8a5e00;
+    --red: #e05555;
+    --blue: #5B9BD5;
+    --text: #eef0f6;
+    --text2: #9ba3bc;
+    --text3: #555d78;
+    --radius: 14px;
+    --radius-sm: 8px;
+    --shadow: 0 4px 20px rgba(0,0,0,0.5);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: -apple-system, 'SF Pro Display', sans-serif; overflow: hidden; }
+
+  /* ── HEADER ── */
+  #header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 20px 10px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 100;
+  }
+  #header h1 { font-size: 20px; font-weight: 800; color: var(--text); flex: 1; }
+  #station-tabs {
+    display: flex; gap: 6px; overflow-x: auto; padding: 10px 20px 6px;
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    scrollbar-width: none;
+  }
+  #station-tabs::-webkit-scrollbar { display: none; }
+  .station-tab {
+    padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 700;
+    cursor: pointer; white-space: nowrap; border: 2px solid transparent;
+    background: var(--card); color: var(--text2); transition: all .15s;
+    user-select: none;
+  }
+  .station-tab.active { background: var(--blue); color: #fff; border-color: transparent; }
+  .station-tab .count-badge {
+    display: inline-block; background: rgba(255,255,255,.2);
+    border-radius: 10px; padding: 1px 7px; font-size: 11px; margin-left: 5px;
+  }
+  .station-tab.has-items .count-badge { background: var(--amber); color: #000; }
+
+  /* ── MAIN CONTENT ── */
+  #main { 
+    height: calc(100vh - 120px); overflow-y: auto; padding: 14px 16px;
+    -webkit-overflow-scrolling: touch;
+  }
+  #tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+
+  /* ── TILE ── */
+  .tile {
+    background: var(--card); border-radius: var(--radius);
+    border: 2px solid var(--border); padding: 16px;
+    box-shadow: var(--shadow); transition: border-color .15s;
+    position: relative; overflow: hidden;
+  }
+  .tile.done { border-color: var(--green-d); opacity: .65; }
+  .tile.in-progress { border-color: var(--amber); }
+  .tile-accent {
+    position: absolute; top: 0; left: 0; bottom: 0; width: 5px;
+  }
+  .tile-header { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
+  .tile-num {
+    min-width: 34px; height: 34px; border-radius: 8px;
+    background: var(--surface); color: var(--text2);
+    font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .tile-title { flex: 1; }
+  .tile-customer { font-size: 15px; font-weight: 800; color: var(--text); line-height: 1.2; }
+  .tile-wo { font-size: 12px; color: var(--text3); margin-top: 2px; }
+  .tile-specs {
+    font-size: 18px; font-weight: 800; color: var(--text);
+    margin: 8px 0 4px; letter-spacing: -.3px;
+  }
+  .tile-meta {
+    display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px;
+  }
+  .chip {
+    padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600;
+    background: var(--surface); color: var(--text2);
+  }
+  .chip.green { background: #1a3a25; color: var(--green); }
+  .chip.amber { background: #2a2000; color: var(--amber); }
+  .chip.blue  { background: #1a2540; color: var(--blue); }
+  .tile-notes {
+    font-size: 12px; color: var(--amber); background: #1e1800;
+    border-radius: var(--radius-sm); padding: 6px 10px; margin-bottom: 10px;
+    border-left: 3px solid var(--amber);
+  }
+
+  /* ── STATUS BUTTONS ── */
+  .tile-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; }
+  .tile-actions.done-state { grid-template-columns: 1fr; }
+  .btn-action {
+    padding: 14px 10px; border-radius: 10px; border: none;
+    font-size: 15px; font-weight: 800; cursor: pointer;
+    transition: opacity .15s, transform .1s;
+    -webkit-appearance: none;
+  }
+  .btn-action:active { opacity: .75; transform: scale(.97); }
+  .btn-start  { background: var(--amber-d); color: var(--amber); border: 2px solid var(--amber); }
+  .btn-start.active { background: var(--amber); color: #000; }
+  .btn-done   { background: #1a3a25; color: var(--green); border: 2px solid var(--green); }
+  .btn-done.active { background: var(--green); color: #000; }
+  .btn-undo   { background: var(--surface); color: var(--text2); border: 2px solid var(--border); grid-column: 1/-1; }
+
+  /* ── ASSIGNEE ── */
+  .tile-assign { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+  .tile-assign label { font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; flex-shrink: 0; }
+  .assign-select {
+    flex: 1; background: var(--surface); color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 10px; font-size: 14px; font-weight: 600;
+    -webkit-appearance: none; appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M0 0l6 8 6-8z' fill='%239ba3bc'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 10px center;
+    padding-right: 28px;
+  }
+
+  /* ── DUAL STATION TILES ── */
+  .dual-steps { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 6px; }
+  .step-box {
+    background: var(--surface); border-radius: 10px; padding: 10px;
+    border: 2px solid var(--border);
+  }
+  .step-box.complete { border-color: var(--green-d); }
+  .step-box.in-progress { border-color: var(--amber); }
+  .step-label { font-size: 10px; font-weight: 700; color: var(--text3); text-transform: uppercase; margin-bottom: 6px; }
+  .step-btn {
+    width: 100%; padding: 10px 6px; border-radius: 8px; border: none;
+    font-size: 13px; font-weight: 800; cursor: pointer;
+    -webkit-appearance: none;
+  }
+  .step-btn:active { opacity: .75; }
+  .step-btn.pending  { background: var(--surface); color: var(--text3); border: 1px solid var(--border); }
+  .step-btn.running  { background: var(--amber); color: #000; }
+  .step-btn.done-btn { background: var(--green); color: #000; }
+
+  /* ── EMPTY / LOADING / STATUS ── */
+  #status-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: var(--surface); border-top: 1px solid var(--border);
+    padding: 8px 20px; display: flex; align-items: center; gap: 10px;
+    font-size: 12px; color: var(--text3);
+  }
+  #sync-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
+  #sync-dot.syncing { background: var(--amber); animation: pulse .6s infinite alternate; }
+  #sync-dot.error { background: var(--red); }
+  @keyframes pulse { from { opacity: .4; } to { opacity: 1; } }
+  #last-sync { flex: 1; }
+  #item-count { font-weight: 700; color: var(--text2); }
+
+  .empty-state {
+    text-align: center; padding: 60px 20px; color: var(--text3);
+  }
+  .empty-state .big { font-size: 48px; margin-bottom: 12px; }
+  .empty-state p { font-size: 16px; }
+
+  #loading-screen {
+    position: fixed; inset: 0; background: var(--bg);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 16px; z-index: 9999;
+  }
+  #loading-screen .spinner {
+    width: 40px; height: 40px; border: 3px solid var(--border);
+    border-top-color: var(--blue); border-radius: 50%;
+    animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #loading-screen p { color: var(--text2); font-size: 15px; }
+
+  /* ── USER PICKER MODAL ── */
+  #user-modal {
+    position: fixed; inset: 0; background: rgba(0,0,0,.85);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 9998; padding: 20px;
+  }
+  #user-modal .box {
+    background: var(--card); border-radius: 20px; padding: 28px 24px;
+    max-width: 420px; width: 100%; border: 2px solid var(--border);
+  }
+  #user-modal h2 { font-size: 22px; font-weight: 800; margin-bottom: 6px; }
+  #user-modal p  { font-size: 14px; color: var(--text2); margin-bottom: 20px; }
+  #user-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .user-btn {
+    padding: 16px 8px; border-radius: 12px; background: var(--surface);
+    border: 2px solid var(--border); color: var(--text); font-size: 15px; font-weight: 700;
+    cursor: pointer; text-align: center; transition: all .15s;
+    -webkit-appearance: none;
+  }
+  .user-btn:active { background: var(--blue); border-color: var(--blue); color: #fff; }
+
+  /* ── TOAST ── */
+  #toast {
+    position: fixed; bottom: 60px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: #111; color: #fff; padding: 10px 22px; border-radius: 30px;
+    font-size: 14px; font-weight: 600; opacity: 0; transition: all .25s;
+    pointer-events: none; white-space: nowrap; z-index: 9997;
+    border: 1px solid var(--border);
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 500px) {
+    #tiles { grid-template-columns: 1fr; }
+    .tile-specs { font-size: 16px; }
+    #header h1 { font-size: 18px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="loading-screen">
+  <div class="spinner"></div>
+  <p>Loading shop queue…</p>
+</div>
+
+<div id="user-modal" style="display:none">
+  <div class="box">
+    <h2>Who are you?</h2>
+    <p>Tap your name to get started</p>
+    <div id="user-grid"></div>
+  </div>
+</div>
+
+<div id="header">
+  <h1>🏭 Shop Queue</h1>
+  <button onclick="changeUser()" style="background:var(--surface);border:1px solid var(--border);color:var(--text2);padding:6px 14px;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer" id="user-label">—</button>
+  <button onclick="loadData()" style="background:var(--surface);border:1px solid var(--border);color:var(--text2);padding:6px 14px;border-radius:20px;font-size:13px;cursor:pointer">↻</button>
+</div>
+
+<div id="station-tabs"></div>
+
+<div id="main">
+  <div id="tiles"></div>
+</div>
+
+<div id="status-bar">
+  <div id="sync-dot"></div>
+  <span id="last-sync">Not synced yet</span>
+  <span id="item-count"></span>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────────────────────────────
+const SB_URL = 'https://ecndvwmbycyppqkbvuzs.supabase.co';
+const SB_KEY = 'sb_publishable_DPSLNDOI___sDI-lt3YbpQ_TGJbHaV-';
+const HDR = {
+  'Content-Type': 'application/json',
+  'apikey': SB_KEY,
+  'Authorization': 'Bearer ' + SB_KEY
+};
+
+// ── STATE ────────────────────────────────────────────────────────────────────
+let currentUser = localStorage.getItem('sq_user') || '';
+let activeStation = localStorage.getItem('sq_station') || 'ALL';
+let allItems = []; // flat list of line items with wo info attached
+let operators = ['Joel','Dan','Ed','Evril','Nick W','Julio','Andrew','Nick C','Chris'];
+let stations = [];
+let pollTimer = null;
+
+// ── SUPABASE HELPERS ─────────────────────────────────────────────────────────
+async function sbGet(table, params = '') {
+  const url = `${SB_URL}/rest/v1/${table}${params ? '?' + params : ''}`;
+  const r = await fetch(url, { headers: HDR });
+  if (!r.ok) throw new Error(`SB GET ${table} ${r.status}`);
+  return r.json();
+}
+
+async function sbPatch(table, match, body) {
+  const params = Object.entries(match).map(([k,v]) => `${k}=eq.${v}`).join('&');
+  const r = await fetch(`${SB_URL}/rest/v1/${table}?${params}`, {
+    method: 'PATCH',
+    headers: { ...HDR, 'Prefer': 'return=minimal' },
+    body: JSON.stringify(body)
+  });
+  if (!r.ok) throw new Error(`SB PATCH ${table} ${r.status}`);
+}
+
+// ── DATA LOAD ────────────────────────────────────────────────────────────────
+async function loadData() {
+  setSyncState('syncing');
+  try {
+    // Load config for operators/stations
+    const config = await sbGet('admin_config', 'select=key,value');
+    config.forEach(row => {
+      try {
+        const val = typeof row.value === 'string' ? JSON.parse(row.value) : row.value;
+        if (row.key === 'operators') operators = val;
+        if (row.key === 'stations')  stations  = val;
+      } catch(e) {}
+    });
+
+    // Load active (non-delivered) work orders + line items
+    const [wosRaw, lisRaw] = await Promise.all([
+      sbGet('work_orders', 'delivered=eq.false&order=created_at.asc&limit=300'),
+      sbGet('line_items',  'status=neq.Skip&order=id.asc&limit=3000')
+    ]);
+
+    // Filter to WOs that aren't completely done or delivered
+    const activeWOIds = new Set(wosRaw.filter(w => !w.delivered).map(w => w.id));
+    const woMap = {};
+    wosRaw.forEach(w => { woMap[w.id] = w; });
+
+    // Build flat item list
+    allItems = lisRaw
+      .filter(li => activeWOIds.has(li.wo_id))
+      .map(li => ({
+        _dbId:       li.id,
+        woId:        li.wo_id,
+        woNum:       li.wo_num || woMap[li.wo_id]?.wo_num || '—',
+        customer:    li.customer || woMap[li.wo_id]?.customer || '—',
+        delivery:    woMap[li.wo_id]?.delivery_date || '',
+        station:     li.station || 'OTHER',
+        productCat:  li.product_cat || '',
+        type:        li.type || '',
+        gauge:       li.gauge || '',
+        size:        li.size || '',
+        qty:         li.qty || '',
+        wtUnit:      li.wt_unit || 0,
+        weight:      li.weight || 0,
+        notes:       li.notes || '',
+        bundle:      li.bundle || '',
+        assignee:    li.assignee || '',
+        status:      li.status || 'Pending',
+        completedBy: li.completed_by || '',
+        completedAt: li.completed_at || '',
+        priority:    li.priority || 999,
+        isDual:      li.is_dual || false,
+        step1Op:     li.step1_op || '',
+        step1Status: li.step1_status || 'Pending',
+        step2Op:     li.step2_op || '',
+        step2Status: li.step2_status || 'Pending',
+      }));
+
+    // Derive station list from live data + config
+    const liveStations = [...new Set(allItems.map(i => i.station))].filter(Boolean);
+    if (!stations.length) stations = liveStations;
+    // Always show stations that have items, plus config stations
+    const allStations = [...new Set([...stations, ...liveStations])];
+
+    renderStationTabs(allStations);
+    renderTiles();
+    setSyncState('ok');
+    document.getElementById('last-sync').textContent = 'Updated ' + new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+  } catch(e) {
+    setSyncState('error');
+    document.getElementById('last-sync').textContent = 'Sync failed — tap ↻ to retry';
+    console.error('loadData error:', e);
+  }
+}
+
+// ── RENDER TABS ──────────────────────────────────────────────────────────────
+function renderStationTabs(allStations) {
+  const pendingByStation = {};
+  allItems.forEach(i => {
+    if (i.status !== 'Complete') {
+      pendingByStation[i.station] = (pendingByStation[i.station] || 0) + 1;
+    }
+  });
+  const totalPending = allItems.filter(i => i.status !== 'Complete').length;
+
+  const tabs = document.getElementById('station-tabs');
+  const stationList = ['ALL', ...allStations.sort()];
+
+  tabs.innerHTML = stationList.map(st => {
+    const count = st === 'ALL' ? totalPending : (pendingByStation[st] || 0);
+    const hasItems = count > 0;
+    return `<div class="station-tab${activeStation === st ? ' active' : ''}${hasItems ? ' has-items' : ''}"
+              onclick="setStation('${st}')">
+      ${st}${count > 0 ? `<span class="count-badge">${count}</span>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function setStation(st) {
+  activeStation = st;
+  localStorage.setItem('sq_station', st);
+  document.querySelectorAll('.station-tab').forEach(el => {
+    el.classList.toggle('active', el.textContent.startsWith(st));
+  });
+  renderTiles();
+}
+
+// ── RENDER TILES ─────────────────────────────────────────────────────────────
+function renderTiles() {
+  const container = document.getElementById('tiles');
+  let items = activeStation === 'ALL'
+    ? allItems
+    : allItems.filter(i => i.station === activeStation);
+
+  // Sort: In Process first, then Pending by priority/delivery, then Complete
+  items = [...items].sort((a, b) => {
+    const order = { 'In Process': 0, 'Pending': 1, 'Complete': 2 };
+    const oa = order[a.status] ?? 1, ob = order[b.status] ?? 1;
+    if (oa !== ob) return oa - ob;
+    if (a.priority !== b.priority) return (a.priority||999) - (b.priority||999);
+    return (a.delivery||'z').localeCompare(b.delivery||'z');
+  });
+
+  const pending = items.filter(i => i.status !== 'Complete').length;
+  document.getElementById('item-count').textContent = `${pending} pending · ${items.length} total`;
+
+  if (!items.length) {
+    container.innerHTML = `<div class="empty-state"><div class="big">✅</div><p>No items for this station</p></div>`;
+    return;
+  }
+
+  container.innerHTML = items.map(item => renderTile(item)).join('');
+}
+
+function renderTile(item) {
+  const done = item.status === 'Complete';
+  const inProg = item.status === 'In Process';
+  const tileClass = done ? 'done' : inProg ? 'in-progress' : '';
+  const accentColor = done ? '#2e7d52' : inProg ? '#f0a500' : '#2d3248';
+
+  // Spec line: gauge + size or productCat
+  const specParts = [item.gauge, item.size || item.productCat].filter(Boolean);
+  const specs = specParts.join(' · ') || item.productCat || '—';
+  const qty = item.qty ? `× ${item.qty}` : '';
+  const weight = item.weight ? `${Number(item.weight).toLocaleString()} lbs` : '';
+
+  const chips = [
+    item.type ? `<span class="chip">${item.type}</span>` : '',
+    qty ? `<span class="chip">${qty}</span>` : '',
+    weight ? `<span class="chip blue">${weight}</span>` : '',
+    item.assignee ? `<span class="chip blue">👤 ${item.assignee}</span>` : '',
+    done && item.completedBy ? `<span class="chip green">✓ ${item.completedBy}</span>` : '',
+    inProg ? `<span class="chip amber">▶ In Progress</span>` : '',
+  ].filter(Boolean).join('');
+
+  const notes = item.notes ? `<div class="tile-notes">📝 ${escHtml(item.notes)}</div>` : '';
+  const bundle = item.bundle ? `<div style="font-size:12px;color:#f0a500;margin-bottom:8px">📦 Bundle: ${escHtml(item.bundle)}</div>` : '';
+
+  // Assignee selector (only when not complete)
+  const assignSel = !done ? `
+    <div class="tile-assign">
+      <label>Assigned</label>
+      <select class="assign-select" onchange="updateAssignee(${item._dbId}, '${escAttr(item.woId)}', this.value, this)">
+        <option value="">— Unassigned —</option>
+        ${operators.map(op => `<option value="${escAttr(op)}"${item.assignee===op?' selected':''}>${op}</option>`).join('')}
+      </select>
+    </div>` : '';
+
+  // Action buttons
+  const actions = renderActions(item);
+
+  return `<div class="tile ${tileClass}" id="tile-${item._dbId}">
+    <div class="tile-accent" style="background:${accentColor}"></div>
+    <div class="tile-header">
+      <div class="tile-num">WO<br>${item.woNum}</div>
+      <div class="tile-title">
+        <div class="tile-customer">${escHtml(item.customer)}</div>
+        <div class="tile-wo">${item.station}${item.delivery ? ' · 📅 ' + fmtDate(item.delivery) : ''}</div>
+      </div>
+    </div>
+    <div class="tile-specs">${escHtml(specs)}</div>
+    <div class="tile-meta">${chips}</div>
+    ${notes}${bundle}
+    ${item.isDual ? renderDualSteps(item) : ''}
+    ${assignSel}
+    ${actions}
+  </div>`;
+}
+
+function renderActions(item) {
+  const done = item.status === 'Complete';
+  const inProg = item.status === 'In Process';
+
+  if (item.isDual) {
+    // Dual handled inside renderDualSteps — just show undo if all done
+    if (done) {
+      return `<div class="tile-actions done-state" style="margin-top:10px">
+        <button class="btn-action btn-undo" onclick="updateStatus(${item._dbId},'${escAttr(item.woId)}','Pending')">↩ Reopen</button>
+      </div>`;
+    }
+    return '';
+  }
+
+  if (done) {
+    return `<div class="tile-actions done-state">
+      <button class="btn-action btn-undo" onclick="updateStatus(${item._dbId},'${escAttr(item.woId)}','Pending')">↩ Reopen</button>
+    </div>`;
+  }
+
+  return `<div class="tile-actions">
+    <button class="btn-action btn-start${inProg ? ' active' : ''}"
+      onclick="updateStatus(${item._dbId},'${escAttr(item.woId)}','${inProg ? 'Pending' : 'In Process'}')">
+      ${inProg ? '⏸ Pause' : '▶ Start'}
+    </button>
+    <button class="btn-action btn-done" onclick="updateStatus(${item._dbId},'${escAttr(item.woId)}','Complete')">
+      ✓ Done
+    </button>
+  </div>`;
+}
+
+function renderDualSteps(item) {
+  const s1 = item.step1Status;
+  const s2 = item.step2Status;
+  const s1done = s1 === 'Complete';
+  const s1ip   = s1 === 'In Process';
+  const s2done = s2 === 'Complete';
+  const s2ip   = s2 === 'In Process';
+
+  // Determine step labels from station name
+  const stationParts = item.station.split(/\s*[→\/]\s*/);
+  const step1Label = stationParts[0] || 'Step 1';
+  const step2Label = stationParts[1] || 'Step 2';
+
+  const s1Cls = s1done ? 'done-btn' : s1ip ? 'running' : 'pending';
+  const s2Cls = s2done ? 'done-btn' : s2ip ? 'running' : 'pending';
+
+  const s1Text = s1done ? '✓ Done' : s1ip ? '▶ Running' : 'Start';
+  const s2Text = s2done ? '✓ Done' : s2ip ? '▶ Running' : 'Start';
+
+  const s1Next = s1done ? 'Pending' : s1ip ? 'Complete' : 'In Process';
+  const s2Next = s2done ? 'Pending' : s2ip ? 'Complete' : 'In Process';
+
+  return `<div class="dual-steps">
+    <div class="step-box${s1done ? ' complete' : s1ip ? ' in-progress' : ''}">
+      <div class="step-label">${step1Label}</div>
+      <button class="step-btn ${s1Cls}"
+        onclick="updateDualStep(${item._dbId},'${escAttr(item.woId)}',1,'${s1Next}')">
+        ${s1Text}
+      </button>
+    </div>
+    <div class="step-box${s2done ? ' complete' : s2ip ? ' in-progress' : ''}" ${!s1done ? 'style="opacity:.45;pointer-events:none"' : ''}>
+      <div class="step-label">${step2Label}</div>
+      <button class="step-btn ${s2Cls}"
+        onclick="updateDualStep(${item._dbId},'${escAttr(item.woId)}',2,'${s2Next}')">
+        ${s2Text}
+      </button>
+    </div>
+  </div>`;
+}
+
+// ── ACTIONS ──────────────────────────────────────────────────────────────────
+async function updateStatus(dbId, woId, newStatus) {
+  const item = allItems.find(i => i._dbId == dbId);
+  if (!item) return;
+
+  const prev = item.status;
+  item.status = newStatus;
+  if (newStatus === 'Complete') {
+    item.completedBy = currentUser || 'Shop';
+    item.completedAt = new Date().toISOString();
+    if (item.isDual) {
+      item.step1Status = 'Complete';
+      item.step2Status = 'Complete';
+    }
+  } else if (newStatus === 'In Process') {
+    item.completedBy = ''; item.completedAt = '';
+    if (item.isDual) item.step1Status = 'In Process';
+  } else {
+    item.completedBy = ''; item.completedAt = '';
+    if (item.isDual) {
+      item.step1Status = 'Pending'; item.step2Status = 'Pending';
+    }
+  }
+
+  // Optimistic render
+  renderTiles();
+  toast(newStatus === 'Complete' ? '✓ Marked complete' : newStatus === 'In Process' ? '▶ Started' : 'Reopened');
+
+  // Patch to DB
+  try {
+    const patch = {
+      status: newStatus,
+      completed_by: item.completedBy || null,
+      completed_at: item.completedAt || null,
+    };
+    if (item.isDual) {
+      patch.step1_status = item.step1Status;
+      patch.step2_status = item.step2Status;
+    }
+    await sbPatch('line_items', { id: dbId }, patch);
+    setSyncState('ok');
+  } catch(e) {
+    // Rollback on failure
+    item.status = prev;
+    renderTiles();
+    toast('⚠ Sync failed — tap ↻');
+    setSyncState('error');
+  }
+}
+
+async function updateDualStep(dbId, woId, step, newStatus) {
+  const item = allItems.find(i => i._dbId == dbId);
+  if (!item) return;
+
+  if (step === 1) {
+    item.step1Status = newStatus;
+    if (newStatus === 'Complete') item.step1Status = 'Complete';
+    if (newStatus === 'Pending') item.step1Status = 'Pending';
+  } else {
+    item.step2Status = newStatus;
+  }
+
+  // Derive overall status
+  const s1 = item.step1Status, s2 = item.step2Status;
+  if (s1 === 'Complete' && s2 === 'Complete') {
+    item.status = 'Complete';
+    item.completedBy = currentUser || 'Shop';
+    item.completedAt = new Date().toISOString();
+  } else if (s1 === 'In Process' || s2 === 'In Process' || s1 === 'Complete') {
+    item.status = 'In Process';
+    item.completedBy = ''; item.completedAt = '';
+  } else {
+    item.status = 'Pending';
+    item.completedBy = ''; item.completedAt = '';
+  }
+
+  renderTiles();
+  toast(newStatus === 'Complete' ? '✓ Step done' : newStatus === 'In Process' ? '▶ Step started' : 'Reset');
+
+  try {
+    await sbPatch('line_items', { id: dbId }, {
+      step1_status:  item.step1Status,
+      step2_status:  item.step2Status,
+      status:        item.status,
+      completed_by:  item.completedBy || null,
+      completed_at:  item.completedAt || null,
+    });
+  } catch(e) {
+    toast('⚠ Sync failed — tap ↻');
+    setSyncState('error');
+  }
+}
+
+async function updateAssignee(dbId, woId, assignee, el) {
+  const item = allItems.find(i => i._dbId == dbId);
+  if (!item) return;
+  item.assignee = assignee;
+  toast('Assigned to ' + (assignee || 'nobody'));
+  try {
+    await sbPatch('line_items', { id: dbId }, { assignee: assignee || null });
+  } catch(e) {
+    toast('⚠ Sync failed');
+  }
+}
+
+// ── USER PICKER ───────────────────────────────────────────────────────────────
+function showUserPicker() {
+  const grid = document.getElementById('user-grid');
+  grid.innerHTML = operators.map(op =>
+    `<button class="user-btn" onclick="selectUser('${escAttr(op)}')">${op}</button>`
+  ).join('');
+  document.getElementById('user-modal').style.display = 'flex';
+}
+
+function selectUser(name) {
+  currentUser = name;
+  localStorage.setItem('sq_user', name);
+  document.getElementById('user-label').textContent = '👤 ' + name;
+  document.getElementById('user-modal').style.display = 'none';
+}
+
+function changeUser() {
+  showUserPicker();
+}
+
+// ── UTILS ─────────────────────────────────────────────────────────────────────
+function setSyncState(state) {
+  const dot = document.getElementById('sync-dot');
+  dot.className = 'syncing' === state ? 'syncing' : state === 'error' ? 'error' : '';
+}
+
+function fmtDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso + 'T12:00:00');
+  return d.toLocaleDateString([], { month:'short', day:'numeric' });
+}
+
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function escAttr(s) {
+  return String(s||'').replace(/'/g,'&#39;');
+}
+
+let _toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), 2000);
+}
+
+// ── BOOT ──────────────────────────────────────────────────────────────────────
+async function boot() {
+  document.getElementById('user-label').textContent = currentUser ? '👤 ' + currentUser : 'Set Name';
+
+  await loadData();
+  document.getElementById('loading-screen').style.display = 'none';
+
+  if (!currentUser) showUserPicker();
+
+  // Poll every 20s
+  pollTimer = setInterval(loadData, 20000);
+}
+
+boot();
+</script>
+</body>
+</html>
