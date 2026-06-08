@@ -1368,7 +1368,8 @@ function startSBPoll() {
       const modalOpen = document.querySelector('#split-modal, #wo-modal, [id$="-modal"]');
       const inputFocused = document.activeElement && ['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName);
       const dropOpen = document.querySelector('#cust-drop[style*="block"], .autocomplete-list[style*="block"]');
-      if (modalOpen || window._editingWOId || inputFocused || dropOpen) {
+      const editingInline = !!window._editingWOId || !!document.querySelector('#e-wonum');
+      if (modalOpen || editingInline || inputFocused || dropOpen) {
         updateBadges();
         return;
       }
@@ -1388,14 +1389,14 @@ function startSBPoll() {
             const searchVal = document.getElementById('assign-search')?.value || '';
             renderAssign(searchVal, c);
             // Restore open WO card if one was open
-            if(_openWOId){
+            if(_openWOId && _openWOId !== window._editingWOId){
               const det = document.getElementById(`wo-detail-${_openWOId}`);
               const row = document.getElementById(`wo-${_openWOId}`);
               if(det && row){
                 const wo = state.wos.find(w=>w.id===_openWOId);
                 if(wo){ det.innerHTML=renderWODetail(wo); det.style.display='block'; row.classList.add('open'); }
               } else {
-                _openWOId = null; // WO no longer in view
+                _openWOId = null;
               }
             }
           }
@@ -2208,10 +2209,10 @@ function liRecalcWeight(n){
 const STATION_CAT_MAP = {
   'SLIP':       'Slip',
   'DRIVE':      'Drive',
-  'SLIP / DRIVE': null,   // ambiguous — warn but don't force
+  'SLIP / DRIVE': null,
   'STANDING S': 'Standing S',
   'IOWA':       'Flat Sheet',
-  'SHEAR':      'Flat Sheet',
+  'SHEAR':      null,  // accepts Flat Sheet AND Coil Stock — no warning
   'IOWA \u2192 SHEAR': 'Flat Sheet',
   'SHEAR \u2192 BREAK': 'Flat Sheet',
   'BREAK':      'Flat Sheet',
