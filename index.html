@@ -3004,6 +3004,42 @@ function exitBoardView(){
   if(_wakeLock){ _wakeLock.release(); _wakeLock = null; }
 }
 
+function boardToggleLI(woId, itemId, newStatus){
+  const wo = state.wos.find(w=>w.id===woId);
+  if(!wo) return;
+  const item = wo.items.find(i=>String(i.id)===String(itemId));
+  if(!item) return;
+  item.status = newStatus;
+  if(newStatus==='Complete'){
+    item.completedBy = state.currentUser||'Board';
+    item.completedAt = new Date().toISOString();
+    // For dual-station items, mark both steps complete
+    if(item.isDual){ item.step1Status='Complete'; item.step2Status='Complete'; }
+  } else if(newStatus==='In Process'){
+    item.completedBy=''; item.completedAt='';
+    if(item.isDual) item.step1Status='In Process';
+  } else {
+    item.completedBy=''; item.completedAt='';
+    if(item.isDual){ item.step1Status='Pending'; item.step2Status='Pending'; }
+  }
+  saveState(); updateBadges();
+  sbUpdateLI(woId, item.id, {
+    status: item.status,
+    completedBy: item.completedBy||null,
+    completedAt: item.completedAt||null,
+    step1Status: item.step1Status||null,
+    step2Status: item.step2Status||null
+  }).catch(e=>console.warn('boardToggleLI sync error',e));
+  // Refresh the modal in-place
+  showBoardWODetail(woId);
+  // Also refresh the assign view detail panel if it's open
+  const det = document.getElementById('wo-detail-'+woId);
+  if(det && det.style.display!=='none'){
+    const wo2 = state.wos.find(w=>w.id===woId);
+    if(wo2) det.innerHTML = renderWODetail(wo2);
+  }
+}
+
 function showBoardWODetail(woId){
   const wo = state.wos.find(w=>w.id===woId);
   if(!wo) return;
@@ -3019,15 +3055,23 @@ function showBoardWODetail(woId){
     const inProgress = i.status==='In Process';
     const dot = done?'🟢':inProgress?'🟡':'⚪';
     const label = [i.gauge, i.size||i.productCat].filter(Boolean).join(' ');
+    const btnStyle = 'border:none;border-radius:5px;padding:3px 10px;cursor:pointer;font-size:11px;font-weight:700;';
+    const completeBtn = done
+      ? `<button style="${btnStyle}background:#1e3a1e;color:#4CAF7D;" onclick="boardToggleLI(${woId},'${i.id}','Pending')">↩ Undo</button>`
+      : `<button style="${btnStyle}background:#4CAF7D;color:#fff;" onclick="boardToggleLI(${woId},'${i.id}','Complete')">✓ Done</button>`;
+    const inProgressBtn = !done
+      ? `<button style="${btnStyle}background:${inProgress?'#5a3a00':'#333'};color:${inProgress?'#f0a500':'#aaa'};" onclick="boardToggleLI(${woId},'${i.id}','${inProgress?'Pending':'In Process'}')">▶${inProgress?' Started':' Start'}</button>`
+      : '';
     return `<div style="padding:8px 0;border-bottom:1px solid #333;font-size:13px">
-      <div style="display:flex;align-items:center;gap:10px">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <span>${dot}</span>
-        <span style="flex:1;color:#fff;font-weight:600">${label||'—'}</span>
+        <span style="flex:1;color:#fff;font-weight:600;min-width:80px">${label||'—'}</span>
         <span style="color:#aaa">×${i.qty||'—'}</span>
         <span style="color:#666;font-size:11px">${i.station||''}</span>
         ${i.assignee?'<span style="color:#5B9BD5;font-size:11px">'+i.assignee+'</span>':''}
-        ${done?'<span style="color:#4CAF7D;font-size:11px">✓ '+(i.completedBy||'')+'</span>':''}
+        <div style="display:flex;gap:4px;margin-left:auto">${inProgressBtn}${completeBtn}</div>
       </div>
+      ${done&&i.completedBy?'<div style="font-size:11px;color:#4CAF7D;margin-top:2px;margin-left:26px">✓ '+i.completedBy+'</div>':''}
       ${i.notes?'<div style="font-size:11px;color:#999;margin-top:4px;margin-left:26px;line-height:1.4">'+i.notes+'</div>':''}
       ${i.bundle?'<div style="font-size:11px;color:#f0a500;margin-top:2px;margin-left:26px">Bundle: '+i.bundle+'</div>':''}
       ${i.skidSplits&&i.skidSplits.length?'<div style="font-size:10px;color:#888;margin-top:2px;margin-left:26px">Skids: '+i.skidSplits.map(s=>(s.qty||'?')+'×'+(s.size||s.type||'?')).join(' · ')+'</div>':''}
