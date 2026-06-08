@@ -1352,6 +1352,9 @@ let _sbPollTimer = null;
 function startSBPoll() {
   if (_sbPollTimer) return;
   _sbPollTimer = setInterval(async () => {
+    // Skip entire poll cycle if user is actively editing — don't overwrite state
+    const editingNow = !!window._editingWOId || !!document.querySelector('#e-wonum') || !!document.querySelector('.wo-edit-form');
+    if(editingNow){ updateBadges(); return; }
     const ok = await sbLoadState();
     if (ok) {
       // Save fresh state to localStorage as backup
@@ -1368,7 +1371,7 @@ function startSBPoll() {
       const modalOpen = document.querySelector('#split-modal, #wo-modal, [id$="-modal"]');
       const inputFocused = document.activeElement && ['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName);
       const dropOpen = document.querySelector('#cust-drop[style*="block"], .autocomplete-list[style*="block"]');
-      const editingInline = !!window._editingWOId || !!document.querySelector('#e-wonum');
+      const editingInline = !!window._editingWOId || !!document.querySelector('#e-wonum') || !!document.querySelector('.wo-edit-form');
       if (modalOpen || editingInline || inputFocused || dropOpen) {
         updateBadges();
         return;
@@ -1662,11 +1665,10 @@ function loadState(){
   // Then load from Supabase in background (authoritative, multi-user)
   sbLoadState().then(ok => {
     if(ok){
-      // Supabase is authoritative — overwrite localStorage with fresh data
       try { localStorage.setItem('kzn_state', JSON.stringify(state)); } catch(e){}
-      // Re-render current view with fresh data
       const c = document.getElementById('content');
-      if(c && state.activeView) {
+      const editingInline = !!window._editingWOId || !!document.querySelector('#e-wonum') || !!document.querySelector('.wo-edit-form');
+      if(c && state.activeView && !editingInline) {
         try {
           if(state.activeView==='dashboard') renderDashboard(c);
           else if(state.activeView==='assign') renderAssign('',c);
@@ -1675,7 +1677,6 @@ function loadState(){
         } catch(e){}
       }
       updateBadges();
-      // Start polling for live changes
       startSBPoll();
     }
   });
@@ -2017,6 +2018,7 @@ function addLI(data){
   if(empty)empty.style.display='none';
   const div=document.createElement('div');
   div.className='li-block mb8';div.id=`li-${n}`;
+  if(data&&data.id) div.dataset.liId=String(data.id);
   const catOpts=Object.keys(PRODUCT_CATS).map(c=>`<option${data&&data.productCat===c?' selected':''}>${c}</option>`).join('');
   const initCat=data?data.productCat||'Flat Sheet':'Flat Sheet';
   const initGauge=data?data.gauge||'':'';
@@ -2305,7 +2307,7 @@ function getLIs(){
     const step1Op=el.querySelector('.li-step1-op');
     const step2Op=el.querySelector('.li-step2-op');
     items.push({
-      id:Date.now()+idx+Math.random(),
+      id:el.dataset.liId||Date.now()+idx+Math.random(),
       productCat:el.querySelector('.li-cat').value,
       type:el.querySelector('.li-type').value,
       gauge:el.querySelector('.li-gauge').value,
@@ -3395,7 +3397,7 @@ function editWO(id){
   document.getElementById('topbar-actions').innerHTML='<button class="btn btn-primary" onclick="saveEditWO('+id+')">Save Changes</button> <button class="btn" onclick="cancelEdit()">Cancel</button>';
   const _liveTruck=getWOTruckId(wo.id);
   const truckOpts='<option value="">Unassigned</option><option value="1"'+(_liveTruck==="1"?' selected':'')+'>Truck 1 Double Axle</option><option value="2"'+(_liveTruck==="2"?' selected':'')+'>Truck 2 Single Axle</option>';
-  c.innerHTML='<div style="max-width:900px">'
+  c.innerHTML='<div class="wo-edit-form" style="max-width:900px">'
     +'<div class="card mb16"><div class="section-head">Order Header</div>'
     +'<div class="grid3 mb12">'
     +'<div class="field"><label class="lbl">WO Number</label><input type="text" id="e-wonum" value="'+wo.woNum+'"></div>'
@@ -3504,7 +3506,12 @@ function saveEditWO(id){
       completedAt: item.completedAt||null,
       priority:   item.priority||null,
       skidSplits: item.skidSplits||null,
-      coilNum:    item.coilNum||null
+      coilNum:    item.coilNum||null,
+      productCat: item.productCat||null,
+      type:       item.type||null,
+      gauge:      item.gauge||null,
+      size:       item.size||null,
+      wtUnit:     item.wtUnit||null
     }).catch(e=>console.warn('saveEditWO sbUpdateLI error',e));
   });
   toast('WO #'+wo.woNum+' updated');
