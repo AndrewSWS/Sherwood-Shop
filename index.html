@@ -399,18 +399,7 @@ select{cursor:pointer}
     <div class="metric-card"><div class="metric-label">Unassigned Items</div><div class="metric-val" style="color:var(--red)">42</div><div class="metric-sub">Need operator</div></div>
   </div>
 
-  <div class="grid2 gap16 mb20">
-    <div class="card" id="dash-truck1"><div class="section-head">Truck 1 — Double Axle &nbsp;<span id="dash-truck1-label" style="font-weight:400;color:var(--text3)">Today</span></div>
-      <div class="flex-between mb4"><span style="font-size:13px" id="dash-t1-lbs">0 / 36,000 lbs</span><strong id="dash-t1-pct">0%</strong></div>
-      <div class="prog-bar"><div class="prog-fill blue" id="dash-t1-bar" style="width:0%"></div></div>
-      <div style="font-size:12px;color:var(--text2);margin-top:6px" id="dash-t1-sub">0 stops today · 36,000 lbs remaining</div>
-    </div>
-    <div class="card" id="dash-truck2"><div class="section-head">Truck 2 — Single Axle &nbsp;<span id="dash-truck2-label" style="font-weight:400;color:var(--text3)">Today</span></div>
-      <div class="flex-between mb4"><span style="font-size:13px" id="dash-t2-lbs">0 / 11,000 lbs</span><strong id="dash-t2-pct">0%</strong></div>
-      <div class="prog-bar"><div class="prog-fill blue" id="dash-t2-bar" style="width:0%"></div></div>
-      <div style="font-size:12px;color:var(--text2);margin-top:6px" id="dash-t2-sub">0 stops today · 11,000 lbs remaining</div>
-    </div>
-  </div>
+  <div id="dash-trucks-row" class="mb20"></div>
 
   <div class="card mb20" style="border-color:var(--amber);border-width:1.5px;transition:all .15s" id="unscheduled-drop-zone" ondragover="unschDragOver(event)" ondragleave="unschDragLeave(event)" ondrop="unschDrop(event)">
     <div class="flex-between mb12">
@@ -1892,8 +1881,7 @@ function renderCreate(c){
     <div class="field mt8"><label class="lbl">Truck Assignment</label>
       <select id="f-truck" style="width:280px">
         <option value="">Assign after WO complete</option>
-        <option value="1">Truck 1 — Double Axle (max 36,000 lbs)</option>
-        <option value="2">Truck 2 — Single Axle (max 11,000 lbs)</option>
+        ${truckOptions("")}
       </select>
     </div>
     <div class="field mt8"><label class="lbl">Delivery / Packing Notes</label>
@@ -2754,7 +2742,7 @@ function renderWOCard(wo){
         ${wo.po?`<span class="badge badge-gray">PO: ${wo.po}</span>`:''}
         ${wo.zone?`<span class="badge badge-blue">${wo.zone}</span>`:''}
         ${wo.isPickup?'<span class="badge" style="background:#EEF4FB;color:#185FA5;border:1px solid #5B9BD5">🏪 Pick Up</span>':wo.delivery?`<span class="badge badge-amber">📅 ${fmtDate(wo.delivery)}</span>`:''}
-        ${getWOTruckId(wo.id)?`<span class="badge badge-teal">🚚 Truck ${getWOTruckId(wo.id)}</span>`:''}
+        ${getWOTruckId(wo.id)?`<span class="badge badge-teal">🚚 ${truckName(getWOTruckId(wo.id))}</span>`:''}
       </div>
       <div class="flex gap8">
         ${statusPill(st)}
@@ -2809,8 +2797,7 @@ function renderWODetail(wo){
   <div class="flex gap8 mt12">
     <select id="assign-truck-${wo.id}" style="width:240px">
       <option value="">Assign to truck...</option>
-      <option value="1" ${getWOTruckId(wo.id)==='1'?'selected':''}>Truck 1 — Double Axle</option>
-      <option value="2" ${getWOTruckId(wo.id)==='2'?'selected':''}>Truck 2 — Single Axle</option>
+      ${truckOptions(getWOTruckId(wo.id))}
     </select>
     <button class="btn btn-sm btn-primary" onclick="assignTruck(${wo.id})">Assign Truck</button>
   </div>
@@ -3209,8 +3196,6 @@ function renderBoardView(){
 
   grid.innerHTML = days.map(day=>{
     const dayWOs = state.wos.filter(w=>w.delivery===day.iso);
-    const t1WOs = dayWOs.filter(w=>getWOTruckId(w.id)==='1');
-    const t2WOs = dayWOs.filter(w=>getWOTruckId(w.id)==='2');
     const ntWOs = dayWOs.filter(w=>!getWOTruckId(w.id));
     const isToday = day.iso===todayISO;
 
@@ -3526,7 +3511,7 @@ function editWO(id){
   document.getElementById('page-title').textContent='Edit WO #'+wo.woNum;
   document.getElementById('topbar-actions').innerHTML='<button class="btn btn-primary" onclick="saveEditWO('+id+')">Save Changes</button> <button class="btn" onclick="cancelEdit()">Cancel</button>';
   const _liveTruck=getWOTruckId(wo.id);
-  const truckOpts='<option value="">Unassigned</option><option value="1"'+(_liveTruck==="1"?' selected':'')+'>Truck 1 Double Axle</option><option value="2"'+(_liveTruck==="2"?' selected':'')+'>Truck 2 Single Axle</option>';
+  const truckOpts=truckOptions(_liveTruck);
   c.innerHTML='<div class="wo-edit-form" style="max-width:900px">'
     +'<div class="card mb16"><div class="section-head">Order Header</div>'
     +'<div class="grid3 mb12">'
@@ -5185,9 +5170,7 @@ function renderTruck(c){
     const isSelected=iso===activeTruckDay;
     const isToday=iso===todayISOf;
     const dayWOs=state.wos.filter(w=>w.delivery===iso);
-    const t1w=state.trucks[0].stops.filter(s=>s.delivery===iso).reduce((s,st)=>s+getWOWeight(st.woId),0);
-    const t2w=state.trucks[1].stops.filter(s=>s.delivery===iso).reduce((s,st)=>s+getWOWeight(st.woId),0);
-    const totalW=t1w+t2w;
+    const totalW=state.trucks.reduce((sum,t)=>sum+t.stops.filter(s=>s.delivery===iso).reduce((s,st)=>s+getWOWeight(st.woId),0),0);
     return`<div onclick="switchTruckDay('${iso}')" style="flex:1;padding:10px 8px;text-align:center;cursor:pointer;border-bottom:3px solid ${isSelected?'var(--blue)':'transparent'};background:${isSelected?'var(--blue-l)':isToday?'#f8fbff':'var(--surface)'};border-radius:var(--rad) var(--rad) 0 0;transition:all .15s;min-width:80px">
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:${isSelected?'var(--blue)':isToday?'var(--blue)':'var(--text2)'}">${d.toLocaleDateString('en-US',{weekday:'short'})}</div>
       <div style="font-size:12px;color:${isSelected?'var(--blue)':'var(--text2)'};">${d.toLocaleDateString('en-US',{month:'short',day:'numeric'})}</div>
@@ -5199,10 +5182,7 @@ function renderTruck(c){
 
   // Filter stops for selected day only
   const selWOs=state.wos.filter(w=>w.delivery===activeTruckDay);
-  const t1DayStops=state.trucks[0].stops.filter(s=>s.delivery===activeTruckDay);
-  const t2DayStops=state.trucks[1].stops.filter(s=>s.delivery===activeTruckDay);
-  const t1DayW=t1DayStops.reduce((s,st)=>s+getWOWeight(st.woId),0);
-  const t2DayW=t2DayStops.reduce((s,st)=>s+getWOWeight(st.woId),0);
+  const _dayTrucks=state.trucks.map(t=>({t,stops:t.stops.filter(s=>s.delivery===activeTruckDay)})).map(o=>({...o,w:o.stops.reduce((s,st)=>s+getWOWeight(st.woId),0)}));
 
   c.innerHTML=`
   <div class="flex-between mb12" style="flex-wrap:wrap;gap:8px">
@@ -5218,16 +5198,14 @@ function renderTruck(c){
     <div style="padding:12px 16px;background:var(--blue-l);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
       <div style="font-size:14px;font-weight:700;color:var(--blue)">📅 ${fmtDate(activeTruckDay)}</div>
       <div class="flex gap8 flex-wrap">
-        <span style="font-size:13px;color:var(--text2)">Truck 1: <strong>${t1DayW.toLocaleString()} lbs</strong></span>
-        <span style="font-size:13px;color:var(--text2)">Truck 2: <strong>${t2DayW.toLocaleString()} lbs</strong></span>
+        ${_dayTrucks.map(o=>`<span style="font-size:13px;color:var(--text2)">${o.t.name}: <strong>${o.w.toLocaleString()} lbs</strong></span>`).join('')}
         <span style="font-size:13px;color:var(--text2)">WOs scheduled: <strong>${selWOs.length}</strong></span>
       </div>
     </div>
   </div>
 
-  <div class="grid2 gap16">
-    ${renderTruckCard(state.trucks[0], activeTruckDay)}
-    ${renderTruckCard(state.trucks[1], activeTruckDay)}
+  <div class="${state.trucks.length<=2?'grid2':'grid3'} gap16">
+    ${state.trucks.map(t=>renderTruckCard(t, activeTruckDay)).join('')}
   </div>
 
   ${selWOs.filter(w=>!getWOTruckId(w.id)).length?`
@@ -5240,8 +5218,7 @@ function renderTruck(c){
           <div style="font-size:12px;color:var(--amber)">${wo.customer}</div>
           <div style="font-size:11px;color:var(--text3);margin:4px 0">${getWOWeight(wo.id).toLocaleString()} lbs</div>
           <div class="flex gap6" style="margin-top:6px">
-            <button class="btn btn-xs btn-primary" onclick="quickAssignTruck(${wo.id},1)">→ T1</button>
-            <button class="btn btn-xs" onclick="quickAssignTruck(${wo.id},2)">→ T2</button>
+            ${state.trucks.map((t,i)=>`<button class="btn btn-xs${i===0?' btn-primary':''}" onclick="quickAssignTruck(${wo.id},${t.id})">\u2192 ${t.name.split(' ').slice(0,2).join(' ')}</button>`).join('')}
           </div>
         </div>`).join('')}
     </div>
@@ -5254,10 +5231,7 @@ function renderTruck(c){
         <option value="">Select WO...</option>
         ${state.wos.map(w=>`<option value="${w.id}">WO #${w.woNum} — ${w.customer}${w.delivery?' ('+fmtDate(w.delivery)+')':' (no date)'}</option>`).join('')}
       </select>
-      <select id="qa-truck" style="width:200px">
-        <option value="1">Truck 1 — Double Axle</option>
-        <option value="2">Truck 2 — Single Axle</option>
-      </select>
+      <select id="qa-truck" style="width:200px">${truckOptions("",false)}</select>
       <button class="btn btn-primary" onclick="quickAddToTruck()">Add to Truck</button>
     </div>
   </div>`;
@@ -5781,6 +5755,20 @@ function getWrapToggleBtn(iso){
   }
 }
 
+
+// ── Dynamic truck helpers — all selects/labels pull from state.trucks ────
+function truckOptions(selectedId, includeEmpty=true){
+  const opts = includeEmpty ? '<option value="">Unassigned</option>' : '';
+  return opts + state.trucks.map(t =>
+    '<option value="'+t.id+'"'+(String(selectedId)===String(t.id)?' selected':'')+'>'+t.name+' (max '+t.max.toLocaleString()+' lbs)</option>'
+  ).join('');
+}
+function truckName(id){
+  if(!id) return '';
+  const t=state.trucks.find(t=>String(t.id)===String(id));
+  return t?t.name:'Truck '+id;
+}
+
 function renderDashboard(c){
   if(!c)c=document.getElementById('content');
   const todayStr=localISO(new Date());
@@ -5804,10 +5792,12 @@ function renderDashboard(c){
   const now=new Date();
   const todayISOf=now.toISOString().split('T')[0];
   // Truck weights for TODAY only
-  const t1Stops=state.trucks[0].stops.filter(s=>s.delivery===todayISOf);
-  const t2Stops=state.trucks[1].stops.filter(s=>s.delivery===todayISOf);
-  const t1W=t1Stops.reduce((s,x)=>s+getWOWeight(x.woId),0);
-  const t2W=t2Stops.reduce((s,x)=>s+getWOWeight(x.woId),0);
+  const _truckStopsToday = state.trucks.map(t=>({
+    truck:t, stops:t.stops.filter(s=>s.delivery===todayISOf)
+  }));
+  const _truckWeightsToday = _truckStopsToday.map(({truck,stops})=>({
+    truck, stops, w:stops.reduce((s,x)=>s+getWOWeight(x.woId),0)
+  }));
 
   // Unscheduled WOs — no delivery date set
   const unscheduled=state.wos.filter(w=>!w.delivery&&!w.isPickup);
@@ -5858,8 +5848,7 @@ function renderDashboard(c){
                   onclick="event.stopPropagation()"
                   onchange="quickTruckAssign(${wo.id},this.value)">
                   <option value="" ${!liveTruck?'selected':''}>🚚 Truck</option>
-                  <option value="1" ${liveTruck==='1'?'selected':''}>T1</option>
-                  <option value="2" ${liveTruck==='2'?'selected':''}>T2</option>
+                  ${state.trucks.map(t=>`<option value="${t.id}"${String(liveTruck)===String(t.id)?' selected':''}>T${t.id}</option>`).join('')}
                 </select>
                 <button onclick="event.stopPropagation();toggleWOComplete(${wo.id})"
                   style="font-size:9px;padding:2px 6px;border-radius:10px;border:none;cursor:pointer;font-weight:700;
@@ -5909,17 +5898,16 @@ function renderDashboard(c){
     <div class="metric-card"><div class="metric-label">Unassigned Items</div><div class="metric-val" style="color:var(--red)">${unassigned}</div><div class="metric-sub">Need operator</div></div>
   </div>
 
-  <div class="grid2 gap16 mb20">
-    <div class="card" id="dash-truck1"><div class="section-head">Truck 1 — Double Axle &nbsp;<span id="dash-truck1-label" style="font-weight:400;color:var(--text3)">Today</span></div>
-      <div class="flex-between mb4"><span style="font-size:13px" id="dash-t1-lbs">${t1W.toLocaleString()} / 36,000 lbs</span><strong id="dash-t1-pct">${Math.round(t1W/36000*100)}%</strong></div>
-      <div class="prog-bar"><div class="prog-fill ${t1W/36000>0.9?'red':t1W/36000>0.7?'amber':'blue'}" id="dash-t1-bar" style="width:${Math.min(100,Math.round(t1W/36000*100))}%"></div></div>
-      <div style="font-size:12px;color:var(--text2);margin-top:6px" id="dash-t1-sub">${t1Stops.length} stop${t1Stops.length!==1?'s':''} today · ${(36000-t1W).toLocaleString()} lbs remaining</div>
-    </div>
-    <div class="card" id="dash-truck2"><div class="section-head">Truck 2 — Single Axle &nbsp;<span id="dash-truck2-label" style="font-weight:400;color:var(--text3)">Today</span></div>
-      <div class="flex-between mb4"><span style="font-size:13px" id="dash-t2-lbs">${t2W.toLocaleString()} / 11,000 lbs</span><strong id="dash-t2-pct">${Math.round(t2W/11000*100)}%</strong></div>
-      <div class="prog-bar"><div class="prog-fill ${t2W/11000>0.9?'red':t2W/11000>0.7?'amber':'blue'}" id="dash-t2-bar" style="width:${Math.min(100,Math.round(t2W/11000*100))}%"></div></div>
-      <div style="font-size:12px;color:var(--text2);margin-top:6px" id="dash-t2-sub">${t2Stops.length} stop${t2Stops.length!==1?'s':''} today · ${(11000-t2W).toLocaleString()} lbs remaining</div>
-    </div>
+  <div id="dash-trucks-row" class="${_truckWeightsToday.length===1?'':'grid'+Math.min(3,_truckWeightsToday.length)} gap16 mb20">
+    ${_truckWeightsToday.map(({truck,stops,w})=>{
+      const pct=Math.min(100,Math.round(w/truck.max*100));
+      const cls=pct>90?'red':pct>70?'amber':'blue';
+      return`<div class="card" id="dash-truck-${truck.id}"><div class="section-head">${truck.name} <span id="dash-truck-${truck.id}-label" style="font-weight:400;color:var(--text3)">Today</span></div>
+        <div class="flex-between mb4"><span style="font-size:13px" id="dash-truck-${truck.id}-lbs">${w.toLocaleString()} / ${truck.max.toLocaleString()} lbs</span><strong id="dash-truck-${truck.id}-pct">${pct}%</strong></div>
+        <div class="prog-bar"><div class="prog-fill ${cls}" id="dash-truck-${truck.id}-bar" style="width:${pct}%"></div></div>
+        <div style="font-size:12px;color:var(--text2);margin-top:6px" id="dash-truck-${truck.id}-sub">${stops.length} stop${stops.length!==1?'s':''} today · ${(truck.max-w).toLocaleString()} lbs remaining</div>
+      </div>`;
+    }).join('')}
   </div>
 
   ${renderSuggestionPanel()}
@@ -6005,7 +5993,7 @@ function renderDashboard(c){
             </div>
             <div class="flex gap6">
               ${statusPill(woStatus(wo))}
-              ${getWOTruckId(wo.id)?`<span class="badge badge-teal">🚚 Truck ${getWOTruckId(wo.id)}</span>`:''}
+              ${getWOTruckId(wo.id)?`<span class="badge badge-teal">🚚 ${truckName(getWOTruckId(wo.id))}</span>`:''}
               <button class="btn btn-xs btn-amber" onclick="editWO(${wo.id})" title="Edit WO">✏</button>
               <button class="btn btn-xs" onclick="openWOFromDash(${wo.id})" title="View & manage">📋</button>
               <button class="btn btn-xs" onclick="printWO(${wo.id})" title="Print WO">🖨</button>
@@ -6030,29 +6018,20 @@ function renderDashboard(c){
 }
 
 function updateDashTruckGauges(iso){
-  // Update the truck gauge cards for a specific date (or today if null)
-  const dateLabel = iso ? fmtDate(iso) : 'Today';
-  const t1s = state.trucks[0].stops.filter(s=>s.delivery===iso);
-  const t2s = state.trucks[1].stops.filter(s=>s.delivery===iso);
-  const t1w = t1s.reduce((s,x)=>s+getWOWeight(x.woId),0);
-  const t2w = t2s.reduce((s,x)=>s+getWOWeight(x.woId),0);
-  const t1pct = Math.min(100,Math.round(t1w/36000*100));
-  const t2pct = Math.min(100,Math.round(t2w/11000*100));
-
   const el = id => document.getElementById(id);
-  if(!el('dash-t1-lbs')) return; // dashboard not rendered
-  el('dash-truck1-label').textContent = dateLabel;
-  el('dash-truck2-label').textContent = dateLabel;
-  el('dash-t1-lbs').textContent = t1w.toLocaleString()+' / 36,000 lbs';
-  el('dash-t1-pct').textContent = t1pct+'%';
-  el('dash-t1-bar').style.width = t1pct+'%';
-  el('dash-t1-bar').className = 'prog-fill '+(t1pct>90?'red':t1pct>70?'amber':'blue');
-  el('dash-t1-sub').textContent = t1s.length+' stop'+(t1s.length!==1?'s':'')+' · '+(36000-t1w).toLocaleString()+' lbs remaining';
-  el('dash-t2-lbs').textContent = t2w.toLocaleString()+' / 11,000 lbs';
-  el('dash-t2-pct').textContent = t2pct+'%';
-  el('dash-t2-bar').style.width = t2pct+'%';
-  el('dash-t2-bar').className = 'prog-fill '+(t2pct>90?'red':t2pct>70?'amber':'blue');
-  el('dash-t2-sub').textContent = t2s.length+' stop'+(t2s.length!==1?'s':'')+' · '+(11000-t2w).toLocaleString()+' lbs remaining';
+  if(!state.trucks.length || !el('dash-truck-'+state.trucks[0].id+'-lbs')) return;
+  state.trucks.forEach(t=>{
+    const stops = t.stops.filter(s=>s.delivery===iso);
+    const w = stops.reduce((s,x)=>s+getWOWeight(x.woId),0);
+    const pct = Math.min(100,Math.round(w/t.max*100));
+    const cls = pct>90?'red':pct>70?'amber':'blue';
+    const todayLabel = iso===new Date().toISOString().split('T')[0]?'Today':fmtDate(iso);
+    const lbl=el('dash-truck-'+t.id+'-label'); if(lbl)lbl.textContent=todayLabel;
+    const lbsEl=el('dash-truck-'+t.id+'-lbs'); if(lbsEl)lbsEl.textContent=w.toLocaleString()+' / '+t.max.toLocaleString()+' lbs';
+    const pctEl=el('dash-truck-'+t.id+'-pct'); if(pctEl)pctEl.textContent=pct+'%';
+    const barEl=el('dash-truck-'+t.id+'-bar'); if(barEl){barEl.style.width=pct+'%';barEl.className='prog-fill '+cls;}
+    const subEl=el('dash-truck-'+t.id+'-sub'); if(subEl)subEl.textContent=stops.length+' stop'+(stops.length!==1?'s':'')+' · '+(t.max-w).toLocaleString()+' lbs remaining';
+  });
 }
 
 function toggleDayDetail(iso, forceOpen=false){
@@ -6071,8 +6050,7 @@ function toggleDayDetail(iso, forceOpen=false){
   const dayWOs=state.wos.filter(w=>w.delivery===iso);
   if(!dayWOs.length){panel.innerHTML=`<div class="card" style="border-color:var(--blue)"><div style="color:var(--text3);font-size:13px;padding:8px 0">No WOs scheduled for ${fmtDate(iso)}</div></div>`;return;}
   const dayW=dayWOs.reduce((s,wo)=>s+getWOWeight(wo.id),0);
-  const t1stops=state.trucks[0].stops.filter(s=>dayWOs.find(w=>w.id===s.woId));
-  const t2stops=state.trucks[1].stops.filter(s=>dayWOs.find(w=>w.id===s.woId));
+  const _allDayStops=state.trucks.flatMap(t=>t.stops.filter(s=>dayWOs.find(w=>w.id===s.woId)).map(s=>({...s,truckName:t.name,truckId:t.id})));
   panel.innerHTML=`<div class="card" style="border-color:var(--blue);border-width:1.5px">
     <div class="flex-between mb12">
       <div><span style="font-size:15px;font-weight:700">📅 ${fmtDate(iso)}</span>
@@ -6108,8 +6086,7 @@ function toggleDayDetail(iso, forceOpen=false){
             <select style="font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:var(--rad);background:var(--surface);color:var(--text)"
               onchange="quickTruckAssign(wo.id,this.value)">
               <option value="" ${!getWOTruckId(wo.id)?'selected':''}>🚚 No Truck</option>
-              <option value="1" ${getWOTruckId(wo.id)==='1'?'selected':''}>Truck 1 — Double Axle</option>
-              <option value="2" ${getWOTruckId(wo.id)==='2'?'selected':''}>Truck 2 — Single Axle</option>
+              ${truckOptions(getWOTruckId(wo.id))}
             </select>
           </div>
         </div>
@@ -6143,8 +6120,11 @@ function toggleDayDetail(iso, forceOpen=false){
           </div>`;
       };
 
-      return truckSection('Truck 1 — Double Axle','#185FA5',t1WOs,'🚚')
-           + truckSection('Truck 2 — Single Axle','#2D6A2D',t2WOs,'🚛')
+      const colors=['#185FA5','#2D6A2D','#7B3F00','#5A0080'];
+      return state.trucks.map((t,i)=>{
+        const tWOs=state.wos.filter(w=>getWOTruckId(w.id)===String(t.id));
+        return truckSection(t.name,colors[i%colors.length],tWOs,i===0?'🚚':'🚛');
+      }).join('');
            + (noTruckWOs.length?truckSection('⚠ No Truck Assigned','#BA7517',noTruckWOs,'📋'):'');
     })()}
   </div>`;
@@ -6688,8 +6668,7 @@ function renderUnscheduledGrouped(unscheduled){
             <select onclick="event.stopPropagation()" onchange="quickTruckAssign(${wo.id},this.value)"
               style="font-size:11px;padding:3px 6px;width:100%;border:1px solid ${grp?grp.color:'#FAC775'};border-radius:4px;background:#fff">
               <option value="" ${!getWOTruckId(wo.id)?'selected':''}>🚚 Assign Truck...</option>
-              <option value="1" ${getWOTruckId(wo.id)==='1'?'selected':''}>Truck 1 — Double Axle</option>
-              <option value="2" ${getWOTruckId(wo.id)==='2'?'selected':''}>Truck 2 — Single Axle</option>
+              ${truckOptions(getWOTruckId(wo.id))}
             </select>
           </div>
           <div style="margin-top:6px;display:flex;gap:5px" onclick="event.stopPropagation()">
@@ -6717,6 +6696,7 @@ function renderSettings(c){
     {id:'materials', label:'🔩 Material Types'},
     {id:'products',  label:'📦 Product Catalog'},
     {id:'audit',     label:'🔍 WO Audit'},
+    {id:'trucks',    label:'🚚 Trucks'},
     {id:'data',      label:'💾 Data'}
   ];
   const tabBar=tabs.map(t=>`<div class="tab${settingsTab===t.id?' active':''}" onclick="settingsTab='${t.id}';renderSettings()">${t.label}</div>`).join('');
@@ -6727,6 +6707,7 @@ function renderSettings(c){
   else if(settingsTab==='materials') body=renderSettingsMaterials();
   else if(settingsTab==='products') body=renderSettingsProducts();
   else if(settingsTab==='audit') body=renderSettingsAudit();
+  else if(settingsTab==='trucks') body=renderSettingsTrucks();
   else if(settingsTab==='data') body=renderSettingsData();
 
   c.innerHTML=`<div class="tabs">${tabBar}</div>${body}`;
@@ -6885,6 +6866,90 @@ function saveShopPassword(){
       toast('✓ Password updated');
     })
     .catch(e=>toast('⚠ Failed to save password: '+e.message));
+}
+
+
+function renderSettingsTrucks(){
+  const trucks = state.trucks;
+  return `<div class="card">
+    <div class="flex-between mb12">
+      <div class="section-head" style="margin:0">🚚 Fleet Management</div>
+      <button class="btn btn-primary" onclick="addTruckSetting()">+ Add Truck</button>
+    </div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:16px">Add, rename, or remove trucks. Changes apply immediately across the truck planner and all WO assignment dropdowns.</div>
+    ${trucks.map(t=>`
+    <div class="card card-sm mb8" style="background:var(--page)">
+      <div class="flex gap8 flex-wrap" style="align-items:center">
+        <input type="text" value="${t.name}" style="flex:1;min-width:200px;font-weight:600"
+          onchange="renameTruckSetting(${t.id},this.value)">
+        <div style="display:flex;align-items:center;gap:6px">
+          <label style="font-size:12px;color:var(--text2)">Max lbs:</label>
+          <input type="number" value="${t.max}" style="width:100px"
+            onchange="setTruckMax(${t.id},this.value)">
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <label style="font-size:12px;color:var(--text2)">Driver:</label>
+          <input type="text" value="${t.driver||''}" style="width:120px" placeholder="Driver name"
+            onchange="setTruckDriver(${t.id},this.value)">
+        </div>
+        ${trucks.length>1?`<button class="btn btn-xs btn-danger" onclick="deleteTruckSetting(${t.id})">Remove</button>`:''}
+      </div>
+    </div>`).join('')}
+  </div>`;
+}
+
+async function addTruckSetting(){
+  const name = prompt('Truck name (e.g. "Truck 3 — Flatbed"):');
+  if(!name||!name.trim()) return;
+  const maxStr = prompt('Max weight (lbs):','20000');
+  const max = parseInt(maxStr)||20000;
+  const newId = Math.max(...state.trucks.map(t=>t.id),0)+1;
+  const truck = {id:newId, name:name.trim(), driver:'', max, stops:[], shipDate:''};
+  state.trucks.push(truck);
+  // Sync to Supabase
+  try{ await _sbPost('trucks',{id:newId,name:truck.name,max_lbs:max,driver:null,ship_date:null}); }catch(e){console.warn(e);}
+  saveState();
+  renderSettings(document.getElementById('content'));
+  toast('\u2713 '+truck.name+' added');
+}
+
+function renameTruckSetting(id,name){
+  const t=state.trucks.find(t=>t.id===id);
+  if(!t||!name.trim()) return;
+  t.name=name.trim();
+  _sbPatch('trucks',{id},{name:t.name}).catch(e=>console.warn(e));
+  saveState();
+}
+
+function setTruckMax(id,val){
+  const t=state.trucks.find(t=>t.id===id);
+  if(!t) return;
+  t.max=parseInt(val)||t.max;
+  _sbPatch('trucks',{id},{max_lbs:t.max}).catch(e=>console.warn(e));
+  saveState();
+}
+
+function setTruckDriver(id,val){
+  const t=state.trucks.find(t=>t.id===id);
+  if(!t) return;
+  t.driver=val.trim();
+  _sbPatch('trucks',{id},{driver:t.driver||null}).catch(e=>console.warn(e));
+  saveState();
+}
+
+async function deleteTruckSetting(id){
+  const t=state.trucks.find(t=>t.id===id);
+  if(!t) return;
+  const assignedWOs=state.wos.filter(w=>getWOTruckId(w.id)===String(id));
+  if(assignedWOs.length){
+    if(!confirm(t.name+' has '+assignedWOs.length+' WO(s) assigned. Remove truck and unassign them?')) return;
+    assignedWOs.forEach(wo=>{ wo.truck=''; state.trucks.forEach(tk=>{ tk.stops=tk.stops.filter(s=>s.woId!==wo.id); }); });
+  }
+  state.trucks=state.trucks.filter(t=>t.id!==id);
+  try{ await _sbDelete('trucks',{id}); }catch(e){console.warn(e);}
+  saveState();
+  renderSettings(document.getElementById('content'));
+  toast('Truck removed');
 }
 
 function renderSettingsData(){
