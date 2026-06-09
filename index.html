@@ -1294,13 +1294,14 @@ const _liDbIdMap = {};
 // ── SUPABASE: Load full state from DB ──
 async function sbLoadState() {
   try {
-    const [wosRaw, lisRaw, trucksRaw, stopsRaw, coilsRaw, configRaw] = await Promise.all([
+    const [wosRaw, lisRaw, trucksRaw, stopsRaw, coilsRaw, configRaw, custsRaw] = await Promise.all([
       _sbGet('work_orders', 'order=created_at.asc&limit=500'),
       _sbGet('line_items', 'order=id.asc&limit=5000'),
       _sbGet('trucks', 'order=id.asc'),
       _sbGet('truck_stops', 'order=seq.asc&limit=1000'),
       _sbGet('coil_records', 'order=priority.asc&limit=500'),
-      _sbGet('admin_config', 'select=key,value')
+      _sbGet('admin_config', 'select=key,value'),
+      _sbGet('customers', 'order=name.asc&limit=2000')
     ]);
     if (!wosRaw) return false; // offline
 
@@ -1359,6 +1360,34 @@ async function sbLoadState() {
             case 'acknowledged_gaps': state.adminConfig.acknowledgedGaps = val; break;
           }
         } catch(e) {}
+      });
+    }
+
+    // Merge customers from DB — Supabase is the source of truth for new additions,
+    // but the hardcoded snap list is the baseline. We merge: snap first, then
+    // any DB customer not already in snap gets added.
+    if (custsRaw && custsRaw.length) {
+      if (!state.adminConfig) state.adminConfig = {};
+      const snapCusts = state.adminConfig.customers || [];
+      const snapNames = new Set(snapCusts.map(c => c.name.toLowerCase()));
+      const newFromDB = custsRaw
+        .filter(r => !snapNames.has((r.name||'').toLowerCase()))
+        .map(r => ({
+          name: r.name||'',
+          address: r.address||'',
+          city: r.city||'',
+          state: r.state||'',
+          zip: r.zip||'',
+          zone: r.zone||''
+        }));
+      if (newFromDB.length) {
+        state.adminConfig.customers = [...snapCusts, ...newFromDB];
+      }
+      // Also update zone for existing customers if DB has a zone set
+      custsRaw.forEach(r => {
+        if (!r.zone) return;
+        const existing = (state.adminConfig.customers||[]).find(c => c.name.toLowerCase() === (r.name||'').toLowerCase());
+        if (existing && !existing.zone) existing.zone = r.zone;
       });
     }
 
@@ -1890,19 +1919,16 @@ function renderCreate(c){
 function custSearch(q){
   const drop=document.getElementById('cust-drop');
   if(!q||q.length<1){drop.style.display='none';return}
-  const matches=getCustomers().filter(c=>c.name.toLowerCase().includes(q.toLowerCase())).slice(0,10);
-  const addNew=`<div class="autocomplete-item" style="border-top:1px solid var(--border);color:var(--blue);font-weight:600"
-    onclick="openAddCustomerModal('${q.replace(/'/g,"\'").replace(/"/g,"&quot;")}')">
-    + Add "${q}" as new customer
-  </div>`;
+  const matches=getCustomers().filter(c=>c.name.toLowerCase().includes(q.toLowerCase())).slice(0,25);
+  window._custSearchResults = matches;
+  window._custSearchQ = q;
+  const addNew='<div class="autocomplete-item" style="border-top:1px solid var(--border);color:var(--blue);font-weight:600" onclick="openAddCustomerModal(window._custSearchQ)">+ Add as new customer</div>';
   if(!matches.length){
-    drop.innerHTML=`<div class="autocomplete-item" style="color:var(--text3);cursor:default">No matches found</div>${addNew}`;
+    drop.innerHTML='<div class="autocomplete-item" style="color:var(--text3);cursor:default">No matches found</div>'+addNew;
     drop.style.display='block';return;
   }
-  drop.innerHTML=matches.map(c=>`<div class="autocomplete-item" onclick="selectCust(${JSON.stringify(c).replace(/"/g,'&quot;')})">
-    ${c.name}<span class="zone-tag">${c.zone} · ${c.city}, ${c.state}</span></div>`).join('')+addNew;
+  drop.innerHTML=matches.map((c,i)=>'<div class="autocomplete-item" onclick="selectCustByIdx('+i+')">'+c.name+'<span class="zone-tag">'+(c.zone||'')+' · '+(c.city||'')+', '+(c.state||'')+'</span></div>').join('')+addNew;
   drop.style.display='block';
-  // Keep focus on the input — don't let dropdown steal it
   setTimeout(()=>{
     const inp=document.getElementById('f-cust')||document.getElementById('e-cust');
     if(inp&&document.activeElement!==inp){const l=inp.value.length;inp.focus();inp.setSelectionRange(l,l);}
@@ -1927,6 +1953,10 @@ function selectCust(c){
     document.getElementById('f-zone').value=c.zone;
   }
   hideCustDrop();
+}
+function selectCustByIdx(i){
+  const c = window._custSearchResults && window._custSearchResults[i];
+  if(c) selectCust(c);
 }
 function hideCustDrop(){const d=document.getElementById('cust-drop');if(d)d.style.display='none';}
 document.addEventListener('click',e=>{if(!e.target.closest('.autocomplete-wrap')&&!e.target.closest('#add-cust-modal'))hideCustDrop()});
@@ -6363,7 +6393,7 @@ function renderCustomers(c){
           const meta=getCustMeta(cu.name);
           const grp=getCustGroup(cu.name);
           const hasOpenWO=state.wos.some(w=>w.customer===cu.name&&woStatus(w)!=='Complete');
-          return`<div class="card card-sm mb8 cust-card data-custname="${(cu.name||'').toLowerCase()}" data-custcity="${(cu.city||'').toLowerCase()}" data-custzone="${cu.zone||''} ${custEditName===cu.name?'selected-card':''}"
+          return`<div class="card card-sm mb8 cust-card${custEditName===cu.name?' selected-card':''}" data-custname="${(cu.name||'').toLowerCase()}" data-custcity="${(cu.city||'').toLowerCase()}" data-custzone="${cu.zone||''}"
             style="cursor:pointer;border-color:${custEditName===cu.name?'var(--blue)':'var(--border)'}"
             onclick="selectCustEdit('${cu.name.replace(/'/g,"\'")}')">
             <div class="flex-between flex-wrap gap6">
@@ -6437,7 +6467,7 @@ function selectCustEdit(name){
     <div class="field"><label class="lbl">Delivery Group</label>
       <select id="ce-group">${groupOpts}</select></div>
   </div>
-  <div class="field mb12">
+  <div class="field mb12"><label class="lbl">Zone / Region</label><select id="ce-zone"><option value="">— Unassigned —</option>${['SE Pennsylvania','Bucks / Montgomery','PA Other','Lehigh Valley','NJ South','NJ Central','NJ North','Delaware','Maryland','New York'].map(z=>`<option value="${z}"${(cust.zone||'')==z?' selected':''}>${z}</option>`).join('')}</select></div><div class="field mb12">
     <label class="lbl">Notes</label>
     <textarea id="ce-notes" rows="2" placeholder="Delivery notes, special instructions...">${meta.notes||''}</textarea>
   </div>
@@ -6457,40 +6487,24 @@ function selectCustEdit(name){
 function saveCustMeta(name){
   if(!state.customerMeta)state.customerMeta={};
   const groupId = document.getElementById('ce-group').value;
-  state.customerMeta[name]={
-    contact:document.getElementById('ce-contact').value.trim(),
-    phone:document.getElementById('ce-phone').value.trim(),
-    email:document.getElementById('ce-email').value.trim(),
-    groupId,
-    notes:document.getElementById('ce-notes').value.trim(),
-    notify:document.getElementById('ce-notify').checked
-  };
-  // Also update zone in customers array to match selected group
-  if(groupId){
-    const grp = state.deliveryGroups.find(g=>g.id===groupId);
-    if(grp){
-      const custs = state.adminConfig && state.adminConfig.customers;
-      if(custs){
-        const cust = custs.find(c=>c.name===name);
-        if(cust){
-          // Map group name back to zone
-          const zoneMap = {
-            'Delaware':'Delaware','Maryland':'Maryland',
-            'NJ South':'NJ South','NJ Central':'NJ Central','NJ North':'NJ North',
-            'SE Pennsylvania':'SE Pennsylvania','Bucks / Montgomery':'Bucks / Montgomery',
-            'Lehigh Valley':'Lehigh Valley','PA Other':'PA Other','New York':'New York'
-          };
-          // Try to match group name to a zone
-          const matchedZone = Object.keys(zoneMap).find(z=>
-            grp.name.toLowerCase().includes(z.toLowerCase().split(' ')[0])
-          );
-          if(matchedZone) cust.zone = matchedZone;
-        }
-      }
-    }
+  const zone = (document.getElementById('ce-zone')||{}).value || '';
+  const contact = document.getElementById('ce-contact').value.trim();
+  const phone = document.getElementById('ce-phone').value.trim();
+  const email = document.getElementById('ce-email').value.trim();
+  const notes = document.getElementById('ce-notes').value.trim();
+  const notify = document.getElementById('ce-notify').checked;
+  state.customerMeta[name]={ contact, phone, email, groupId, notes, notify };
+  // Update zone in customers array
+  const custs = state.adminConfig && state.adminConfig.customers;
+  if(custs){
+    const cust = custs.find(c=>c.name===name);
+    if(cust && zone) cust.zone = zone;
   }
   saveState();
-  toast('✓ '+name+' updated');
+  // Sync to Supabase
+  _sbPatch('customers', {name}, { zone: zone||null, contact: contact||null, phone: phone||null, email: email||null, notes: notes||null })
+    .catch(e=>console.warn('saveCustMeta patch error',e));
+  toast('\u2713 '+name+' updated');
   renderCustomers(document.getElementById('content'));
 }
 
@@ -8158,8 +8172,24 @@ function importQBInvoice(invNum){
           custInp.parentElement.appendChild(locPicker);
         }
       }
-      if(cust) selectCust(cust);
-      else custInp.value = inv.customer;
+      if(cust){
+        selectCust(cust);
+      } else {
+        // Customer not in system — auto-add with blank zone so WO can be saved
+        const newCust = { name: inv.customer, address:'', city:'', state:'', zip:'', zone:'' };
+        getCustomers().push(newCust);
+        if(!state.customerMeta) state.customerMeta={};
+        state.customerMeta[inv.customer] = { contact:'', phone:'', email:'', groupId:'', notify:false, notes:'' };
+        saveState();
+        _sbPost('customers', { name: newCust.name, address:null, city:null, state:null, zip:null, zone:null })
+          .catch(e=>console.warn('sbPost new customer error',e));
+        selectCust(newCust);
+        // Warn that region needs to be set
+        const warn = document.createElement('div');
+        warn.style.cssText='background:#fff3cd;border:1px solid #f0ad4e;border-radius:var(--rad);padding:8px 12px;margin-top:6px;font-size:12px;color:#856404';
+        warn.innerHTML='\u26a0\ufe0f <strong>'+inv.customer+'</strong> was added as a new customer \u2014 please set their <strong>Region/Zone</strong> in <a href="#" onclick="nav(\'customers\');return false">Customer Admin</a>.';
+        custInp.parentElement.appendChild(warn);
+      }
     }
 
     // Clear existing line items
