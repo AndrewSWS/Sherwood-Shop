@@ -7747,21 +7747,54 @@ function renderQBList(invoices){
         }).join('');
         diffHtml += `</div>`;
 
-        // Check for notes/packing description changes
-        // Match QB items to system items by qty, compare notes
+        // Packing notes comparison:
+        // Match each QB item to a WO item by:
+        //   Step 1 — find ALL WO items with the same qty as this QB item
+        //   Step 2 — among those, find one whose note code matches the QB code
+        //   Step 3 — if exactly one qty match exists and code doesn't match → note changed
+        //   Step 4 — if multiple qty matches and none have matching code → note changed
+        //   WO items with no notes are manual/system-only — excluded from comparison
+        const _nc = n=>{ if(!n) return ''; const m=n.match(/^([^\s(]+)/); return m?m[1].toLowerCase():''; };
+        const sysNoteItems = existing.items.filter(i=>i.notes); // only WO items that have a note
+        const usedSysIds = new Set();
         const notesChanged = [];
+
         inv.items.forEach(qbItem=>{
-          const qbQty = String(qbItem.qty).trim();
-          const sysMatch = existing.items.find(s=>String(s.qty).trim()===qbQty);
-          if(sysMatch && qbItem.notes && sysMatch.notes){
-            const qbNote = qbItem.notes.trim().toLowerCase();
-            const sysNote = sysMatch.notes.trim().toLowerCase();
-            if(qbNote !== sysNote){
-              notesChanged.push({sys: sysMatch.notes, qb: qbItem.notes, qty: qbItem.qty});
+          if(!qbItem.notes) return; // QB item has no note, nothing to compare
+          const qbCode = _nc(qbItem.notes);
+          const qbQty  = String(qbItem.qty).trim();
+
+          // Step 1: all WO items with matching qty (that haven't been used yet)
+          const qtyMatches = sysNoteItems.filter(s=>!usedSysIds.has(s)&&String(s.qty).trim()===qbQty);
+
+          let sysItem = null;
+
+          if(qtyMatches.length === 1){
+            // Only one WO item with this qty — that's our match regardless of code
+            sysItem = qtyMatches[0];
+          } else if(qtyMatches.length > 1){
+            // Multiple WO items share this qty — find the one whose code matches
+            const codeMatch = qtyMatches.find(s=>_nc(s.notes)===qbCode);
+            if(codeMatch){
+              // Found exact code match among the qty group — not changed
+              sysItem = codeMatch;
+            } else {
+              // No code match found among qty group — pick first unused, flag as changed
+              sysItem = qtyMatches[0];
             }
-          } else if(sysMatch && qbItem.notes && !sysMatch.notes){
-            // QB has notes but system doesn't
-            notesChanged.push({sys: '(none)', qb: qbItem.notes, qty: qbItem.qty});
+          } else {
+            // No qty match at all — try code match across all remaining WO items
+            sysItem = sysNoteItems.find(s=>!usedSysIds.has(s)&&_nc(s.notes)===qbCode)||null;
+          }
+
+          if(!sysItem) return; // no WO counterpart found, skip
+
+          usedSysIds.add(sysItem);
+
+          const qbNote  = qbItem.notes.trim().toLowerCase();
+          const sysNote = sysItem.notes.trim().toLowerCase();
+          if(qbNote !== sysNote){
+            notesChanged.push({sys: sysItem.notes, qb: qbItem.notes, qty: qbItem.qty});
           }
         });
 
@@ -7839,18 +7872,28 @@ function renderQBList(invoices){
     // Skip notes check if WO is complete — no point flagging finished orders
     const allDone = existing.items.every(i=>i.status==='Complete');
     if(allDone) return false;
-    // Check notes: verify every QB code that exists in system is accounted for
-    // Build both pools and check set equality (order independent)
-    const extractQBCode = n=>{ if(!n) return null; const m = n.match(/^[A-Za-z]+:([A-Za-z0-9.]+)/); return m ? m[1].toLowerCase() : null; };
-    const sysCodeSet1 = new Set(existing.items.map(i=>extractQBCode(i.notes)).filter(Boolean));
-    // Only flag if QB has a code that's completely absent from system
-    const sysQtySet1 = new Set(existing.items.map(i=>String(i.qty).trim()));
+    // Notes check: qty first, then use QB code to disambiguate. WO items without notes are ignored.
+    const _ec1 = n=>{ if(!n) return ''; const m=n.match(/^([^\s(]+)/); return m?m[1].toLowerCase():''; };
+    const sysNoteItems1 = existing.items.filter(i=>i.notes);
+    const used1 = new Set();
     return inv.items.some(qbItem=>{
       if(!qbItem.notes) return false;
-      if(!sysQtySet1.has(String(qbItem.qty).trim())) return false; // new item
-      const qbCode = extractQBCode(qbItem.notes);
-      if(!qbCode) return false;
-      return !sysCodeSet1.has(qbCode); // code completely missing from system
+      const qbCode1 = _ec1(qbItem.notes);
+      const qbQty1  = String(qbItem.qty).trim();
+      const qtyMatches1 = sysNoteItems1.filter(s=>!used1.has(s)&&String(s.qty).trim()===qbQty1);
+      let sys1 = null;
+      if(qtyMatches1.length===1){
+        sys1 = qtyMatches1[0];
+      } else if(qtyMatches1.length>1){
+        const codeHit1 = qtyMatches1.find(s=>_ec1(s.notes)===qbCode1);
+        sys1 = codeHit1 || qtyMatches1[0];
+        if(codeHit1){ used1.add(sys1); return false; } // exact match = no change
+      } else {
+        sys1 = sysNoteItems1.find(s=>!used1.has(s)&&_ec1(s.notes)===qbCode1)||null;
+      }
+      if(!sys1) return false;
+      used1.add(sys1);
+      return _ec1(qbItem.notes) !== _ec1(sys1.notes);
     });
   });
   const dupesClean = dupes.filter(inv=>!dupesNeedReview.includes(inv));
@@ -7939,15 +7982,27 @@ function dupes_delete_clean(){
     if(JSON.stringify(sysQP) !== JSON.stringify(qbQP)) return true;
     const allDone2 = existing.items.every(i=>i.status==='Complete');
     if(allDone2) return false;
-    const extractQBCode2 = n=>{ if(!n) return null; const m = n.match(/^[A-Za-z]+:([A-Za-z0-9.]+)/); return m ? m[1].toLowerCase() : null; };
-    const sysCodeSet2 = new Set(existing.items.map(i=>extractQBCode2(i.notes)).filter(Boolean));
-    const sysQtySet2 = new Set(existing.items.map(i=>String(i.qty).trim()));
+    const _ec2 = n=>{ if(!n) return ''; const m=n.match(/^([^\s(]+)/); return m?m[1].toLowerCase():''; };
+    const sysNoteItems2 = existing.items.filter(i=>i.notes);
+    const used2 = new Set();
     return inv.items.some(qbItem=>{
       if(!qbItem.notes) return false;
-      if(!sysQtySet2.has(String(qbItem.qty).trim())) return false;
-      const qbCode = extractQBCode2(qbItem.notes);
-      if(!qbCode) return false;
-      return !sysCodeSet2.has(qbCode);
+      const qbCode2 = _ec2(qbItem.notes);
+      const qbQty2  = String(qbItem.qty).trim();
+      const qtyMatches2 = sysNoteItems2.filter(s=>!used2.has(s)&&String(s.qty).trim()===qbQty2);
+      let sys2 = null;
+      if(qtyMatches2.length===1){
+        sys2 = qtyMatches2[0];
+      } else if(qtyMatches2.length>1){
+        const codeHit2 = qtyMatches2.find(s=>_ec2(s.notes)===qbCode2);
+        sys2 = codeHit2 || qtyMatches2[0];
+        if(codeHit2){ used2.add(sys2); return false; }
+      } else {
+        sys2 = sysNoteItems2.find(s=>!used2.has(s)&&_ec2(s.notes)===qbCode2)||null;
+      }
+      if(!sys2) return false;
+      used2.add(sys2);
+      return _ec2(qbItem.notes) !== _ec2(sys2.notes);
     });
   });
   updateQBPillCount();
