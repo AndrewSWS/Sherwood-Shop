@@ -2618,13 +2618,16 @@ function mergeDupWO(existingId){
   incoming.items.forEach(qbItem=>{
     if(!qbItem.notes) return;
     const qbCode = extractCode(qbItem.notes);
-    // Find system item that either has this exact code or has no note yet
+    // Find system item: 1) exact code match, 2) same qty+no code, 3) same qty any
     let sysItem = qbCode
       ? existing.items.find(s=>extractCode(s.notes)===qbCode)  // exact code match
       : null;
-    // Fallback: find system item with same qty and no note
     if(!sysItem){
-      sysItem = existing.items.find(s=>String(s.qty).trim()===String(qbItem.qty).trim() && !(s.notes||'').trim());
+      const sameQty = existing.items.filter(s=>String(s.qty).trim()===String(qbItem.qty).trim());
+      // Prefer item with no note or no extractable code (e.g. old note like "55")
+      sysItem = sameQty.find(s=>!(s.notes||'').trim()) // blank note
+             || sameQty.find(s=>!extractCode(s.notes)) // has note but no code pattern
+             || sameQty[0]; // last resort: first same-qty item
     }
     if(!sysItem) return;
     const qbNote = qbItem.notes.trim();
@@ -2657,7 +2660,10 @@ function mergeDupWO(existingId){
   renderCreate(document.getElementById('content'));
   updateBadges();
 
-  // Refresh QB selector so this invoice moves from Review Needed → No Changes
+  // Mark as imported so it disappears from the QB list on re-render
+  _qbImported.add(String(existing.woNum));
+
+  // Refresh QB selector so this invoice disappears
   const qbList = document.getElementById('qb-invoice-list');
   if(qbList) qbList.innerHTML = renderQBList(_qbInvoices);
   updateQBPillCount();
@@ -5763,7 +5769,8 @@ function getWrapToggleBtn(iso){
 // ── Dynamic truck helpers — all selects/labels pull from state.trucks ────
 function truckOptions(selectedId, includeEmpty=true){
   const opts = includeEmpty ? '<option value="">Unassigned</option>' : '';
-  return opts + state.trucks.map(t =>
+  const trucks = (state && state.trucks) || [];
+  return opts + trucks.map(t =>
     '<option value="'+t.id+'"'+(String(selectedId)===String(t.id)?' selected':'')+'>'+t.name+' (max '+t.max.toLocaleString()+' lbs)</option>'
   ).join('');
 }
@@ -7522,6 +7529,7 @@ function qbProductCat(cat, desc){
 }
 
 let _qbInvoices = []; // parsed invoices waiting for selection
+let _qbImported = new Set(); // invoice numbers already loaded this session
 
 function triggerQBImport(){
   // Create a hidden file input, trigger it, clean up after
@@ -7598,7 +7606,14 @@ function parseQBWorkbook(wb, filename){
     const C_QTY  = ci('Qty');
     const C_PRICE= ci('Sales Price');
     const C_AMT  = ci('Amount');
-    console.log('QB cols — TYPE:',C_TYPE,'DATE:',C_DATE,'NUM:',C_NUM,'NAME:',C_NAME,'ITEM:',C_ITEM);
+    // Ship To City/State — added to QB report by user for location-based customer matching
+    const C_SHIP_CITY  = ci('Ship To City') >= 0 ? ci('Ship To City')
+                       : ci('Shipping City') >= 0 ? ci('Shipping City')
+                       : ci('Ship City') >= 0 ? ci('Ship City') : -1;
+    const C_SHIP_STATE = ci('Ship To State') >= 0 ? ci('Ship To State')
+                       : ci('Shipping State') >= 0 ? ci('Shipping State')
+                       : ci('Ship State') >= 0 ? ci('Ship State') : -1;
+    console.log('QB cols — TYPE:',C_TYPE,'DATE:',C_DATE,'NUM:',C_NUM,'NAME:',C_NAME,'ITEM:',C_ITEM,'SHIP_CITY:',C_SHIP_CITY,'SHIP_STATE:',C_SHIP_STATE);
 
     // Parse invoices
     const invoices = {};
@@ -7661,7 +7676,10 @@ function parseQBWorkbook(wb, filename){
       const fullNotes = noteParts.join(' | ');
 
       if(!invoices[invNum]){
-        invoices[invNum] = { invNum, customer, date: dateStr, items: [] };
+        const qbCity  = C_SHIP_CITY  >= 0 ? String(row[C_SHIP_CITY]  ||'').trim() : '';
+        const qbState = C_SHIP_STATE >= 0 ? String(row[C_SHIP_STATE] ||'').trim() : '';
+        console.log('QB ship-to — inv:',invNum,'city:',qbCity,'state:',qbState);
+        invoices[invNum] = { invNum, customer, date: dateStr, items: [], qbCity, qbState };
       }
 
       // If no item code and no memo, this is a QB continuation row —
@@ -7688,6 +7706,7 @@ function parseQBWorkbook(wb, filename){
 
     const list = Object.values(invoices);
     if(!list.length){ toast('⚠ No invoices found — check this is a Sales by Customer Detail export'); return; }
+    _qbImported = new Set(); // reset on new file load
     _qbInvoices = list;
     // Check for gaps in new invoice numbers vs current system
     const maxSys = Math.max(...state.wos.map(w=>parseInt(w.woNum)).filter(n=>!isNaN(n)), 0);
@@ -7706,10 +7725,7 @@ function parseQBWorkbook(wb, filename){
 function updateQBPillCount(){
   const el = document.getElementById('qb-pill-count');
   if(!el || !_qbInvoices) return;
-  const remaining = _qbInvoices.filter(inv=>{
-    const row = document.getElementById('qb-inv-'+inv.invNum);
-    return !row || row.dataset.imported !== '1';
-  }).length;
+  const remaining = _qbInvoices.filter(inv=>!_qbImported.has(String(inv.invNum))).length;
   el.textContent = remaining + ' left';
 }
 
@@ -7778,9 +7794,26 @@ function deleteQBInvoice(invNum){
   if(row) row.remove();
 }
 
+
+// Check if two customer names refer to the same root customer
+// (handles "United Supply Company" matching "United Supply Company — North Plainfield NJ")
+function custNamesMatch(sysName, qbName){
+  if(!sysName || !qbName) return false;
+  if(sysName.toLowerCase() === qbName.toLowerCase()) return true;
+  // System name is a location variant: "Riley Sales, Inc. — Moorestown NJ"
+  // QB name is the root: "Riley Sales, Inc."
+  const sysLow = sysName.toLowerCase();
+  const qbLow  = qbName.toLowerCase();
+  if(sysLow.startsWith(qbLow)) return true;
+  if(qbLow.startsWith(sysLow)) return true;
+  return false;
+}
+
 function renderQBList(invoices){
   // Get existing WO numbers to detect duplicates
   const existingWONums = new Set(state.wos.map(w=>String(w.woNum)));
+  // Filter out already-imported invoices so they disappear after saving
+  invoices = invoices.filter(inv=>!_qbImported.has(String(inv.invNum)));
   
   // Separate duplicates from new
   const dupes = invoices.filter(inv=>existingWONums.has(inv.invNum));
@@ -7788,8 +7821,8 @@ function renderQBList(invoices){
 
   const itemKey = i => `${i.gauge}|${i.size}|${i.qty}`.toLowerCase().trim();
 
-  const renderCard = (inv, isDupe) => {
-    const dupeBorder = isDupe ? 'border-color:#BA7517;background:#FFF8EC' : 'background:var(--page);border:1px solid var(--border)';
+  const renderCard = (inv, isDupe, isReviewNeeded=false) => {
+    const dupeBorder = isDupe && isReviewNeeded ? 'border:1.5px solid #c0392b;background:#FFF8F8' : isDupe ? 'border-color:#BA7517;background:#FFF8EC' : 'background:var(--page);border:1px solid var(--border)';
 
     let diffHtml = '';
     let newCount = 0;
@@ -7816,7 +7849,7 @@ function renderQBList(invoices){
 
         diffHtml = `<div style="margin-top:8px;border-top:1px solid #f0c060;padding-top:8px">`;
         // Show customer mismatch if different
-        if(existing.customer !== inv.customer){
+        if(!custNamesMatch(existing.customer, inv.customer)){
           diffHtml += `<div style="font-size:11px;margin-bottom:8px;padding:4px 8px;background:#FFF0F0;border:1px solid #c0392b;border-radius:4px;color:#c0392b;font-weight:600">⚠ Customer mismatch — System: "${existing.customer}" · QB: "${inv.customer}"</div>`;
         }
 
@@ -7937,7 +7970,7 @@ function renderQBList(invoices){
       }
     }
 
-    const dupeLabel = isDupe && newCount > 0
+    const dupeLabel = isDupe && isReviewNeeded
       ? `<span style="background:#c0392b;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px">⚠ DUPLICATE — REVIEW NEEDED</span>`
       : isDupe
       ? `<span style="background:#BA7517;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px">⚠ DUPLICATE — no changes</span>`
@@ -7975,57 +8008,68 @@ function renderQBList(invoices){
   let html = '';
 
   // Split dupes into needs-review and clean
-  const dupesNeedReview = dupes.filter(inv=>{
+  // A dupe needs review if: customer is a true mismatch, item count differs,
+  // qty pool differs, or any packing note code changed.
+  const _needsReview = (inv) => {
     const existing = state.wos.find(w=>String(w.woNum)===String(inv.invNum));
     if(!existing) return true;
-    // Only flag on: customer, item count, qty pool, packing notes
-    if(existing.customer !== inv.customer) return true;
+    // Real customer mismatch (not just location variant)
+    if(!custNamesMatch(existing.customer, inv.customer)) return true;
+    // Item count differs
     if(inv.items.length !== existing.items.length) return true;
+    // Qty pool differs
     const sysQtys = existing.items.map(i=>String(i.qty).trim()).sort();
     const qbQtys  = inv.items.map(i=>String(i.qty).trim()).sort();
     if(JSON.stringify(sysQtys) !== JSON.stringify(qbQtys)) return true;
-    // Skip notes check if WO is complete — no point flagging finished orders
-    const allDone = existing.items.every(i=>i.status==='Complete');
-    if(allDone) return false;
-    // Notes check: qty first, then use QB code to disambiguate. WO items without notes are ignored.
-    const _ec1 = n=>{ if(!n) return ''; const m=n.match(/^([^\s(]+)/); return m?m[1].toLowerCase():''; };
-    const sysNoteItems1 = existing.items.filter(i=>i.notes);
-    const used1 = new Set();
-    return inv.items.some(qbItem=>{
-      if(!qbItem.notes) return false;
-      const qbCode1 = _ec1(qbItem.notes);
-      const qbQty1  = String(qbItem.qty).trim();
-      const qtyMatches1 = sysNoteItems1.filter(s=>!used1.has(s)&&String(s.qty).trim()===qbQty1);
-      let sys1 = null;
-      if(qtyMatches1.length===1){
-        sys1 = qtyMatches1[0];
-      } else if(qtyMatches1.length>1){
-        const codeHit1 = qtyMatches1.find(s=>_ec1(s.notes)===qbCode1);
-        sys1 = codeHit1 || qtyMatches1[0];
-        if(codeHit1){ used1.add(sys1); return false; } // exact match = no change
-      } else {
-        sys1 = sysNoteItems1.find(s=>!used1.has(s)&&_ec1(s.notes)===qbCode1)||null;
+    // Packing note check — for each QB item with a note, find the sys item
+    // with the SAME qty AND same code prefix. Only flag if the code genuinely
+    // doesn't match any same-qty sys item (i.e. a real note change).
+    const _code = n=>{ if(!n) return ''; const m=n.match(/^([^\s(]+)/); return m?m[1].toLowerCase():''; };
+    const sysPool = existing.items.map((i,idx)=>({idx, qty:String(i.qty).trim(), code:_code(i.notes), notes:i.notes}));
+    const used = new Set();
+    for(const qbItem of inv.items){
+      if(!qbItem.notes) continue;
+      const qbQty  = String(qbItem.qty).trim();
+      const qbCode = _code(qbItem.notes);
+      // All sys items with same qty not yet used
+      const qtyHits = sysPool.filter(s=>!used.has(s.idx)&&s.qty===qbQty);
+      if(!qtyHits.length) continue;
+      // Try exact code match first — this handles multiple items with same qty
+      const exactMatch = qtyHits.find(s=>s.code===qbCode);
+      if(exactMatch){
+        used.add(exactMatch.idx); // matched — no change
+        continue;
       }
-      if(!sys1) return false;
-      used1.add(sys1);
-      return _ec1(qbItem.notes) !== _ec1(sys1.notes);
-    });
-  });
-  const dupesClean = dupes.filter(inv=>!dupesNeedReview.includes(inv));
+      // No exact code match among same-qty items — check if any sys item has NO code
+      // (blank notes). If so, this might be a new note being added, not a change.
+      const blankSys = qtyHits.find(s=>!s.code);
+      if(blankSys){
+        used.add(blankSys.idx); // sys had no note, QB adds one — treat as addition not mismatch
+        continue;
+      }
+      // QB code doesn't match any same-qty sys item that has a note — real change
+      used.add(qtyHits[0].idx);
+      return true;
+    }
+    return false;
+  };
+  const dupesNeedReview = dupes.filter(_needsReview);
+  const dupesNeedReviewNums = new Set(dupesNeedReview.map(inv=>inv.invNum));
+  const dupesClean = dupes.filter(inv=>!dupesNeedReviewNums.has(inv.invNum));
 
   // Section 1: Needs Review
   if(dupesNeedReview.length){
     // Count how many have wrong customer
     const wrongCustCount = dupesNeedReview.filter(inv=>{
       const ex = state.wos.find(w=>String(w.woNum)===String(inv.invNum));
-      return ex && ex.customer !== inv.customer;
+      return ex && !custNamesMatch(ex.customer, inv.customer);
     }).length;
 
     html += `<div style="background:#FFF0F0;border:1px solid #c0392b;border-radius:var(--rad);padding:8px 12px;margin-bottom:10px;font-size:12px;color:#c0392b;font-weight:600;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
       <span>🔴 ${dupesNeedReview.length} invoice${dupesNeedReview.length!==1?'s':''} need review — count or qty differs, or wrong customer</span>
       ${wrongCustCount>0?`<button class="btn btn-xs" style="background:#c0392b;color:#fff" onclick="fixAllCustomerNames()">Fix ${wrongCustCount} Wrong Customer${wrongCustCount!==1?'s':''}</button>`:''}
     </div>`;
-    html += dupesNeedReview.map(inv=>renderCard(inv,true)).join('');
+    html += dupesNeedReview.map(inv=>renderCard(inv,true,true)).join('');
   }
 
   // Section 2: No Changes — can be bulk dismissed
@@ -8034,7 +8078,7 @@ function renderQBList(invoices){
       <span>🟡 ${dupesClean.length} duplicate${dupesClean.length!==1?'s':''} — no changes detected</span>
       <button class="btn btn-xs" style="background:#BA7517;color:#fff" onclick="dupes_delete_clean()">Dismiss All</button>
     </div>`;
-    html += dupesClean.map(inv=>renderCard(inv,true)).join('');
+    html += dupesClean.map(inv=>renderCard(inv,true,false)).join('');
   }
 
   // Section 3: New invoices
@@ -8106,8 +8150,7 @@ function dupes_delete_clean(){
     if(!existing) return false;
     const countDiff = inv.items.length - existing.items.length;
     if(countDiff !== 0) return true; // keep review needed
-    if(existing.customer !== inv.customer) return true; // wrong customer
-    if(existing.customer !== inv.customer) return true;
+    if(!custNamesMatch(existing.customer, inv.customer)) return true; // wrong customer
     if(inv.items.length !== existing.items.length) return true;
     const sysQP = existing.items.map(i=>String(i.qty).trim()).sort();
     const qbQP  = inv.items.map(i=>String(i.qty).trim()).sort();
@@ -8160,11 +8203,31 @@ function pickQBLocation(btn, idx){
   picker.remove();
 }
 
+function pickQBLocationNew(btn, custName){
+  // User clicked "Add as new location" — create a new customer entry
+  const picker = btn.parentElement;
+  if(getCustomers().find(c=>c.name.toLowerCase()===custName.toLowerCase())){
+    picker.remove();
+    return;
+  }
+  const newCust = { name: custName, address:'', city:'', state:'', zip:'', zone:'' };
+  getCustomers().push(newCust);
+  if(!state.customerMeta) state.customerMeta={};
+  state.customerMeta[custName] = { contact:'', phone:'', email:'', groupId:'', notify:false, notes:'' };
+  saveState();
+  _sbPost('customers', { name: custName, address:null, city:null, state:null, zip:null, zone:null })
+    .catch(e=>console.warn('sbPost new customer error',e));
+  selectCust(newCust);
+  picker.innerHTML = '<div style="color:var(--green);font-size:12px;padding:4px 0">✓ Added <strong>'+custName+'</strong> as a new customer — set their zone in Customer Admin.</div>';
+  setTimeout(()=>picker.remove(), 3000);
+}
+
 function importQBInvoice(invNum){
   const inv = _qbInvoices.find(i=>i.invNum===invNum);
   if(!inv)return;
 
-  // Mark as imported in the modal list (don't close modal)
+  // Mark as imported in the set and modal list (don't close modal)
+  _qbImported.add(String(invNum));
   const btn = document.querySelector(`button[onclick*="importQBInvoice('${invNum}')"]`);
   if(btn){ btn.textContent='✓ Loaded'; btn.disabled=true; btn.style.background='var(--green-m)'; }
   const row = document.getElementById(`qb-inv-${invNum}`);
@@ -8216,46 +8279,90 @@ function importQBInvoice(invNum){
     if(numInp) numInp.value = inv.invNum;
     if(dateInp) dateInp.value = inv.date;
     if(custInp){
-      // Try exact match first
+      // Step 1: exact name match
       let cust = getCustomers().find(c=>c.name.toLowerCase()===inv.customer.toLowerCase());
-      // If no exact match, try partial match — handles "United Supply Company" 
-      // matching "United Supply — Egg Harbor" etc.
+
       if(!cust){
-        const partial = getCustomers().filter(c=>
-          c.name.toLowerCase().includes(inv.customer.toLowerCase().split(' ').slice(0,2).join(' ')) ||
-          inv.customer.toLowerCase().includes(c.name.toLowerCase().split(' ').slice(0,2).join(' '))
-        );
+        // Step 2: partial name match — find all customers that share the same root name
+        // e.g. QB "Riley Sales, Inc." matches "Riley Sales, Inc. — Cherry Hill NJ" etc.
+        const invWords = inv.customer.toLowerCase().split(' ').slice(0,2).join(' ');
+        const partial = getCustomers().filter(c=>{
+          const cLow = c.name.toLowerCase();
+          return cLow.includes(invWords) || inv.customer.toLowerCase().includes(cLow.split(' ').slice(0,2).join(' '));
+        });
+
         if(partial.length === 1){
-          // Only one match — use it
+          // Only one location on file — use it
           cust = partial[0];
         } else if(partial.length > 1){
-          // Multiple locations — show a picker
-          custInp.value = inv.customer;
-          const locPicker = document.createElement('div');
-          locPicker.style.cssText='background:var(--amber-l);border:1px solid var(--amber);border-radius:var(--rad);padding:10px 12px;margin-top:8px;font-size:13px';
-          locPicker.innerHTML='<div style="font-weight:600;margin-bottom:6px">⚠ Multiple locations found for <em>'+inv.customer+'</em> — pick one:</div>'
-            + partial.map((c,i)=>'<button class="btn btn-sm" style="margin:3px" onclick="pickQBLocation(this,'+i+')">'
-              +c.name+'</button>').join('');
-          locPicker._locations = partial;
-          custInp.parentElement.appendChild(locPicker);
+          // Multiple locations — use Ship To City to find the right one
+          const qbCity  = (inv.qbCity  ||'').trim();
+          const qbState = (inv.qbState ||'').trim();
+
+          if(qbCity){
+            const cityMatch = partial.filter(c=>{
+              const cCity = (c.city||'').trim().toLowerCase();
+              const qLow  = qbCity.toLowerCase();
+              return cCity && (cCity === qLow || qLow.includes(cCity) || cCity.includes(qLow));
+            });
+            if(cityMatch.length === 1){
+              // Auto-matched by city — silent green confirmation
+              cust = cityMatch[0];
+              const info = document.createElement('div');
+              info.style.cssText='background:#f0faf0;border:1px solid #4CAF7D;border-radius:var(--rad);padding:6px 12px;margin-top:6px;font-size:12px;color:#2D6A2D';
+              info.textContent='✓ Auto-matched to '+cust.name+' by ship-to city ('+qbCity+(qbState?' '+qbState:'')+')';
+              setTimeout(()=>custInp.parentElement.appendChild(info),50);
+            } else {
+              // City not in system — auto-create "Customer Name — City ST"
+              const newName = inv.customer+' — '+qbCity+(qbState?' '+qbState:'');
+              const existing = getCustomers().find(c=>c.name.toLowerCase()===newName.toLowerCase());
+              if(existing){
+                cust = existing;
+              } else {
+                const newCust = { name: newName, address:'', city: qbCity, state: qbState, zip:'', zone:'' };
+                getCustomers().push(newCust);
+                if(!state.customerMeta) state.customerMeta={};
+                state.customerMeta[newName] = { contact:'', phone:'', email:'', groupId:'', notify:false, notes:'' };
+                saveState();
+                _sbPost('customers', { name: newName, address:null, city: qbCity||null, state: qbState||null, zip:null, zone:null })
+                  .catch(e=>console.warn('sbPost new customer error',e));
+                cust = newCust;
+                const warn = document.createElement('div');
+                warn.style.cssText='background:#fff3cd;border:1px solid #f0ad4e;border-radius:var(--rad);padding:8px 12px;margin-top:6px;font-size:12px;color:#856404';
+                warn.innerHTML='⚠️ Added <strong>'+newName+'</strong> as a new customer — set their <strong>Zone</strong> in <a href="#" onclick="nav(\'customers\');return false">Customer Admin</a>.';
+                setTimeout(()=>custInp.parentElement.appendChild(warn),50);
+              }
+            }
+          } else {
+            // No Ship To City in QB export — show picker so user can choose
+            custInp.value = inv.customer;
+            const locPicker = document.createElement('div');
+            locPicker.style.cssText='background:var(--amber-l);border:1px solid var(--amber);border-radius:var(--rad);padding:10px 12px;margin-top:8px;font-size:13px';
+            locPicker.innerHTML='<div style="font-weight:600;margin-bottom:4px">⚠ Multiple locations for <em>'+inv.customer+'</em></div>'
+              +'<div style="font-size:11px;color:var(--text2);margin-bottom:8px">No Ship To City in QB report. Pick the right location or add a new one:</div>'
+              + partial.map((c,i)=>'<button class="btn btn-sm" style="margin:3px" onclick="pickQBLocation(this,'+i+')">'
+                +c.name+(c.city?' <span style="font-size:10px;color:var(--text3)">· '+c.city+', '+c.state+'</span>':'')+' </button>').join('');
+            locPicker._locations = partial;
+            custInp.parentElement.appendChild(locPicker);
+          }
         }
       }
+
       if(cust){
         selectCust(cust);
       } else {
-        // Customer not in system — auto-add with blank zone so WO can be saved
-        const newCust = { name: inv.customer, address:'', city:'', state:'', zip:'', zone:'' };
+        // Brand new customer not in system at all — auto-add with blank zone
+        const newCust = { name: inv.customer, address:'', city: inv.qbCity||'', state: inv.qbState||'', zip:'', zone:'' };
         getCustomers().push(newCust);
         if(!state.customerMeta) state.customerMeta={};
         state.customerMeta[inv.customer] = { contact:'', phone:'', email:'', groupId:'', notify:false, notes:'' };
         saveState();
-        _sbPost('customers', { name: newCust.name, address:null, city:null, state:null, zip:null, zone:null })
+        _sbPost('customers', { name: newCust.name, address:null, city: newCust.city||null, state: newCust.state||null, zip:null, zone:null })
           .catch(e=>console.warn('sbPost new customer error',e));
         selectCust(newCust);
-        // Warn that region needs to be set
         const warn = document.createElement('div');
         warn.style.cssText='background:#fff3cd;border:1px solid #f0ad4e;border-radius:var(--rad);padding:8px 12px;margin-top:6px;font-size:12px;color:#856404';
-        warn.innerHTML='\u26a0\ufe0f <strong>'+inv.customer+'</strong> was added as a new customer \u2014 please set their <strong>Region/Zone</strong> in <a href="#" onclick="nav(\'customers\');return false">Customer Admin</a>.';
+        warn.innerHTML='⚠️ <strong>'+inv.customer+'</strong> added as a new customer — set their <strong>Zone</strong> in <a href="#" onclick="nav(\'customers\');return false">Customer Admin</a>.';
         custInp.parentElement.appendChild(warn);
       }
     }
