@@ -5852,7 +5852,7 @@ function renderDashboard(c){
                   onclick="event.stopPropagation()"
                   onchange="quickTruckAssign(${wo.id},this.value)">
                   <option value="" ${!liveTruck?'selected':''}>🚚 Truck</option>
-                  ${state.trucks.map(t=>`<option value="${t.id}"${String(liveTruck)===String(t.id)?' selected':''}>T${t.id}</option>`).join('')}
+                  ${state.trucks.map(t=>`<option value="${t.id}"${String(liveTruck)===String(t.id)?' selected':''}>${t.name.split(' ').slice(0,2).join(' ')}</option>`).join('')}
                 </select>
                 <button onclick="event.stopPropagation();toggleWOComplete(${wo.id})"
                   style="font-size:9px;padding:2px 6px;border-radius:10px;border:none;cursor:pointer;font-weight:700;
@@ -5867,17 +5867,18 @@ function renderDashboard(c){
             </div>
           </div>`;
         };
-        const t1 = dayWOs.filter(w=>getWOTruckId(w.id)==='1');
-        const t2 = dayWOs.filter(w=>getWOTruckId(w.id)==='2');
         const nt = dayWOs.filter(w=>!getWOTruckId(w.id));
         const divider = (label,color) => `<div style="display:flex;align-items:center;gap:4px;margin:6px 0 4px">
           <span style="font-size:9px;font-weight:700;text-transform:uppercase;color:${color};white-space:nowrap">${label}</span>
           <div style="flex:1;height:1px;background:${color}"></div>
         </div>`;
-        return (t1.length?divider('🚚 T1','#185FA5')+t1.map(renderChip).join(''):'')
-             + (t2.length?divider('🚛 T2','#2D6A2D')+t2.map(renderChip).join(''):'')
-             + (nt.length?divider('⚠ No Truck','#BA7517')+nt.map(renderChip).join(''):'');
-      })():`<div style="text-align:center;padding:12px 0;font-size:11px;color:var(--text3)">Drop here</div>`}
+        const _tColors=['#185FA5','#2D6A2D','#7B3F00','#5A0080'];
+        const _tIcons=['🚚','🚛','🛻','🚜'];
+        return state.trucks.map((t,i)=>{
+          const tWOs=dayWOs.filter(w=>getWOTruckId(w.id)===String(t.id));
+          return tWOs.length?divider(_tIcons[i%4]+' '+t.name,_tColors[i%4])+tWOs.map(renderChip).join(''):'';
+        }).join('')
+             + (nt.length?divider('⚠ No Truck','#BA7517')+nt.map(renderChip).join(''):'' );      })():`<div style="text-align:center;padding:12px 0;font-size:11px;color:var(--text3)">Drop here</div>`}
       ${isToday?'<div style="font-size:10px;text-align:center;color:var(--blue);margin-top:4px;font-weight:600">▼ click for details</div>':''}
     </div>`;
   }).join('');
