@@ -3253,8 +3253,12 @@ function renderBoardView(){
       +'<div class="bd-date">'+fmtDate(day.iso)+(totalLbs?' · '+totalLbs.toLocaleString()+' lbs':'')+getBoardWeatherBadge(day.iso)+'</div>'
       +'</div>'
       +(dayWOs.length
-        ? truckSection('🚚 TRUCK 1','#4AA8D8',t1WOs)
-          +truckSection('🚛 TRUCK 2','#4CAF7D',t2WOs)
+        ? state.trucks.map((t,i)=>{
+            const colors=['#4AA8D8','#4CAF7D','#9B59B6','#E67E22'];
+            const icons=['🚚','🚛','🛻','🚜'];
+            const tWOs=dayWOs.filter(w=>getWOTruckId(w.id)===String(t.id));
+            return truckSection(icons[i%icons.length]+' '+t.name.toUpperCase(),colors[i%colors.length],tWOs);
+          }).join('')
           +truckSection('⚠ UNASSIGNED','#FAC775',ntWOs)
         :'<div style="padding:20px;text-align:center;color:#444;font-size:12px">No deliveries</div>')
       +'</div>';
@@ -6060,8 +6064,6 @@ function toggleDayDetail(iso, forceOpen=false){
     </div>
     ${(()=>{
       // Group WOs by truck
-      const t1WOs = dayWOs.filter(w=>getWOTruckId(w.id)==='1');
-      const t2WOs = dayWOs.filter(w=>getWOTruckId(w.id)==='2');
       const noTruckWOs = dayWOs.filter(w=>!getWOTruckId(w.id));
 
       const renderWOCard = (wo) => {
@@ -6122,9 +6124,9 @@ function toggleDayDetail(iso, forceOpen=false){
 
       const colors=['#185FA5','#2D6A2D','#7B3F00','#5A0080'];
       return state.trucks.map((t,i)=>{
-        const tWOs=state.wos.filter(w=>getWOTruckId(w.id)===String(t.id));
+        const tWOs=dayWOs.filter(w=>getWOTruckId(w.id)===String(t.id));
         return truckSection(t.name,colors[i%colors.length],tWOs,i===0?'🚚':'🚛');
-      }).join('');
+      }).join('')
            + (noTruckWOs.length?truckSection('⚠ No Truck Assigned','#BA7517',noTruckWOs,'📋'):'');
     })()}
   </div>`;
