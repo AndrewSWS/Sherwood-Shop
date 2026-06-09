@@ -2825,8 +2825,23 @@ function renderLIDetail(wo,item,idx){
       </select></div>
     <div><label class="lbl" style="font-size:10px">Weight (lbs)</label>
       <input type="number" style="width:100px" value="${item.weight||''}" onchange="updateLI(${wo.id},'${item.id}','weight',this.value)" placeholder="lbs"></div>
-    <div><label class="lbl" style="font-size:10px">Bundle / Skid #</label>
-      <input type="text" style="width:120px;background:var(--amber-l);border-color:#FAC775;font-weight:600" value="${item.bundle||''}" placeholder="Bundle #" oninput="updateLI(${wo.id},'${item.id}','bundle',this.value)"></div>
+    ${(()=>{
+      const isIowaSt = (item.station||'').toUpperCase().includes('IOWA');
+      const hasSkids = item.skidSplits && item.skidSplits.length;
+      if(isIowaSt && hasSkids){
+        // Per-skid bundle inputs for Iowa items
+        const skidInputs = item.skidSplits.map((s,si)=>`
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+            <span style="font-size:11px;color:var(--text3);min-width:60px">Skid #${si+1} <span style="color:var(--text2)">${escHtml(s.size||s.type||'')} ×${s.qty||'?'}</span></span>
+            <input type="text" placeholder="Bundle #" value="${escHtml(s.bundle||'')}"
+              style="width:100px;background:var(--amber-l);border:1px solid #FAC775;border-radius:var(--rad);padding:4px 7px;font-weight:600;font-size:12px"
+              oninput="updateSkidBundle(${wo.id},'${item.id}',${si},this.value)">
+          </div>`).join('');
+        return `<div style="grid-column:1/-1"><label class="lbl" style="font-size:10px">Bundle # per Skid</label><div style="margin-top:4px">${skidInputs}</div></div>`;
+      }
+      return `<div><label class="lbl" style="font-size:10px">Bundle / Skid #</label>
+        <input type="text" style="width:120px;background:var(--amber-l);border-color:#FAC775;font-weight:600" value="${item.bundle||''}" placeholder="Bundle #" oninput="updateLI(${wo.id},'${item.id}','bundle',this.value)"></div>`;
+    })()}
   </div>
   ${item.isDual?renderDualStepPanel(wo,item):''}
   <div class="flex gap6 flex-wrap" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
@@ -7815,7 +7830,25 @@ function renderQBList(invoices){
         } else if(qtyMismatch){
           const missing = unmatchedSys.map(q=>'×'+q).join(', ');
           const added = unmatchedQB.map(q=>'×'+q).join(', ');
-          if(missing) diffHtml += `<div style="font-size:11px;color:#c0392b;font-weight:600">⚠ In system but not QB: ${missing}</div>`;
+          if(missing){
+            // Find the actual WO items that are unmatched so we can offer a delete button
+            const unmatchedSysItems = [];
+            const _qtyPool = [...qbQtyPool];
+            existing.items.forEach(item=>{
+              const q = String(item.qty).trim();
+              const idx = _qtyPool.indexOf(q);
+              if(idx>-1){ _qtyPool.splice(idx,1); } else { unmatchedSysItems.push(item); }
+            });
+            diffHtml += `<div style="font-size:11px;color:#c0392b;font-weight:600;margin-bottom:4px">⚠ In system but not QB:</div>`;
+            unmatchedSysItems.forEach(item=>{
+              const label = [item.gauge, item.size||item.productCat].filter(Boolean).join(' ');
+              diffHtml += `<div style="display:flex;align-items:center;gap:8px;background:#fff0f0;border:1px solid #f5a0a0;border-radius:4px;padding:4px 8px;margin-bottom:4px;font-size:11px">
+                <span style="flex:1;color:#c0392b">${label} ×${item.qty}</span>
+                <button class="btn btn-xs" style="background:#c0392b;color:#fff;padding:2px 8px;font-size:10px"
+                  onclick="event.stopPropagation();deleteWOItemFromQBImport('${existing.id||existing.woNum}','${item.id}')">Remove</button>
+              </div>`;
+            });
+          }
           if(added) diffHtml += `<div style="font-size:11px;color:var(--green);font-weight:600">+ In QB but not system: ${added}</div>`;
         }
         diffHtml += `</div>`;
@@ -7929,6 +7962,23 @@ function renderQBList(invoices){
   }
 
   return html || '<div style="text-align:center;padding:20px;color:var(--text3)">No invoices to show</div>';
+}
+
+async function deleteWOItemFromQBImport(woId, itemId){
+  if(!confirm('Remove this item from the Work Order?')) return;
+  const wo = state.wos.find(w=>String(w.id||w.woNum)===String(woId));
+  if(!wo) return;
+  const idx = wo.items.findIndex(i=>String(i.id)===String(itemId));
+  if(idx===-1) return;
+  wo.items.splice(idx,1);
+  try {
+    // itemId is the state-level item id; _liDbIdMap maps it to the Supabase row id
+    const dbId = _liDbIdMap[itemId] || itemId;
+    await _sbDelete('line_items', {id: dbId});
+  } catch(e){ console.warn('delete WO item error',e); }
+  saveState();
+  const el = document.getElementById('qb-invoice-list');
+  if(el) el.innerHTML = renderQBList(_qbInvoices);
 }
 
 function fixAllCustomerNames(){
