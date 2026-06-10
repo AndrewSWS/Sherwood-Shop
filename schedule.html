@@ -209,7 +209,7 @@
 
 <script>
 const SB_URL = 'https://ecndvwmbycyppqkbvuzs.supabase.co';
-const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVjbmR2d21ieWN5cHBxa2J2dXpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgwMjYyMTIsImV4cCI6MjA2MzYwMjIxMn0.J3JFlGMRFnbP7iqGMFpEb3UKiJV4p04g5g6Qk4Ueqjc';
+const SB_KEY = 'sb_publishable_DPSLNDOI___sDI-lt3YbpQ_TGJbHaV-';
 const HDR = { 'Content-Type':'application/json', apikey: SB_KEY, Authorization: 'Bearer '+SB_KEY };
 
 let driverName = ''; // pulled from truck record on selection
@@ -228,7 +228,21 @@ async function init() {
   // Load trucks from Supabase
   try {
     const r = await fetch(`${SB_URL}/rest/v1/trucks?order=id`, { headers: HDR });
+    if (!r.ok) {
+      const err = await r.text();
+      showToast('⚠ Trucks error: ' + r.status);
+      console.error('Trucks fetch failed:', r.status, err);
+      setSyncStatus('red');
+      return;
+    }
     trucks = await r.json();
+    console.log('Trucks loaded:', trucks);
+    if (!Array.isArray(trucks) || trucks.length === 0) {
+      showToast('No trucks found in system');
+      setSyncStatus('amber');
+      document.getElementById('stops').innerHTML = '<div id="loading" style="color:var(--amber)">No trucks configured. Set up trucks in the main app first.</div>';
+      return;
+    }
     const sel = document.getElementById('truck-select');
     sel.innerHTML = '<option value="">— Select Your Truck —</option>';
     trucks.forEach(t => {
@@ -244,7 +258,8 @@ async function init() {
     setSyncStatus('green');
   } catch(e) {
     setSyncStatus('red');
-    showToast('⚠ Could not load trucks');
+    showToast('⚠ Could not load trucks: ' + e.message);
+    console.error('Trucks fetch error:', e);
   }
 
   if (activeTruck) loadStops();
@@ -271,7 +286,7 @@ async function loadStops() {
   try {
     // Get stops for this truck on the selected date
     const r = await fetch(
-      `${SB_URL}/rest/v1/truck_stops?truck_id=eq.${activeTruck}&ship_date=eq.${activeDate}&order=seq,wo_num`,
+      `${SB_URL}/rest/v1/truck_stops?truck_id=eq.${activeTruck}&delivery=eq.${activeDate}&order=seq,wo_num`,
       { headers: HDR }
     );
     const rawStops = await r.json();
@@ -394,7 +409,7 @@ function renderStopCard(stop, idx) {
   } else if (!isDelivered) {
     if (!isArrived) {
       actionsHtml = `<div class="stop-actions">
-        <button class="btn-action btn-arrive" onclick="markArrived(${stop.id});event.stopPropagation()">📍 Arrived at Stop</button>
+        <button class="btn-action btn-arrive" onclick="markArrived('${stop.id}');event.stopPropagation()">📍 Arrived at Stop</button>
       </div>
       <div class="input-row">
         <label>Odometer</label>
@@ -402,18 +417,18 @@ function renderStopCard(stop, idx) {
       </div>`;
     } else {
       actionsHtml = `<div class="stop-actions">
-        <button class="btn-action btn-deliver active" onclick="markDelivered(${stop.id});event.stopPropagation()">🚚 Mark Delivered</button>
-        <button class="btn-action btn-undo" onclick="undoArrived(${stop.id});event.stopPropagation()">↩ Undo Arrived</button>
+        <button class="btn-action btn-deliver active" onclick="markDelivered('${stop.id}');event.stopPropagation()">🚚 Mark Delivered</button>
+        <button class="btn-action btn-undo" onclick="undoArrived('${stop.id}');event.stopPropagation()">↩ Undo Arrived</button>
       </div>`;
     }
   } else {
     actionsHtml = `<div class="stop-actions">
-      <button class="btn-action btn-undo" onclick="undoDelivered(${stop.id});event.stopPropagation()">↩ Undo Delivered</button>
+      <button class="btn-action btn-undo" onclick="undoDelivered('${stop.id}');event.stopPropagation()">↩ Undo Delivered</button>
     </div>`;
   }
 
   return `<div class="stop-card ${statusClass}" id="stop-${stop.id}">
-    <div class="stop-header" onclick="toggleDetail(${stop.id})">
+    <div class="stop-header" onclick="toggleDetail('${stop.id}')">
       <div class="stop-num-badge ${numClass}">${idx + 1}</div>
       <div class="stop-info">
         <div class="stop-customer">${stop.customer || wo.customer || '—'}</div>
