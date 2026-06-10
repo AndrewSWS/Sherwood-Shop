@@ -7852,6 +7852,20 @@ function renderQBList(invoices){
         if(!custNamesMatch(existing.customer, inv.customer)){
           diffHtml += `<div style="font-size:11px;margin-bottom:8px;padding:4px 8px;background:#FFF0F0;border:1px solid #c0392b;border-radius:4px;color:#c0392b;font-weight:600">⚠ Customer mismatch — System: "${existing.customer}" · QB: "${inv.customer}"</div>`;
         }
+        // Show city mismatch only when customer HAS a city on file that differs
+        if(inv.qbCity){
+          const sysCust = getCustomers().find(c=>c.name===existing.customer);
+          const sysCity = (sysCust&&sysCust.city||'').trim();
+          const sysCityL = sysCity.toLowerCase();
+          const qbCityL  = inv.qbCity.trim().toLowerCase();
+          const cityDiffers = sysCity && !(sysCityL===qbCityL || qbCityL.includes(sysCityL) || sysCityL.includes(qbCityL));
+          if(cityDiffers){
+            diffHtml += `<div style="font-size:11px;margin-bottom:8px;padding:6px 10px;background:#FFF0E8;border:1px solid #E07020;border-radius:4px;color:#8B4500">
+              📍 <strong>Ship-to city differs:</strong> QB says <strong>${inv.qbCity}${inv.qbState?' '+inv.qbState:''}</strong>, this WO is assigned to <strong>${existing.customer}</strong> (${sysCity}).
+              Use the customer field to pick or create the right location.
+            </div>`;
+          }
+        }
 
         // Item counts
         diffHtml += `<div style="display:flex;gap:16px;margin-bottom:8px;font-size:12px">`;
@@ -8015,6 +8029,23 @@ function renderQBList(invoices){
     if(!existing) return true;
     // Real customer mismatch (not just location variant)
     if(!custNamesMatch(existing.customer, inv.customer)) return true;
+    // City mismatch — only flag if customer HAS a city on file that differs from QB ship-to
+    // If no city on file, silently update (handled in renderCard display)
+    if(inv.qbCity){
+      const sysCust = getCustomers().find(c=>c.name===existing.customer);
+      const sysCity = (sysCust&&sysCust.city||'').trim().toLowerCase();
+      const qbCityL = inv.qbCity.trim().toLowerCase();
+      const cityDiffers = sysCity && !(sysCity===qbCityL || qbCityL.includes(sysCity) || sysCity.includes(qbCityL));
+      if(cityDiffers) return true; // existing customer has a DIFFERENT city → needs new location
+      // No city on file → silently add it (don't flag for review)
+      if(!sysCity && sysCust){
+        sysCust.city  = inv.qbCity.trim();
+        sysCust.state = inv.qbState || sysCust.state;
+        saveState();
+        _sbPatch('customers', {name: sysCust.name}, {city: sysCust.city, state: sysCust.state||null})
+          .catch(e=>console.warn('city silent update',e));
+      }
+    }
     // Item count differs
     if(inv.items.length !== existing.items.length) return true;
     // Qty pool differs
@@ -8279,8 +8310,48 @@ function importQBInvoice(invNum){
     if(numInp) numInp.value = inv.invNum;
     if(dateInp) dateInp.value = inv.date;
     if(custInp){
-      // Step 1: exact name match
-      let cust = getCustomers().find(c=>c.name.toLowerCase()===inv.customer.toLowerCase());
+      // Step 1: exact name match — but still check city if QB provides one
+      let _exactMatch = getCustomers().find(c=>c.name.toLowerCase()===inv.customer.toLowerCase());
+      let cust = null;
+      if(_exactMatch){
+        const qbCity  = (inv.qbCity  ||'').trim();
+        const qbState = (inv.qbState ||'').trim();
+        const sysCity = (_exactMatch.city||'').trim().toLowerCase();
+        const qbCityL = qbCity.toLowerCase();
+        // If system customer has no city but QB provides one, update the customer (don't create duplicate)
+        if(qbCity && !sysCity){
+          _exactMatch.city  = qbCity;
+          _exactMatch.state = qbState || _exactMatch.state;
+          saveState();
+          _sbPatch('customers', {name: _exactMatch.name}, {city: qbCity, state: qbState||null})
+            .catch(e=>console.warn('city update error',e));
+        }
+        const cityMismatch = qbCity && sysCity && !(sysCity===qbCityL || qbCityL.includes(sysCity) || sysCity.includes(qbCityL));
+        if(cityMismatch){
+          // Exact name but different city — rename existing to include its city, create new for QB city
+          // First check if a location-named version already exists
+          const newName = inv.customer+' — '+qbCity+(qbState?' '+qbState:'');
+          const alreadyExists = getCustomers().find(c=>c.name.toLowerCase()===newName.toLowerCase());
+          if(alreadyExists){
+            cust = alreadyExists;
+          } else {
+            const newCust = { name: newName, address:'', city: qbCity, state: qbState, zip:'', zone: _exactMatch.zone||'' };
+            getCustomers().push(newCust);
+            if(!state.customerMeta) state.customerMeta={};
+            state.customerMeta[newName] = { contact:'', phone:'', email:'', groupId:'', notify:false, notes:'' };
+            saveState();
+            _sbPost('customers', { name: newName, address:null, city: qbCity||null, state: qbState||null, zip:null, zone: newCust.zone||null })
+              .catch(e=>console.warn('sbPost new customer error',e));
+            cust = newCust;
+            const warn = document.createElement('div');
+            warn.style.cssText='background:#fff3cd;border:1px solid #f0ad4e;border-radius:var(--rad);padding:8px 12px;margin-top:6px;font-size:12px;color:#856404';
+            warn.innerHTML='⚠️ Ship-to city <strong>'+qbCity+'</strong> differs from existing <strong>'+_exactMatch.name+'</strong> ('+(_exactMatch.city||'no city on file')+'). Added <strong>'+newName+'</strong> as a new location — set Zone in <a href="#" onclick="nav(\'customers\');return false">Customer Admin</a>.';
+            setTimeout(()=>custInp.parentElement.appendChild(warn),50);
+          }
+        } else {
+          cust = _exactMatch;
+        }
+      }
 
       if(!cust){
         // Step 2: partial name match — find all customers that share the same root name
@@ -8292,8 +8363,45 @@ function importQBInvoice(invNum){
         });
 
         if(partial.length === 1){
-          // Only one location on file — use it
-          cust = partial[0];
+          const onlyMatch = partial[0];
+          const qbCity  = (inv.qbCity  ||'').trim();
+          const qbState = (inv.qbState ||'').trim();
+          const sysCity = (onlyMatch.city||'').trim().toLowerCase();
+          const qbCityL = qbCity.toLowerCase();
+          // If system customer has no city but QB provides one, update them (don't create duplicate)
+          if(qbCity && !sysCity){
+            onlyMatch.city  = qbCity;
+            onlyMatch.state = qbState || onlyMatch.state;
+            saveState();
+            _sbPatch('customers', {name: onlyMatch.name}, {city: qbCity, state: qbState||null})
+              .catch(e=>console.warn('city update error',e));
+          }
+          // If QB has a ship-to city and it doesn't match the customer's city on file
+          // → this is a different location, auto-create a new one
+          const cityMismatch = qbCity && sysCity && !(sysCity===qbCityL || qbCityL.includes(sysCity) || sysCity.includes(qbCityL));
+          if(cityMismatch){
+            const newName = inv.customer+' — '+qbCity+(qbState?' '+qbState:'');
+            const alreadyExists = getCustomers().find(c=>c.name.toLowerCase()===newName.toLowerCase());
+            if(alreadyExists){
+              cust = alreadyExists;
+            } else {
+              const newCust = { name: newName, address:'', city: qbCity, state: qbState, zip:'', zone:'' };
+              getCustomers().push(newCust);
+              if(!state.customerMeta) state.customerMeta={};
+              state.customerMeta[newName] = { contact:'', phone:'', email:'', groupId:'', notify:false, notes:'' };
+              saveState();
+              _sbPost('customers', { name: newName, address:null, city: qbCity||null, state: qbState||null, zip:null, zone:null })
+                .catch(e=>console.warn('sbPost new customer error',e));
+              cust = newCust;
+              const warn = document.createElement('div');
+              warn.style.cssText='background:#fff3cd;border:1px solid #f0ad4e;border-radius:var(--rad);padding:8px 12px;margin-top:6px;font-size:12px;color:#856404';
+              warn.innerHTML='⚠️ Ship-to city <strong>'+qbCity+'</strong> differs from <strong>'+onlyMatch.name+'</strong> ('+onlyMatch.city+'). Added <strong>'+newName+'</strong> as a new location — set Zone in <a href="#" onclick="nav(\'customers\');return false">Customer Admin</a>.';
+              setTimeout(()=>custInp.parentElement.appendChild(warn),50);
+            }
+          } else {
+            // City matches or no city data — use the single match
+            cust = onlyMatch;
+          }
         } else if(partial.length > 1){
           // Multiple locations — use Ship To City to find the right one
           const qbCity  = (inv.qbCity  ||'').trim();
