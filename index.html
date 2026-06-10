@@ -974,6 +974,15 @@ const PRODUCT_CATS = {
     gauges: ['16','18','20','22','24'],
     sizes: {'16':['1x120'],'18':['1x120'],'20':['1x120'],'22':['1x120'],'24':['1x120']}
   },
+  'Plenums': {
+    gauges: ['26','24','22','20'],
+    sizes: {
+      '26':['13x20x36 Plenum Kit','13x20x48 Plenum Kit','Custom'],
+      '24':['13x20x36 Plenum Kit','13x20x48 Plenum Kit','Custom'],
+      '22':['Custom'],
+      '20':['Custom']
+    }
+  },
   'Other / Hardware': {
     gauges: ['—'],
     sizes: {
@@ -7692,7 +7701,7 @@ const QB_CAT_MAP = {
   'GVNLCoil':  'Other / Hardware',
   'Blank':     'Flat Sheet',
   'HVACAcsry': 'Other / Hardware',
-  'Plenums':   'PLENUMS',
+  'Plenums':   'Plenums',
   'Elgen':     'Other / Hardware',
   'Misc':      'Other / Hardware'
 };
@@ -7738,6 +7747,7 @@ function qbStation(cat, desc){
 // Auto-detect product category override for slip/drive/standing s/coil items
 function qbProductCat(cat, desc){
   const d=(desc||'').toLowerCase();
+  if(d.includes('plenum')||cat==='Plenums') return'Plenums';
   if(d.includes('standing-s')||d.includes('standing s')) return'Standing S';
   if(d.includes('slip')) return'Slip';
   if(d.includes('drive')) return'Drive';
