@@ -4367,8 +4367,30 @@ function renderQueue(c){
     rows = items.map((item, qIdx)=>renderQueueItem(item, qIdx, items.length)).join('');
   }
   const _rows = rows || '<div style="text-align:center;padding:40px;color:var(--text3);font-size:13px">No items at this station</div>';
+  // Totals for current station
+  const stationTotalQty  = items.reduce((s,i)=>s+(Number(i.qty)||0), 0);
+  const stationTotalWt   = items.reduce((s,i)=>s+(Number(i.weight)||0), 0);
+  // Qty breakdown by product category
+  const qtyByCat = {};
+  items.forEach(i=>{
+    const cat = i.productCat || i.type || 'Other';
+    qtyByCat[cat] = (qtyByCat[cat]||0) + (Number(i.qty)||0);
+  });
+  const catBreakdown = Object.entries(qtyByCat)
+    .sort((a,b)=>b[1]-a[1])
+    .map(([cat,qty])=>`<span style="background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:2px 10px;font-size:12px;font-weight:600;color:var(--text2)">${cat} <strong style="color:var(--text)">${qty.toLocaleString()}</strong></span>`)
+    .join('');
+
   c.innerHTML=`
   ${hiddenNote}
+  <div style="background:var(--blue-l);border:1px solid var(--blue);border-radius:var(--rad);padding:12px 16px;margin-bottom:12px">
+    <div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;margin-bottom:${catBreakdown?'8px':'0'}">
+      <div style="font-size:13px;font-weight:700;color:var(--blue)">${activeQStation} — ${items.length} job${items.length!==1?'s':''}</div>
+      <div style="font-size:22px;font-weight:900;color:var(--text)">${stationTotalQty.toLocaleString()} <span style="font-size:13px;font-weight:600;color:var(--text2)">total pcs</span></div>
+      ${stationTotalWt?`<div style="font-size:14px;font-weight:700;color:var(--text2)">${stationTotalWt.toLocaleString()} lbs</div>`:''}
+    </div>
+    ${catBreakdown?`<div style="display:flex;flex-wrap:wrap;gap:6px">${catBreakdown}</div>`:''}
+  </div>
   <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
     <div style="background:var(--amber-l);border:1px solid #FAC775;border-radius:var(--rad);padding:8px 16px;font-size:13px;font-weight:600;color:var(--amber)">
       📋 ${totalOpen} open line item${totalOpen!==1?'s':''} across all stations
