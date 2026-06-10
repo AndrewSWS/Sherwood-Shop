@@ -4069,6 +4069,11 @@ function exportBundleCSV() {
   a.click();
 }
 // ══════════════════════════════════════════════════════════════════════════════
+function toggleQueueProductFilter(prod){
+  _queueProductFilter = _queueProductFilter === prod ? null : prod;
+  renderQueue();
+}
+
 function renderQueue(c){
   if(!c)c=document.getElementById('content');
   const today=new Date();today.setHours(0,0,0,0);
@@ -4114,7 +4119,16 @@ function renderQueue(c){
   stationAllItems.sort(queueSort);
   // Only preserve existing manual priorities — don't auto-assign new ones
   // Items without priority will sort by delivery date by default
-  const items = stationAllItems.map(x=>x.item);
+  let items = stationAllItems.map(x=>x.item);
+  if(_queueProductFilter){
+    items = items.filter(i=>{
+      const gauge = i.gauge ? i.gauge+' Ga' : '';
+      let product = i.size || '';
+      if(!product){ const nc=(i.notes||'').match(/^([^\s(]+)/); product=nc?nc[1]:(i.productCat||i.type||'Other'); }
+      const key = [gauge,product].filter(Boolean).join(' ');
+      return key === _queueProductFilter;
+    });
+  }
   const hiddenNote=hiddenWOs?`<div style="font-size:12px;color:var(--text3);padding:6px 10px;background:var(--gray-l);border-radius:var(--rad);margin-bottom:8px">${hiddenWOs} past WO${hiddenWOs!==1?'s':''} hidden · <button class="btn btn-xs" onclick="showAllQueue=true;updateQueueToggle();renderQueue()">Show All</button></div>`:'';
   // IOWA: group by coil number
   const isIOWA = activeQStation === 'IOWA';
@@ -4368,17 +4382,40 @@ function renderQueue(c){
   }
   const _rows = rows || '<div style="text-align:center;padding:40px;color:var(--text3);font-size:13px">No items at this station</div>';
   // Totals for current station
-  const stationTotalQty  = items.reduce((s,i)=>s+(Number(i.qty)||0), 0);
-  const stationTotalWt   = items.reduce((s,i)=>s+(Number(i.weight)||0), 0);
-  // Qty breakdown by product category
-  const qtyByCat = {};
+  const stationTotalQty = items.reduce((s,i)=>s+(Number(i.qty)||0), 0);
+  const stationTotalWt  = items.reduce((s,i)=>s+(Number(i.weight)||0), 0);
+  // Qty breakdown by gauge + product (e.g. "26 Ga 5' Slip", "28 Ga 8' Drive")
+  // If no size, fall back to QB note code prefix (e.g. FltSht:243696 → FltSht:243696)
+  const qtyByProduct = {};
   items.forEach(i=>{
-    const cat = i.productCat || i.type || 'Other';
-    qtyByCat[cat] = (qtyByCat[cat]||0) + (Number(i.qty)||0);
+    const gauge = i.gauge ? i.gauge+' Ga' : '';
+    let product = i.size || '';
+    if(!product){
+      // Try to extract code from notes e.g. "FltSht:243696 (48x96...)" → "FltSht:243696"
+      const noteCode = (i.notes||'').match(/^([^\s(]+)/);
+      product = noteCode ? noteCode[1] : (i.productCat || i.type || 'Other');
+    }
+    const key = [gauge, product].filter(Boolean).join(' ');
+    qtyByProduct[key] = (qtyByProduct[key]||0) + (Number(i.qty)||0);
   });
-  const catBreakdown = Object.entries(qtyByCat)
-    .sort((a,b)=>b[1]-a[1])
-    .map(([cat,qty])=>`<span style="background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:2px 10px;font-size:12px;font-weight:600;color:var(--text2)">${cat} <strong style="color:var(--text)">${qty.toLocaleString()}</strong></span>`)
+  const catBreakdown = Object.entries(qtyByProduct)
+    .sort((a,b)=>{
+      const gaA = parseFloat(a[0].match(/^([\d.]+)/)?.[1]||'9999');
+      const gaB = parseFloat(b[0].match(/^([\d.]+)/)?.[1]||'9999');
+      if(gaA !== gaB) return gaA - gaB;
+      return a[0].localeCompare(b[0]);
+    })
+    .map(([prod,qty])=>{
+      const active = _queueProductFilter === prod;
+      return `<span onclick="toggleQueueProductFilter('${prod.replace(/'/g,"\\'")}');event.stopPropagation()"
+        style="cursor:pointer;border-radius:var(--rad);padding:4px 12px;font-size:12px;font-weight:600;white-space:nowrap;transition:all .15s;
+        ${active
+          ? 'background:var(--blue);border:1px solid var(--blue);color:#fff;'
+          : 'background:var(--surface);border:1px solid var(--border);color:var(--text2);'}
+        "
+        title="${active?'Click to clear filter':'Click to filter queue'}"
+      >${prod} <strong style="font-size:14px">&times;${qty.toLocaleString()}</strong>${active?' ✕':''}</span>`;
+    })
     .join('');
 
   c.innerHTML=`
@@ -4562,6 +4599,7 @@ function moveQueueItem(woId, itemId, direction){
 }
 
 function switchQStation(s,el){
+  _queueProductFilter = null; // clear product filter on station switch
   activeQStation=s;
   document.querySelectorAll('.stab').forEach(x=>x.classList.remove('active'));
   el.classList.add('active');
@@ -5451,6 +5489,7 @@ let activeDayISO = null; // tracks which day is expanded in delivery schedule
 let showAllWOs = false; // false = hide past-delivery WOs, true = show all
 let showAllAssign = false; // same filter for Assign & Manage
 let showAllQueue = false;  // same filter for Shop Queue
+let _queueProductFilter = null; // active product pill filter
 let weekOffset = 0; // 0=current week, -1=last week, +1=next week, etc.
 
 function getWeekDays(offset){
