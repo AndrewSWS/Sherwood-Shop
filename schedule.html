@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Sherwood Steel — Driver Schedule</title>
+<style>
+  :root {
+    --bg: #0d0f1a; --surface: #161929; --card: #1e2235;
+    --border: #2d3248; --text: #eef0f6; --text2: #9ba3bc; --text3: #555d78;
+    --blue: #5B9BD5; --green: #4CAF7D; --amber: #f0a500; --red: #e05050;
+    --radius: 12px; --radius-sm: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
+
+  /* Header */
+  #header {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 14px 16px; display: flex; align-items: center; gap: 12px;
+    position: sticky; top: 0; z-index: 100;
+  }
+  #header .logo { font-size: 18px; font-weight: 900; color: var(--text); flex: 1; }
+  #header .logo span { color: var(--blue); }
+  #sync-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text3); flex-shrink: 0; }
+  #sync-dot.green { background: var(--green); }
+  #sync-dot.amber { background: var(--amber); }
+  #sync-dot.red   { background: var(--red); }
+
+  /* Truck selector */
+  #truck-bar {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 12px 16px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+  }
+  #truck-bar label { font-size: 13px; color: var(--text2); font-weight: 600; }
+  #truck-select {
+    flex: 1; min-width: 200px; background: var(--card); color: var(--text);
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 10px 14px; font-size: 15px; font-weight: 700; -webkit-appearance: none;
+  }
+  #date-display {
+    font-size: 13px; color: var(--blue); font-weight: 700; white-space: nowrap;
+  }
+
+  /* Date nav */
+  #date-nav {
+    display: flex; align-items: center; gap: 8px;
+  }
+  #date-nav button {
+    background: var(--surface); color: var(--text2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 12px; font-size: 16px; cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #date-nav button:active { opacity: .7; }
+  #date-picker {
+    background: var(--card); color: var(--text); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 10px; font-size: 13px; font-weight: 700;
+    flex: 1; text-align: center;
+  }
+  #today-btn {
+    background: var(--blue); color: #fff; border-color: var(--blue);
+    font-size: 12px; padding: 8px 10px; font-weight: 700;
+  }
+
+  /* Summary bar */
+  #summary-bar {
+    display: none; padding: 10px 16px;
+    background: #0a1628; border-bottom: 1px solid #1a2540;
+    font-size: 13px; color: var(--text2);
+  }
+  #summary-bar .sum-num { color: var(--text); font-weight: 800; font-size: 16px; }
+
+  /* Stop list */
+  #stops { padding: 12px 16px; max-width: 700px; margin: 0 auto; }
+
+  .stop-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    margin-bottom: 12px; overflow: hidden; transition: opacity .2s;
+  }
+  .stop-card.delivered { opacity: 0.55; }
+  .stop-card.arrived  { border-color: var(--amber); }
+
+  .stop-header {
+    padding: 14px 16px 10px; cursor: pointer;
+    display: flex; align-items: flex-start; gap: 12px;
+  }
+  .stop-num-badge {
+    width: 36px; height: 36px; border-radius: 50%; background: var(--border);
+    color: var(--text2); font-size: 14px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .stop-num-badge.arrived  { background: #2a2000; color: var(--amber); }
+  .stop-num-badge.delivered{ background: #1a2a1a; color: var(--green); }
+
+  .stop-info { flex: 1; min-width: 0; }
+  .stop-customer { font-size: 20px; font-weight: 900; color: #fff; line-height: 1.1; margin-bottom: 3px; }
+  .stop-address  { font-size: 13px; color: var(--text2); margin-bottom: 2px; }
+  .stop-meta     { font-size: 12px; color: var(--text3); }
+
+  .stop-status-badge {
+    flex-shrink: 0; font-size: 11px; font-weight: 700; padding: 4px 10px;
+    border-radius: 20px; white-space: nowrap; align-self: flex-start;
+  }
+  .badge-pending   { background: #1a2540; color: var(--blue); }
+  .badge-arrived   { background: #2a2000; color: var(--amber); }
+  .badge-delivered { background: #1a2a1a; color: var(--green); }
+
+  /* Popout line items */
+  .stop-detail {
+    display: none; border-top: 1px solid var(--border); padding: 12px 16px;
+    background: #13151f;
+  }
+  .stop-detail.open { display: block; }
+  .li-row {
+    display: flex; gap: 10px; align-items: baseline;
+    padding: 6px 0; border-bottom: 1px solid #1e2235; font-size: 13px;
+  }
+  .li-row:last-child { border-bottom: none; }
+  .li-spec { font-size: 16px; font-weight: 800; color: #fff; flex: 1; }
+  .li-qty  { color: var(--blue); font-weight: 700; font-size: 14px; white-space: nowrap; }
+  .li-status { font-size: 11px; font-weight: 700; white-space: nowrap; }
+  .li-status.complete { color: var(--green); }
+  .li-status.inprocess { color: var(--amber); }
+  .li-status.pending   { color: var(--text3); }
+  .li-notes { font-size: 11px; color: var(--text3); margin-top:2px; }
+  .wo-badge { display:inline-flex; align-items:center; gap:4px; background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:2px 10px; font-size:11px; color:var(--text2); margin-bottom:8px; }
+
+  /* Action buttons */
+  .stop-actions { padding: 12px 16px; border-top: 1px solid var(--border); display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn-action {
+    flex: 1; min-width: 120px; padding: 14px 10px; border-radius: 10px;
+    border: none; font-size: 15px; font-weight: 800; cursor: pointer;
+    -webkit-tap-highlight-color: transparent; transition: opacity .15s;
+  }
+  .btn-action:active { opacity: .75; }
+  .btn-arrive   { background: #2a2000; color: var(--amber); border: 2px solid var(--amber); }
+  .btn-deliver  { background: #1a3a25; color: var(--green); border: 2px solid var(--green); }
+  .btn-deliver.active { background: var(--green); color: #000; }
+  .btn-undo     { background: var(--surface); color: var(--text2); border: 1px solid var(--border); }
+
+  /* Mileage / driver input row */
+  .input-row {
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+    padding: 0 16px 12px; border-top: none;
+  }
+  .input-row label { font-size: 11px; color: var(--text3); font-weight: 700; text-transform: uppercase; }
+  .input-row input {
+    background: var(--surface); color: var(--text); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 12px; font-size: 15px; font-weight: 700;
+    width: 140px;
+  }
+  .input-row input::placeholder { color: var(--text3); font-weight: 400; }
+
+  /* Timestamps */
+  .timestamps { padding: 8px 16px; font-size: 11px; color: var(--text3); border-top: 1px solid var(--border); }
+  .timestamps span { color: var(--text2); font-weight: 600; }
+
+  /* Empty / loading */
+  #empty { text-align: center; padding: 60px 20px; color: var(--text3); }
+  #empty .icon { font-size: 48px; margin-bottom: 12px; }
+  #loading { text-align: center; padding: 40px; color: var(--text3); font-size: 14px; }
+
+  /* Toast */
+  #toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: #232635; color: var(--text); border: 1px solid var(--border);
+    border-radius: 20px; padding: 10px 20px; font-size: 13px; font-weight: 600;
+    z-index: 9999; opacity: 0; transition: opacity .2s; pointer-events: none;
+    max-width: 90vw; text-align: center;
+  }
+  #toast.show { opacity: 1; }
+
+
+</style>
+</head>
+<body>
+
+<div id="header">
+  <div class="logo">Sherwood <span>Steel</span> — Delivery</div>
+  <div id="sync-dot"></div>
+</div>
+
+<div id="truck-bar">
+  <label>🚚 Truck</label>
+  <select id="truck-select" onchange="selectTruck(this.value)">
+    <option value="">— Select Your Truck —</option>
+  </select>
+</div>
+<div id="truck-bar" style="border-top:none;padding-top:8px">
+  <div id="date-nav">
+    <button onclick="shiftDate(-1)">‹</button>
+    <input type="date" id="date-picker" onchange="selectDate(this.value)">
+    <button onclick="shiftDate(1)">›</button>
+    <button id="today-btn" onclick="goToday()">Today</button>
+  </div>
+</div>
+
+<div id="summary-bar">
+  <span id="summary-text"></span>
+</div>
+
+<div id="stops">
+  <div id="loading">Loading schedule...</div>
+</div>
+
+<div id="toast"></div>
+
+
+
+<script>
+const SB_URL = 'https://ecndvwmbycyppqkbvuzs.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVjbmR2d21ieWN5cHBxa2J2dXpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgwMjYyMTIsImV4cCI6MjA2MzYwMjIxMn0.J3JFlGMRFnbP7iqGMFpEb3UKiJV4p04g5g6Qk4Ueqjc';
+const HDR = { 'Content-Type':'application/json', apikey: SB_KEY, Authorization: 'Bearer '+SB_KEY };
+
+let driverName = ''; // pulled from truck record on selection
+let activeTruck = localStorage.getItem('sw_truck') || '';
+let activeDate  = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+let trucks = [];
+let stops = [];
+let openStopId = null;
+let pollTimer = null;
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+async function init() {
+  document.getElementById('date-picker').value = activeDate;
+  updateTodayBtn();
+
+  // Load trucks from Supabase
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/trucks?order=id`, { headers: HDR });
+    trucks = await r.json();
+    const sel = document.getElementById('truck-select');
+    sel.innerHTML = '<option value="">— Select Your Truck —</option>';
+    trucks.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t.id;
+      opt.textContent = t.name + (t.driver ? ' — ' + t.driver : '');
+      if (String(t.id) === activeTruck) {
+        opt.selected = true;
+        if (t.driver) driverName = t.driver;
+      }
+      sel.appendChild(opt);
+    });
+    setSyncStatus('green');
+  } catch(e) {
+    setSyncStatus('red');
+    showToast('⚠ Could not load trucks');
+  }
+
+  if (activeTruck) loadStops();
+  startPoll();
+}
+
+function selectTruck(id) {
+  activeTruck = id;
+  localStorage.setItem('sw_truck', id);
+  // Pull driver name from the truck record
+  const truck = trucks.find(t => String(t.id) === String(id));
+  if (truck && truck.driver) driverName = truck.driver;
+  if (id) loadStops();
+  else {
+    document.getElementById('stops').innerHTML = '<div id="empty"><div class="icon">🚚</div><div>Select your truck to see today\'s stops</div></div>';
+    document.getElementById('summary-bar').style.display = 'none';
+  }
+}
+
+// ── LOAD STOPS ────────────────────────────────────────────────────────────────
+async function loadStops() {
+  if (!activeTruck) return;
+  setSyncStatus('amber');
+  try {
+    // Get stops for this truck on the selected date
+    const r = await fetch(
+      `${SB_URL}/rest/v1/truck_stops?truck_id=eq.${activeTruck}&ship_date=eq.${activeDate}&order=seq,wo_num`,
+      { headers: HDR }
+    );
+    const rawStops = await r.json();
+
+    // Get WO details for each stop (to get line items)
+    if (rawStops.length === 0) {
+      document.getElementById('stops').innerHTML =
+        '<div id="empty"><div class="icon">✅</div><div>No stops scheduled for today</div></div>';
+      document.getElementById('summary-bar').style.display = 'none';
+      setSyncStatus('green');
+      return;
+    }
+
+    const woIds = [...new Set(rawStops.map(s => s.wo_id))].join(',');
+    const [woRes, liRes] = await Promise.all([
+      fetch(`${SB_URL}/rest/v1/work_orders?id=in.(${woIds})`, { headers: HDR }),
+      fetch(`${SB_URL}/rest/v1/line_items?wo_id=in.(${woIds})&order=id`, { headers: HDR })
+    ]);
+    const wos  = await woRes.json();
+    const lis  = await liRes.json();
+
+    // Merge everything
+    const woMap = {};
+    wos.forEach(w => woMap[w.id] = w);
+    const liMap = {};
+    lis.forEach(li => { if(!liMap[li.wo_id]) liMap[li.wo_id] = []; liMap[li.wo_id].push(li); });
+
+    stops = rawStops.map(s => ({
+      ...s,
+      wo:    woMap[s.wo_id] || {},
+      items: liMap[s.wo_id] || []
+    }));
+
+    renderStops();
+    setSyncStatus('green');
+  } catch(e) {
+    setSyncStatus('red');
+    showToast('⚠ Failed to load stops');
+  }
+}
+
+function startPoll() {
+  clearInterval(pollTimer);
+  pollTimer = setInterval(() => { if(activeTruck) loadStops(); }, 30000);
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+function renderStops() {
+  const container = document.getElementById('stops');
+  const pending   = stops.filter(s => !s.delivered).length;
+  const delivered = stops.filter(s => s.delivered).length;
+
+  // Summary bar
+  const sb = document.getElementById('summary-bar');
+  sb.style.display = '';
+  const dateLabel = activeDate === new Date().toISOString().split('T')[0]
+    ? 'today'
+    : new Date(activeDate+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+  document.getElementById('summary-text').innerHTML =
+    `<span class="sum-num">${stops.length}</span> stops ${dateLabel} &nbsp;·&nbsp; ` +
+    `<span class="sum-num" style="color:var(--green)">${delivered}</span> delivered &nbsp;·&nbsp; ` +
+    `<span class="sum-num" style="color:var(--amber)">${pending}</span> remaining`;
+
+  if (!stops.length) {
+    container.innerHTML = '<div id="empty"><div class="icon">✅</div><div>No stops for today</div></div>';
+    return;
+  }
+
+  container.innerHTML = stops.map((stop, idx) => renderStopCard(stop, idx)).join('');
+
+  // Restore open state
+  if (openStopId) {
+    const el = document.getElementById(`detail-${openStopId}`);
+    if (el) el.classList.add('open');
+  }
+}
+
+function renderStopCard(stop, idx) {
+  const isDelivered = !!stop.delivered;
+  const isArrived   = !!stop.arrived_at && !isDelivered;
+  const statusClass = isDelivered ? 'delivered' : isArrived ? 'arrived' : '';
+  const badgeClass  = isDelivered ? 'badge-delivered' : isArrived ? 'badge-arrived' : 'badge-pending';
+  const badgeText   = isDelivered ? '✓ Delivered' : isArrived ? '📍 On Site' : 'Pending';
+  const numClass    = isDelivered ? 'delivered' : isArrived ? 'arrived' : '';
+
+  const wo = stop.wo || {};
+  const address = [stop.address || wo.address, stop.cityst || wo.cityst].filter(Boolean).join(', ');
+
+  // Line items
+  const itemRows = (stop.items || []).map(li => {
+    const spec = [li.gauge ? li.gauge+' Ga' : '', li.size || li.product_cat || ''].filter(Boolean).join(' ');
+    const statusCls = li.status === 'Complete' ? 'complete' : li.status === 'In Process' ? 'inprocess' : 'pending';
+    const statusLabel = li.status === 'Complete' ? '✓ Done' : li.status === 'In Process' ? '▶ In Process' : '○ Pending';
+    return `<div class="li-row">
+      <div>
+        <div class="li-spec">${spec || li.product_cat || '—'}</div>
+        ${li.notes ? `<div class="li-notes">${li.notes}</div>` : ''}
+      </div>
+      <div class="li-qty">× ${li.qty || '—'}</div>
+      <div class="li-status ${statusCls}">${statusLabel}</div>
+    </div>`;
+  }).join('');
+
+  // Timestamps display
+  let tsHtml = '';
+  if (stop.arrived_at || stop.departed_at || stop.mileage) {
+    tsHtml = `<div class="timestamps">`;
+    if (stop.arrived_at)  tsHtml += `Arrived: <span>${fmtTime(stop.arrived_at)}</span> &nbsp;`;
+    if (stop.departed_at) tsHtml += `Departed: <span>${fmtTime(stop.departed_at)}</span> &nbsp;`;
+    if (stop.mileage)     tsHtml += `Odometer: <span>${stop.mileage.toLocaleString()} mi</span>`;
+    tsHtml += `</div>`;
+  }
+
+  // Action buttons — only show for today or past, not future
+  const today = new Date().toISOString().split('T')[0];
+  const isFuture = activeDate > today;
+  let actionsHtml = '';
+  if (isFuture) {
+    actionsHtml = ''; // future — view only
+  } else if (!isDelivered) {
+    if (!isArrived) {
+      actionsHtml = `<div class="stop-actions">
+        <button class="btn-action btn-arrive" onclick="markArrived(${stop.id});event.stopPropagation()">📍 Arrived at Stop</button>
+      </div>
+      <div class="input-row">
+        <label>Odometer</label>
+        <input type="number" id="mileage-${stop.id}" placeholder="e.g. 48250" inputmode="numeric">
+      </div>`;
+    } else {
+      actionsHtml = `<div class="stop-actions">
+        <button class="btn-action btn-deliver active" onclick="markDelivered(${stop.id});event.stopPropagation()">🚚 Mark Delivered</button>
+        <button class="btn-action btn-undo" onclick="undoArrived(${stop.id});event.stopPropagation()">↩ Undo Arrived</button>
+      </div>`;
+    }
+  } else {
+    actionsHtml = `<div class="stop-actions">
+      <button class="btn-action btn-undo" onclick="undoDelivered(${stop.id});event.stopPropagation()">↩ Undo Delivered</button>
+    </div>`;
+  }
+
+  return `<div class="stop-card ${statusClass}" id="stop-${stop.id}">
+    <div class="stop-header" onclick="toggleDetail(${stop.id})">
+      <div class="stop-num-badge ${numClass}">${idx + 1}</div>
+      <div class="stop-info">
+        <div class="stop-customer">${stop.customer || wo.customer || '—'}</div>
+        ${address ? `<div class="stop-address">📍 ${address}</div>` : ''}
+        <div class="stop-meta">WO #${stop.wo_num || wo.wo_num || '—'}
+          ${stop.notes ? ' · ' + stop.notes : ''}
+        </div>
+      </div>
+      <div class="stop-status-badge ${badgeClass}">${badgeText}</div>
+    </div>
+    <div class="stop-detail" id="detail-${stop.id}">
+      ${itemRows || '<div style="color:var(--text3);font-size:13px;padding:4px 0">No line items</div>'}
+    </div>
+    ${tsHtml}
+    ${actionsHtml}
+  </div>`;
+}
+
+function toggleDetail(id) {
+  const el = document.getElementById(`detail-${id}`);
+  if (!el) return;
+  const isOpen = el.classList.contains('open');
+  // Close all
+  document.querySelectorAll('.stop-detail.open').forEach(d => d.classList.remove('open'));
+  if (!isOpen) { el.classList.add('open'); openStopId = id; }
+  else openStopId = null;
+}
+
+// ── ACTIONS ───────────────────────────────────────────────────────────────────
+async function markArrived(stopId) {
+  const mileageEl = document.getElementById(`mileage-${stopId}`);
+  const mileage = mileageEl ? parseInt(mileageEl.value) || null : null;
+  const now = new Date().toISOString();
+  try {
+    await sbPatch(stopId, { arrived_at: now, mileage, driver_name: driverName });
+    showToast('📍 Arrival recorded');
+    loadStops();
+  } catch(e) { showToast('⚠ Failed to save'); }
+}
+
+async function markDelivered(stopId) {
+  const now = new Date().toISOString();
+  try {
+    await sbPatch(stopId, { delivered: true, delivered_at: now, departed_at: now, driver_name: driverName });
+    showToast('✅ Delivered!');
+    loadStops();
+  } catch(e) { showToast('⚠ Failed to save'); }
+}
+
+async function undoArrived(stopId) {
+  if (!confirm('Undo arrival?')) return;
+  try {
+    await sbPatch(stopId, { arrived_at: null, mileage: null });
+    showToast('↩ Arrival removed');
+    loadStops();
+  } catch(e) { showToast('⚠ Failed to save'); }
+}
+
+async function undoDelivered(stopId) {
+  if (!confirm('Mark this stop as not delivered?')) return;
+  try {
+    await sbPatch(stopId, { delivered: false, delivered_at: null, departed_at: null });
+    showToast('↩ Delivery undone');
+    loadStops();
+  } catch(e) { showToast('⚠ Failed to save'); }
+}
+
+async function sbPatch(stopId, body) {
+  const r = await fetch(`${SB_URL}/rest/v1/truck_stops?id=eq.${stopId}`, {
+    method: 'PATCH',
+    headers: { ...HDR, Prefer: 'return=minimal' },
+    body: JSON.stringify(body)
+  });
+  if (!r.ok) throw new Error(await r.text());
+}
+
+// ── UTILS ─────────────────────────────────────────────────────────────────────
+function setSyncStatus(color) {
+  const dot = document.getElementById('sync-dot');
+  dot.className = color;
+}
+
+function fmtTime(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+}
+
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ── DATE NAV ─────────────────────────────────────────────────────────────────
+function selectDate(val) {
+  activeDate = val;
+  updateTodayBtn();
+  if (activeTruck) loadStops();
+}
+
+function shiftDate(dir) {
+  const d = new Date(activeDate + 'T12:00:00');
+  d.setDate(d.getDate() + dir);
+  activeDate = d.toISOString().split('T')[0];
+  document.getElementById('date-picker').value = activeDate;
+  updateTodayBtn();
+  if (activeTruck) loadStops();
+}
+
+function goToday() {
+  activeDate = new Date().toISOString().split('T')[0];
+  document.getElementById('date-picker').value = activeDate;
+  updateTodayBtn();
+  if (activeTruck) loadStops();
+}
+
+function updateTodayBtn() {
+  const today = new Date().toISOString().split('T')[0];
+  const btn = document.getElementById('today-btn');
+  const isToday = activeDate === today;
+  btn.style.display = isToday ? 'none' : '';
+  // Show friendly date label
+  const d = new Date(activeDate + 'T12:00:00');
+  const label = isToday ? 'Today' : d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+  document.getElementById('summary-bar') && (document.getElementById('summary-text').dataset.date = label);
+}
+
+// ── START ─────────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
