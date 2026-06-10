@@ -75,19 +75,24 @@
   .tile-accent {
     position: absolute; top: 0; left: 0; bottom: 0; width: 5px;
   }
-  .tile-header { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
+  .tile-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
   .tile-num {
-    min-width: 34px; height: 34px; border-radius: 8px;
-    background: var(--surface); color: var(--text2);
-    font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
+    min-width: 36px; height: 22px; border-radius: 6px;
+    background: var(--surface); color: var(--text3);
+    font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; padding: 0 6px; white-space: nowrap;
   }
   .tile-title { flex: 1; }
-  .tile-customer { font-size: 15px; font-weight: 800; color: var(--text); line-height: 1.2; }
-  .tile-wo { font-size: 12px; color: var(--text3); margin-top: 2px; }
+  .tile-customer {
+    font-size: 26px; font-weight: 900; color: #ffffff;
+    line-height: 1.1; letter-spacing: -.4px;
+    margin-bottom: 2px;
+  }
+  .tile-wo { font-size: 11px; color: var(--text3); }
+  .tile-divider { border: none; border-top: 1px solid #2d3248; margin: 10px 0; }
   .tile-specs {
-    font-size: 18px; font-weight: 800; color: var(--text);
-    margin: 8px 0 4px; letter-spacing: -.3px;
+    font-size: 32px; font-weight: 900; color: #ffffff;
+    margin: 0 0 8px; letter-spacing: -.6px; line-height: 1.05;
   }
   .tile-meta {
     display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px;
@@ -166,6 +171,40 @@
   @keyframes pulse { from { opacity: .4; } to { opacity: 1; } }
   #last-sync { flex: 1; }
   #item-count { font-weight: 700; color: var(--text2); }
+  #queue-summary {
+    padding: 12px 16px;
+    background: #0e1221;
+    border-bottom: 1px solid #2d3248;
+  }
+  #queue-summary .summary-totals {
+    display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; margin-bottom: 8px;
+  }
+  #queue-summary .summary-station {
+    font-size: 13px; font-weight: 700; color: var(--blue);
+  }
+  #queue-summary .summary-qty {
+    font-size: 26px; font-weight: 900; color: #ffffff;
+  }
+  #queue-summary .summary-qty span {
+    font-size: 13px; font-weight: 600; color: var(--text2);
+  }
+  #queue-summary .summary-wt {
+    font-size: 14px; font-weight: 700; color: var(--text2);
+  }
+  #summary-pills {
+    display: flex; flex-wrap: wrap; gap: 6px;
+  }
+  .summary-pill {
+    cursor: pointer;
+    border-radius: 8px; padding: 5px 12px;
+    font-size: 12px; font-weight: 600;
+    background: var(--surface); border: 1px solid #2d3248; color: var(--text2);
+    white-space: nowrap; transition: all .15s; -webkit-tap-highlight-color: transparent;
+  }
+  .summary-pill.active {
+    background: var(--blue); border-color: var(--blue); color: #fff;
+  }
+  .summary-pill strong { font-size: 14px; }
 
   .empty-state {
     text-align: center; padding: 60px 20px; color: var(--text3);
@@ -304,6 +343,15 @@
 </div>
 
 <div id="station-tabs"></div>
+
+<div id="queue-summary" style="display:none">
+  <div class="summary-totals">
+    <div class="summary-station" id="summary-station"></div>
+    <div class="summary-qty" id="summary-qty"></div>
+    <div class="summary-wt" id="summary-wt"></div>
+  </div>
+  <div id="summary-pills"></div>
+</div>
 
 <div id="main">
   <div id="tiles"></div>
@@ -483,8 +531,11 @@ function renderStationTabs(allStations) {
   }).join('');
 }
 
+let _productFilter = null; // active pill filter
+
 function setStation(st) {
   activeStation = st;
+  _productFilter = null;
   localStorage.setItem('sq_station', st);
   document.querySelectorAll('.station-tab').forEach(el => {
     el.classList.toggle('active', el.textContent.startsWith(st));
@@ -493,6 +544,11 @@ function setStation(st) {
 }
 
 // ── RENDER TILES ─────────────────────────────────────────────────────────────
+function toggleProductFilter(prod) {
+  _productFilter = _productFilter === prod ? null : prod;
+  renderTiles();
+}
+
 function renderTiles() {
   const container = document.getElementById('tiles');
   let items = activeStation === 'ALL'
@@ -514,8 +570,56 @@ function renderTiles() {
   const pending = items.filter(i => i.status !== 'Complete').length;
   document.getElementById('item-count').textContent = `${pending} pending · ${items.length} total`;
 
+  // ── SUMMARY BAR ──
+  const visItems = items.filter(i => i.status !== 'Complete');
+  const totalQty = visItems.reduce((s,i)=>s+(Number(i.qty)||0),0);
+  const totalWt  = visItems.reduce((s,i)=>s+(Number(i.weight)||0),0);
+  // Group by gauge + product, fall back to note code
+  const qtyByProd = {};
+  visItems.forEach(i=>{
+    const gauge = i.gauge ? i.gauge+' Ga' : '';
+    let prod = i.size || '';
+    if(!prod){ const nc=(i.notes||'').match(/^([^ (]+)/); prod=nc?nc[1]:(i.productCat||i.type||'Other'); }
+    const key = [gauge,prod].filter(Boolean).join(' ');
+    qtyByProd[key] = (qtyByProd[key]||0)+(Number(i.qty)||0);
+  });
+  const summaryEl = document.getElementById('queue-summary');
+  if(totalQty > 0){
+    summaryEl.style.display = '';
+    document.getElementById('summary-station').textContent = activeStation + ' — ' + visItems.length + ' job' + (visItems.length!==1?'s':'');
+    document.getElementById('summary-qty').innerHTML = totalQty.toLocaleString() + ' <span>total pcs</span>';
+    document.getElementById('summary-wt').textContent = totalWt ? totalWt.toLocaleString()+' lbs' : '';
+    const pillsEl = document.getElementById('summary-pills');
+    pillsEl.innerHTML = Object.entries(qtyByProd)
+      .sort((a,b)=>{
+        const gaA=parseFloat(a[0].match(/^([\d.]+)/)?.[1]||'9999');
+        const gaB=parseFloat(b[0].match(/^([\d.]+)/)?.[1]||'9999');
+        if(gaA!==gaB) return gaA-gaB;
+        return a[0].localeCompare(b[0]);
+      })
+      .map(([prod,qty])=>{
+        const active = _productFilter === prod;
+        return `<div class="summary-pill${active?' active':''}" onclick="toggleProductFilter('${prod.replace(/'/g,"\\'")}')">
+          ${prod} <strong>&times;${qty.toLocaleString()}</strong>${active?' ✕':''}
+        </div>`;
+      }).join('');
+  } else {
+    summaryEl.style.display = 'none';
+  }
+
+  // Apply product filter
+  if(_productFilter){
+    items = items.filter(i=>{
+      const gauge = i.gauge ? i.gauge+' Ga' : '';
+      let prod = i.size || '';
+      if(!prod){ const nc=(i.notes||'').match(/^([^ (]+)/); prod=nc?nc[1]:(i.productCat||i.type||'Other'); }
+      const key = [gauge,prod].filter(Boolean).join(' ');
+      return key === _productFilter;
+    });
+  }
+
   if (!items.length) {
-    container.innerHTML = `<div class="empty-state"><div class="big">✅</div><p>No items for this station</p></div>`;
+    container.innerHTML = `<div class="empty-state"><div class="big">✅</div><p>No items for this station${_productFilter?' matching filter':''}</p></div>`;
     return;
   }
 
@@ -535,8 +639,8 @@ function renderTile(item) {
   const weight = item.weight ? `${Number(item.weight).toLocaleString()} lbs` : '';
 
   const chips = [
+    qty ? '' : '', /* qty shown inline with specs */
     item.type ? `<span class="chip">${item.type}</span>` : '',
-    qty ? `<span class="chip">${qty}</span>` : '',
     weight ? `<span class="chip blue">${weight}</span>` : '',
     item.assignee ? `<span class="chip blue">👤 ${item.assignee}</span>` : '',
     done && item.completedBy ? `<span class="chip green">✓ ${item.completedBy}</span>` : '',
@@ -598,13 +702,12 @@ function renderTile(item) {
   return `<div class="tile ${tileClass}" id="tile-${item._dbId}">
     <div class="tile-accent" style="background:${accentColor}"></div>
     <div class="tile-header">
-      <div class="tile-num">WO<br>${item.woNum}</div>
-      <div class="tile-title">
-        <div class="tile-customer">${escHtml(item.customer)}</div>
-        <div class="tile-wo">${item.station}${item.delivery ? ' · 📅 ' + fmtDate(item.delivery) : ''}</div>
-      </div>
+      <div class="tile-num">WO #${item.woNum}</div>
+      <div class="tile-wo">${item.station}${item.delivery ? ' · 📅 ' + fmtDate(item.delivery) : ''}</div>
     </div>
-    <div class="tile-specs">${escHtml(specs)}</div>
+    <div class="tile-customer" style="${done?'opacity:0.5;text-decoration:line-through;':''}">${escHtml(item.customer)}</div>
+    <hr class="tile-divider">
+    <div class="tile-specs">${escHtml(specs)}<span style="font-size:24px;font-weight:800;color:#7eb8f7;margin-left:12px">${qty}</span></div>
     <div class="tile-meta">${chips}</div>
     ${notes}${bundle}${skidsHtml}
     ${item.isDual ? renderDualSteps(item) : ''}
