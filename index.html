@@ -3876,6 +3876,143 @@ ${content || '<p style="color:#888">No open items in this queue.</p>'}
 }
 
 
+function printQueueSummary(station){
+  const today = new Date(); today.setHours(0,0,0,0);
+  const rawItems = [];
+  state.wos.forEach(wo=>{
+    const isPast = wo.delivery && new Date(wo.delivery+'T00:00:00') < today;
+    if(isPast && !showAllQueue) return;
+    wo.items.forEach(item=>{
+      if(item.status !== 'Complete' && item.station === station){
+        rawItems.push({woId:wo.id, item, woNum:wo.woNum, customer:wo.customer, delivery:wo.delivery});
+      }
+    });
+  });
+  rawItems.sort(queueSort);
+  let items = rawItems.map(x=>({...x.item, woNum:x.woNum, customer:x.customer, delivery:x.delivery, woId:x.woId}));
+  const filterLabel = _queueProductFilter ? ' — '+_queueProductFilter : '';
+  if(_queueProductFilter){
+    items = items.filter(i=>{
+      const gauge = i.gauge ? i.gauge+' Ga' : '';
+      let prod = i.size || '';
+      if(!prod){ const nc=(i.notes||'').match(/^([^\s(]+)/); prod=nc?nc[1]:(i.productCat||i.type||'Other'); }
+      return [gauge,prod].filter(Boolean).join(' ') === _queueProductFilter;
+    });
+  }
+  const now = new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  const printTitle = station + filterLabel + ' Queue';
+  const totalQty = items.reduce((s,i)=>s+(Number(i.qty)||0),0);
+  const totalWt  = items.reduce((s,i)=>s+(Number(i.weight)||0),0);
+
+  // Group by gauge + product
+  const byProd = {};
+  items.forEach(i=>{
+    const gauge = i.gauge ? i.gauge+' Ga' : '';
+    let prod = i.size || '';
+    if(!prod){ const nc=(i.notes||'').match(/^([^\s(]+)/); prod=nc?nc[1]:(i.productCat||i.type||'Other'); }
+    const key = [gauge,prod].filter(Boolean).join(' ');
+    if(!byProd[key]) byProd[key]={qty:0, wt:0, jobs:[]};
+    byProd[key].qty += Number(i.qty)||0;
+    byProd[key].wt  += Number(i.weight)||0;
+    byProd[key].jobs.push(i);
+  });
+
+  // Sort product groups by gauge
+  const prodRows = Object.entries(byProd).sort((a,b)=>{
+    const gaA=parseFloat(a[0].match(/^([\d.]+)/)?.[1]||'9999');
+    const gaB=parseFloat(b[0].match(/^([\d.]+)/)?.[1]||'9999');
+    if(gaA!==gaB) return gaA-gaB;
+    return a[0].localeCompare(b[0]);
+  });
+
+  // Build product summary rows
+  const summaryRows = prodRows.map(([prod,data])=>{
+    const customers = [...new Set(data.jobs.map(j=>j.customer))].join(', ');
+    const wos = [...new Set(data.jobs.map(j=>'#'+j.woNum))].join(', ');
+    return `<tr>
+      <td style="font-size:15px;font-weight:800;padding:8px 10px;border-bottom:1px solid #e0e0e0">${prod}</td>
+      <td style="font-size:20px;font-weight:900;padding:8px 10px;border-bottom:1px solid #e0e0e0;text-align:center;color:#1565c0">${data.qty.toLocaleString()}</td>
+      <td style="font-size:13px;padding:8px 10px;border-bottom:1px solid #e0e0e0;text-align:right;color:#666">${data.wt?data.wt.toLocaleString()+' lbs':''}</td>
+      <td style="font-size:11px;padding:8px 10px;border-bottom:1px solid #e0e0e0;color:#555">${data.jobs.length} job${data.jobs.length!==1?'s':''}</td>
+      <td style="font-size:11px;padding:8px 10px;border-bottom:1px solid #e0e0e0;color:#555">${customers}</td>
+      <td style="font-size:11px;padding:8px 10px;border-bottom:1px solid #e0e0e0;color:#888">${wos}</td>
+    </tr>`;
+  }).join('');
+
+  // Build per-WO rows
+  const woRows = items.map((item,i)=>{
+    const gauge = item.gauge ? item.gauge+' Ga' : '';
+    const prod = [gauge, item.size||item.productCat||item.type].filter(Boolean).join(' ');
+    return `<tr style="background:${i%2===0?'#fafafa':'#fff'}">
+      <td style="padding:5px 8px;font-size:11px;font-weight:700;white-space:nowrap">WO #${item.woNum}</td>
+      <td style="padding:5px 8px;font-size:11px;font-weight:600;color:#1a5c8a">${item.customer}</td>
+      <td style="padding:5px 8px;font-size:12px;font-weight:700">${prod||'—'}</td>
+      <td style="padding:5px 8px;font-size:13px;font-weight:800;text-align:center;color:#1565c0">${item.qty||'—'}</td>
+      <td style="padding:5px 8px;font-size:11px;color:#666;text-align:right">${item.weight?Number(item.weight).toLocaleString()+' lbs':''}</td>
+      <td style="padding:5px 8px;font-size:11px;color:#888">${item.delivery?fmtDate(item.delivery):''}</td>
+      <td style="padding:5px 8px;font-size:11px">${item.assignee||'<span style="color:#c0392b">Unassigned</span>'}</td>
+    </tr>`;
+  }).join('');
+
+  const win = window.open('','_blank');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
+<title>${printTitle} Summary — ${now}</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: Arial, sans-serif; font-size: 12px; margin: 20px; color: #111; }
+  h1 { font-size: 20px; margin: 0 0 2px; }
+  .meta { font-size: 11px; color: #666; margin-bottom: 16px; }
+  .totals { display: flex; gap: 24px; background: #e8f0fe; border: 1px solid #90caf9; border-radius: 6px; padding: 12px 18px; margin-bottom: 20px; align-items: baseline; }
+  .tot-label { font-size: 11px; color: #555; text-transform: uppercase; font-weight: 700; letter-spacing:.04em; }
+  .tot-val { font-size: 28px; font-weight: 900; color: #1565c0; margin-right: 4px; }
+  .tot-unit { font-size: 12px; color: #555; }
+  .section-head { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing:.05em; color: #333; border-bottom: 2px solid #1565c0; padding-bottom: 4px; margin: 20px 0 8px; }
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #1565c0; color: #fff; padding: 6px 10px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing:.04em; }
+  th.right { text-align: right; }
+  th.center { text-align: center; }
+  @media print { body { margin: 10px; } .no-print { display: none; } }
+</style>
+</head><body>
+<h1>📋 ${printTitle} — Summary</h1>
+<div class="meta">${now} &nbsp;·&nbsp; ${items.length} open job${items.length!==1?'s':''}</div>
+
+<div class="totals">
+  <div><div class="tot-label">Total Pieces</div><div><span class="tot-val">${totalQty.toLocaleString()}</span><span class="tot-unit">pcs</span></div></div>
+  ${totalWt?`<div><div class="tot-label">Total Weight</div><div><span class="tot-val">${totalWt.toLocaleString()}</span><span class="tot-unit">lbs</span></div></div>`:''}
+  <div><div class="tot-label">Jobs</div><div><span class="tot-val">${items.length}</span></div></div>
+  <div><div class="tot-label">Products</div><div><span class="tot-val">${prodRows.length}</span></div></div>
+</div>
+
+<div class="section-head">By Product</div>
+<table>
+  <thead><tr>
+    <th>Product</th><th class="center">Qty</th><th class="right">Weight</th>
+    <th>Jobs</th><th>Customers</th><th>WO #s</th>
+  </tr></thead>
+  <tbody>${summaryRows}</tbody>
+  <tfoot><tr style="background:#f0f4ff;font-weight:800;border-top:2px solid #1565c0">
+    <td style="padding:8px 10px">TOTAL</td>
+    <td style="padding:8px 10px;text-align:center;font-size:16px;color:#1565c0">${totalQty.toLocaleString()}</td>
+    <td style="padding:8px 10px;text-align:right;color:#666">${totalWt?totalWt.toLocaleString()+' lbs':''}</td>
+    <td colspan="3" style="padding:8px 10px;color:#888">${items.length} jobs · ${prodRows.length} products</td>
+  </tr></tfoot>
+</table>
+
+<div class="section-head" style="margin-top:24px">Job Detail</div>
+<table>
+  <thead><tr>
+    <th>WO #</th><th>Customer</th><th>Product</th>
+    <th class="center">Qty</th><th class="right">Weight</th>
+    <th>Delivery</th><th>Assigned</th>
+  </tr></thead>
+  <tbody>${woRows}</tbody>
+</table>
+<script>window.onload=()=>window.print();<\/script>
+</body></html>`);
+  win.document.close();
+}
+
 // Queue sort: manual priority overrides delivery date default
 // Items with no delivery date go to bottom
 function queueSort(a, b){
@@ -4449,6 +4586,7 @@ function renderQueue(c){
     </div>`:'<div style="background:var(--green-l);border:1px solid #c0dd97;border-radius:var(--rad);padding:8px 16px;font-size:13px;font-weight:600;color:var(--green)">✓ All items assigned</div>'}
     <button onclick="resetQueuePriorities()" class="btn btn-sm" style="margin-left:auto" title="Clear manual priorities — revert to delivery date order">↺ Reset Order</button>
     <button data-station="${activeQStation}" onclick="printQueueList(this.dataset.station)" class="btn btn-sm">🖨 Print ${activeQStation} Queue</button>
+    <button data-station="${activeQStation}" onclick="printQueueSummary(this.dataset.station)" class="btn btn-sm">📄 Summary Sheet</button>
   </div>
   <div class="station-tab">${tabs}</div>${_rows}`;
 }
