@@ -6,9 +6,9 @@
 <title>Sherwood Steel — Driver Schedule</title>
 <style>
   :root {
-    --bg: #0d0f1a; --surface: #161929; --card: #1e2235;
-    --border: #2d3248; --text: #eef0f6; --text2: #9ba3bc; --text3: #555d78;
-    --blue: #5B9BD5; --green: #4CAF7D; --amber: #f0a500; --red: #e05050;
+    --bg: #f0f2f7; --surface: #fff; --card: #fff;
+    --border: #d0d5e8; --text: #1a1f35; --text2: #4a5270; --text3: #8892b0;
+    --blue: #2d6bb5; --green: #2e8f5e; --amber: #c47a00; --red: #c93535;
     --radius: 12px; --radius-sm: 8px;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -65,7 +65,7 @@
   /* Summary bar */
   #summary-bar {
     display: none; padding: 10px 16px;
-    background: #0a1628; border-bottom: 1px solid #1a2540;
+    background: #e8edf7; border-bottom: 1px solid var(--border);
     font-size: 13px; color: var(--text2);
   }
   #summary-bar .sum-num { color: var(--text); font-weight: 800; font-size: 16px; }
@@ -85,12 +85,12 @@
     display: flex; align-items: flex-start; gap: 12px;
   }
   .stop-num-badge {
-    width: 36px; height: 36px; border-radius: 50%; background: var(--border);
+    width: 36px; height: 36px; border-radius: 50%; background: #d8def0;
     color: var(--text2); font-size: 14px; font-weight: 800;
     display: flex; align-items: center; justify-content: center; flex-shrink: 0;
   }
-  .stop-num-badge.arrived  { background: #2a2000; color: var(--amber); }
-  .stop-num-badge.delivered{ background: #1a2a1a; color: var(--green); }
+  .stop-num-badge.arrived  { background: #fff3cc; color: var(--amber); }
+  .stop-num-badge.delivered{ background: #d4f0e4; color: var(--green); }
 
   .stop-info { flex: 1; min-width: 0; }
   .stop-customer { font-size: 20px; font-weight: 900; color: #fff; line-height: 1.1; margin-bottom: 3px; }
@@ -101,14 +101,14 @@
     flex-shrink: 0; font-size: 11px; font-weight: 700; padding: 4px 10px;
     border-radius: 20px; white-space: nowrap; align-self: flex-start;
   }
-  .badge-pending   { background: #1a2540; color: var(--blue); }
-  .badge-arrived   { background: #2a2000; color: var(--amber); }
-  .badge-delivered { background: #1a2a1a; color: var(--green); }
+  .badge-pending   { background: #ddeaf8; color: var(--blue); }
+  .badge-arrived   { background: #fff3cc; color: var(--amber); }
+  .badge-delivered { background: #d4f0e4; color: var(--green); }
 
   /* Popout line items */
   .stop-detail {
     display: none; border-top: 1px solid var(--border); padding: 12px 16px;
-    background: #13151f;
+    background: #f7f9fc;
   }
   .stop-detail.open { display: block; }
   .li-row {
@@ -133,10 +133,10 @@
     -webkit-tap-highlight-color: transparent; transition: opacity .15s;
   }
   .btn-action:active { opacity: .75; }
-  .btn-arrive   { background: #2a2000; color: var(--amber); border: 2px solid var(--amber); }
-  .btn-deliver  { background: #1a3a25; color: var(--green); border: 2px solid var(--green); }
+  .btn-arrive   { background: #fff8e1; color: var(--amber); border: 2px solid var(--amber); }
+  .btn-deliver  { background: #e8f8f0; color: var(--green); border: 2px solid var(--green); }
   .btn-deliver.active { background: var(--green); color: #000; }
-  .btn-undo     { background: var(--surface); color: var(--text2); border: 1px solid var(--border); }
+  .btn-undo     { background: #f0f2f7; color: var(--text2); border: 1px solid var(--border); }
 
   /* Mileage / driver input row */
   .input-row {
@@ -145,7 +145,7 @@
   }
   .input-row label { font-size: 11px; color: var(--text3); font-weight: 700; text-transform: uppercase; }
   .input-row input {
-    background: var(--surface); color: var(--text); border: 1px solid var(--border);
+    background: #f7f9fc; color: var(--text); border: 1px solid var(--border);
     border-radius: 8px; padding: 8px 12px; font-size: 15px; font-weight: 700;
     width: 140px;
   }
