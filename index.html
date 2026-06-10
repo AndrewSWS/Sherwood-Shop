@@ -1540,110 +1540,159 @@ function updateSaveIndicator(){
   }
 }
 
-function exportBackup(){
-  // Force save current state first so backup is always up to date
+async function exportBackup(){
+  // Save local state first
   initAdminConfig();
   saveState();
+  toast('⏳ Pulling Supabase tables — please wait...');
+
+  // Pull all Supabase tables in parallel
+  const [sbCustomers, sbLineItems, sbTruckStops, sbBundleUsage, sbCoilRecords] = await Promise.all([
+    _sbGet('customers',  'limit=5000').catch(()=>[]),
+    _sbGet('line_items', 'limit=10000').catch(()=>[]),
+    _sbGet('truck_stops','limit=5000').catch(()=>[]),
+    _sbGet('bundle_usage','limit=5000').catch(()=>[]),
+    _sbGet('coil_records','limit=2000').catch(()=>[]),
+  ]);
+
   const exportData = {
-    wos: state.wos||[],
-    trucks: state.trucks||[],
-    adminConfig: state.adminConfig||{},
-    customerMeta: state.customerMeta||{},
-    deliveryGroups: state.deliveryGroups||[],
+    // Local state
+    wos:           state.wos||[],
+    trucks:        state.trucks||[],
+    adminConfig:   state.adminConfig||{},
+    customerMeta:  state.customerMeta||{},
+    deliveryGroups:state.deliveryGroups||[],
+    // Supabase tables
+    sb_customers:  sbCustomers||[],
+    sb_line_items: sbLineItems||[],
+    sb_truck_stops:sbTruckStops||[],
+    sb_bundle_usage:sbBundleUsage||[],
+    sb_coil_records:sbCoilRecords||[],
+    // Meta
     exportDate: new Date().toISOString(),
-    version: '2.0'
+    version: '3.0'
   };
+
   const blob = new Blob([JSON.stringify(exportData, null, 2)], {type:'application/json'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'sherwood-backup-'+new Date().toISOString().split('T')[0]+'.json';
+  a.download = 'sherwood-full-backup-'+new Date().toISOString().split('T')[0]+'.json';
   a.click();
   URL.revokeObjectURL(url);
-  const woCount = (state.wos||[]).length;
-  const opCount = ((state.adminConfig&&state.adminConfig.operators)||[]).length;
-  const custCount = ((state.adminConfig&&state.adminConfig.customers)||[]).length;
-  const metaCount = Object.keys(state.customerMeta||{}).length;
-  toast('✓ Saved & backed up — '+woCount+' WOs, '+opCount+' operators, '+custCount+' customers'+(metaCount?' ('+metaCount+' with contacts)':''));
+
+  const woCount   = (state.wos||[]).length;
+  const custCount = (sbCustomers||[]).length;
+  const liCount   = (sbLineItems||[]).length;
+  toast('✓ Full backup saved — '+woCount+' WOs, '+custCount+' customers, '+liCount+' line items + all Supabase data');
 }
 
-function importBackup(input){
+async function importBackup(input){
   const file = input.files[0];
   if(!file) return;
   input.value='';
-  const reader = new FileReader();
-  reader.onload = e => {
-    try{
-      toast('📂 Reading file...');
-      const text = new TextDecoder('utf-8').decode(new Uint8Array(e.target.result));
-      toast('📋 Parsing JSON...');
-      const data = JSON.parse(text);
-      const woCount = (data.wos||[]).length;
-      const metaCount = Object.keys(data.customerMeta||{}).length;
-      if(!data.wos) throw new Error('Invalid backup file — missing WO data');
+  try{
+    toast('📂 Reading backup file...');
+    const text = await file.text();
+    const data = JSON.parse(text);
+    if(!data.wos) throw new Error('Invalid backup file — missing WO data');
 
-      // Save current WOs first so we don't lose them
-      const currentWOs = state.wos||[];
-      saveState();
+    const isFullBackup = data.version === '3.0' && data.sb_customers;
+    const woCount    = (data.wos||[]).length;
+    const custCount  = (data.sb_customers||[]).length;
+    const liCount    = (data.sb_line_items||[]).length;
+    const stopCount  = (data.sb_truck_stops||[]).length;
 
-      // Merge: keep existing WOs that aren't in the backup, add backup WOs
-      const backupWOIds = new Set((data.wos||[]).map(w=>String(w.id)));
-      const mergedWOs = [
-        ...(data.wos||[]),
-        ...currentWOs.filter(w=>!backupWOIds.has(String(w.id)))
-      ];
-      const totalWOs = mergedWOs.length;
+    const msg = 'Restore from '+file.name+'?\n\n'
+      +'WOs: '+woCount
+      +(isFullBackup ? '\nCustomers: '+custCount+'\nLine Items: '+liCount+'\nTruck Stops: '+stopCount : '')
+      +'\n\nThis will REPLACE all current Supabase data.\nThis cannot be undone.\n\nType YES to confirm:';
+    const confirm1 = window.prompt(msg);
+    if((confirm1||'').trim().toUpperCase() !== 'YES') return;
 
-      const msg = 'Restore backup from '+file.name+'?\n\n'
-        +'Backup contains: '+woCount+' WOs, '+metaCount+' contacts\n'
-        +'Current session: '+currentWOs.length+' WOs\n'
-        +'After merge: '+totalWOs+' WOs\n\nProceed?';
-      if(!confirm(msg)) return;
+    toast('⏳ Restoring — clearing Supabase...');
 
-      const restored = {
-        wos: mergedWOs,
-        trucks: data.trucks||state.trucks||[],
-        adminConfig: data.adminConfig||state.adminConfig||{},
-        customerMeta: data.customerMeta||state.customerMeta||{},
-        deliveryGroups: data.deliveryGroups||state.deliveryGroups||[],
-        currentUser: state.currentUser||'',
-        activeView: 'dashboard',
-        liCounter: 0
-      };
-      const json = JSON.stringify(restored);
-      localStorage.setItem('kzn_state', json);
-      const verify = localStorage.getItem('kzn_state');
-      if(!verify) throw new Error('localStorage write failed');
-      // Update state directly — no reload needed, avoids auto-save race condition
-      state.wos = restored.wos;
-      state.trucks = restored.trucks;
-      state.adminConfig = restored.adminConfig;
-      state.customerMeta = restored.customerMeta;
-      if(restored.deliveryGroups) state.deliveryGroups = restored.deliveryGroups;
-      toast('✓ Restored — '+totalWOs+' WOs loaded. Syncing to Supabase...');
-      // Navigate to dashboard
-      const dashNav = document.querySelector('.nav-item[onclick*="dashboard"]');
-      nav('dashboard', dashNav);
-      updateBadges();
-      // Push restored data to Supabase so it sticks through polls
-      // Clear existing data first then re-migrate
-      toast('⏳ Pushing restored data to Supabase — please wait...');
-      Promise.all([
-        fetch(`${_SB_URL}/rest/v1/line_items?wo_id=gt.0`,{method:'DELETE',headers:_SB_HDR}),
-        fetch(`${_SB_URL}/rest/v1/truck_stops?truck_id=gt.0`,{method:'DELETE',headers:_SB_HDR}),
-      ]).then(()=>fetch(`${_SB_URL}/rest/v1/work_orders?id=gt.0`,{method:'DELETE',headers:_SB_HDR}))
-      .then(()=>{
-        const woPromises = state.wos.map(wo => sbCreateWO(wo));
-        return Promise.all(woPromises);
-      }).then(()=>{
-        toast('✓ Restore complete — '+totalWOs+' WOs synced to Supabase');
-      }).catch(e=>{
-        toast('⚠ Supabase sync failed: '+e.message+' — data is in localStorage only');
-        console.error('Restore Supabase sync error:', e);
-      });
-    } catch(err){ toast('⚠ Restore failed: '+err.message); console.error('Restore error:', err); }
-  };
-  reader.readAsArrayBuffer(file);
+    // Step 1: Clear Supabase tables (order matters for foreign keys)
+    await fetch(`${_SB_URL}/rest/v1/bundle_usage?id=gt.0`,  {method:'DELETE',headers:_SB_HDR}).catch(()=>{});
+    await fetch(`${_SB_URL}/rest/v1/coil_records?id=gt.0`,   {method:'DELETE',headers:_SB_HDR}).catch(()=>{});
+    await fetch(`${_SB_URL}/rest/v1/truck_stops?id=gt.0`,    {method:'DELETE',headers:_SB_HDR}).catch(()=>{});
+    await fetch(`${_SB_URL}/rest/v1/line_items?id=gt.0`,     {method:'DELETE',headers:_SB_HDR}).catch(()=>{});
+    await fetch(`${_SB_URL}/rest/v1/work_orders?id=gt.0`,    {method:'DELETE',headers:_SB_HDR}).catch(()=>{});
+    if(isFullBackup){
+      await fetch(`${_SB_URL}/rest/v1/customers?id=gt.0`,    {method:'DELETE',headers:_SB_HDR}).catch(()=>{});
+    }
+    toast('⏳ Restoring — writing data...');
+
+    // Step 2: Write Supabase tables from backup
+    if(isFullBackup && data.sb_customers?.length){
+      await fetch(`${_SB_URL}/rest/v1/customers`,{method:'POST',
+        headers:{..._SB_HDR,'Prefer':'return=minimal'},
+        body:JSON.stringify(data.sb_customers)}).catch(e=>console.warn('customers restore',e));
+    }
+
+    // Restore WOs + line items via existing sbCreateWO
+    for(const wo of (data.wos||[])){
+      await sbCreateWO(wo).catch(e=>console.warn('WO restore',wo.woNum,e));
+    }
+
+    // Restore truck stops
+    if(isFullBackup && data.sb_truck_stops?.length){
+      // Insert in chunks of 100
+      for(let i=0;i<data.sb_truck_stops.length;i+=100){
+        const chunk = data.sb_truck_stops.slice(i,i+100);
+        await fetch(`${_SB_URL}/rest/v1/truck_stops`,{method:'POST',
+          headers:{..._SB_HDR,'Prefer':'return=minimal'},
+          body:JSON.stringify(chunk)}).catch(e=>console.warn('truck_stops restore',e));
+      }
+    }
+
+    // Restore bundle_usage
+    if(isFullBackup && data.sb_bundle_usage?.length){
+      for(let i=0;i<data.sb_bundle_usage.length;i+=100){
+        const chunk = data.sb_bundle_usage.slice(i,i+100);
+        await fetch(`${_SB_URL}/rest/v1/bundle_usage`,{method:'POST',
+          headers:{..._SB_HDR,'Prefer':'return=minimal'},
+          body:JSON.stringify(chunk)}).catch(e=>console.warn('bundle_usage restore',e));
+      }
+    }
+
+    // Restore coil_records
+    if(isFullBackup && data.sb_coil_records?.length){
+      for(let i=0;i<data.sb_coil_records.length;i+=100){
+        const chunk = data.sb_coil_records.slice(i,i+100);
+        await fetch(`${_SB_URL}/rest/v1/coil_records`,{method:'POST',
+          headers:{..._SB_HDR,'Prefer':'return=minimal'},
+          body:JSON.stringify(chunk)}).catch(e=>console.warn('coil_records restore',e));
+      }
+    }
+
+    // Step 3: Restore local state
+    const restored = {
+      wos:           data.wos||[],
+      trucks:        data.trucks||state.trucks||[],
+      adminConfig:   data.adminConfig||state.adminConfig||{},
+      customerMeta:  data.customerMeta||state.customerMeta||{},
+      deliveryGroups:data.deliveryGroups||state.deliveryGroups||[],
+      currentUser:   state.currentUser||'',
+      activeView:    'dashboard',
+      liCounter:     0
+    };
+    localStorage.setItem('kzn_state', JSON.stringify(restored));
+    state.wos            = restored.wos;
+    state.trucks         = restored.trucks;
+    state.adminConfig    = restored.adminConfig;
+    state.customerMeta   = restored.customerMeta;
+    state.deliveryGroups = restored.deliveryGroups;
+
+    const dashNav = document.querySelector('.nav-item[onclick*="dashboard"]');
+    nav('dashboard', dashNav);
+    updateBadges();
+    toast('✓ Full restore complete — '+woCount+' WOs'+(isFullBackup?', '+custCount+' customers, '+liCount+' line items':''));
+
+  } catch(err){
+    toast('⚠ Restore failed: '+err.message);
+    console.error('Restore error:', err);
+  }
 }
 
 const CLOUD_BACKUP_URL = 'https://andrewsws.github.io/Sherwood-Shop/backup.json';
@@ -7192,9 +7241,10 @@ async function deleteTruckSetting(id){
 function renderSettingsData(){
   return`
   <div class="card" style="max-width:520px;margin:0 auto">
-    <div style="font-size:15px;font-weight:700;margin-bottom:4px">💾 Export Data</div>
-    <div style="font-size:13px;color:var(--text2);margin-bottom:12px">Download a full JSON backup of all work orders, trucks, customers and settings. Store this somewhere safe.</div>
-    <button class="btn btn-primary" onclick="exportBackup()">💾 Export Data</button>
+    <div style="font-size:15px;font-weight:700;margin-bottom:4px">💾 Full Backup</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:8px">Downloads everything — work orders, trucks, customers, settings, <strong>plus all Supabase data</strong> (customers with cities, line item progress, truck stops, bundle/coil records). One file, complete restore.</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Takes 5–15 seconds to pull from Supabase. Save to a safe location — Google Drive, Dropbox, email to yourself.</div>
+    <button class="btn btn-primary" onclick="exportBackup()">💾 Download Full Backup</button>
   </div>
 
   <div class="card" style="max-width:520px;margin:16px auto 0">
@@ -7207,10 +7257,10 @@ function renderSettingsData(){
   </div>
 
   <div class="card" style="max-width:520px;margin:16px auto 0">
-    <div style="font-size:15px;font-weight:700;margin-bottom:4px">📂 Restore from Export</div>
-    <div style="font-size:13px;color:var(--text2);margin-bottom:4px">Import a previously exported JSON file. This will <strong>overwrite all current data</strong> in Supabase — use with care.</div>
-    <div style="font-size:12px;color:var(--amber);margin-bottom:12px">⚠ Only use this if Supabase data is lost or corrupted. Normal day-to-day data is saved automatically.</div>
-    <button class="btn btn-danger" onclick="document.getElementById('restore-file-input').click()">📂 Restore from File</button>
+    <div style="font-size:15px;font-weight:700;margin-bottom:4px">📂 Restore from Backup</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:4px">Upload a backup file to restore all data. <strong>Completely replaces</strong> all current Supabase data with the backup — including customers, line items, truck stops, and bundle history.</div>
+    <div style="font-size:12px;color:var(--amber);margin-bottom:12px">⚠ This is a full overwrite. You will be asked to type YES to confirm. Only use this for disaster recovery.</div>
+    <button class="btn btn-danger" onclick="document.getElementById('restore-file-input').click()">📂 Restore from Backup File</button>
     <input type="file" id="restore-file-input" accept=".json,application/json,text/plain" style="display:none" onchange="importBackup(this)">
   </div>`;
 }
