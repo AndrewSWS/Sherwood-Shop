@@ -473,7 +473,17 @@ async function markArrived(stopId) {
 async function markDelivered(stopId) {
   const now = new Date().toISOString();
   try {
+    // Update truck_stops
     await sbPatch(stopId, { delivered: true, delivered_at: now, departed_at: now, driver_name: driverName });
+    // Also update work_orders so the main dashboard reflects delivery
+    const stop = stops.find(s => String(s.id) === String(stopId));
+    if (stop && stop.wo_id) {
+      await fetch(`${SB_URL}/rest/v1/work_orders?id=eq.${stop.wo_id}`, {
+        method: 'PATCH',
+        headers: { ...HDR, Prefer: 'return=minimal' },
+        body: JSON.stringify({ delivered: true, delivered_at: now, delivered_by: driverName })
+      });
+    }
     showToast('✅ Delivered!');
     loadStops();
   } catch(e) { 
@@ -495,6 +505,15 @@ async function undoDelivered(stopId) {
   if (!confirm('Mark this stop as not delivered?')) return;
   try {
     await sbPatch(stopId, { delivered: false, delivered_at: null, departed_at: null });
+    // Also clear work_orders delivered status
+    const stop = stops.find(s => String(s.id) === String(stopId));
+    if (stop && stop.wo_id) {
+      await fetch(`${SB_URL}/rest/v1/work_orders?id=eq.${stop.wo_id}`, {
+        method: 'PATCH',
+        headers: { ...HDR, Prefer: 'return=minimal' },
+        body: JSON.stringify({ delivered: false, delivered_at: null, delivered_by: null })
+      });
+    }
     showToast('↩ Delivery undone');
     loadStops();
   } catch(e) { showToast('⚠ Failed to save'); }
