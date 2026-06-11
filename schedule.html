@@ -94,7 +94,7 @@
 
   .stop-info { flex: 1; min-width: 0; }
   .stop-customer { font-size: 20px; font-weight: 900; color: var(--text); line-height: 1.1; margin-bottom: 3px; }
-  .stop-address  { font-size: 13px; color: var(--text2); margin-bottom: 2px; }
+  .stop-address  { font-size: 14px; color: var(--text2); font-weight: 500; margin-bottom: 4px; }
   .stop-meta     { font-size: 12px; color: var(--text3); }
 
   .stop-status-badge {
@@ -163,10 +163,10 @@
   /* Toast */
   #toast {
     position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-    background: #232635; color: var(--text); border: 1px solid var(--border);
-    border-radius: 20px; padding: 10px 20px; font-size: 13px; font-weight: 600;
+    background: #1a1f35; color: #fff; border: none;
+    border-radius: 20px; padding: 12px 24px; font-size: 14px; font-weight: 700;
     z-index: 9999; opacity: 0; transition: opacity .2s; pointer-events: none;
-    max-width: 90vw; text-align: center;
+    max-width: 90vw; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.3);
   }
   #toast.show { opacity: 1; }
 
@@ -432,10 +432,8 @@ function renderStopCard(stop, idx) {
       <div class="stop-num-badge ${numClass}">${idx + 1}</div>
       <div class="stop-info">
         <div class="stop-customer">${stop.customer || wo.customer || '—'}</div>
-        ${address ? `<div class="stop-address">📍 ${address}</div>` : ''}
-        <div class="stop-meta">WO #${stop.wo_num || wo.wo_num || '—'}
-          ${stop.notes ? ' · ' + stop.notes : ''}
-        </div>
+        <div class="stop-address">📍 ${address || 'No address on file'}</div>
+        <div class="stop-meta">WO #${stop.wo_num || wo.wo_num || '—'}${stop.notes ? ' · ' + stop.notes : ''}</div>
       </div>
       <div class="stop-status-badge ${badgeClass}">${badgeText}</div>
     </div>
@@ -466,7 +464,10 @@ async function markArrived(stopId) {
     await sbPatch(stopId, { arrived_at: now, mileage, driver_name: driverName });
     showToast('📍 Arrival recorded');
     loadStops();
-  } catch(e) { showToast('⚠ Failed to save'); }
+  } catch(e) { 
+    showToast('⚠ Failed: ' + e.message);
+    console.error('markArrived error:', e);
+  }
 }
 
 async function markDelivered(stopId) {
@@ -475,7 +476,10 @@ async function markDelivered(stopId) {
     await sbPatch(stopId, { delivered: true, delivered_at: now, departed_at: now, driver_name: driverName });
     showToast('✅ Delivered!');
     loadStops();
-  } catch(e) { showToast('⚠ Failed to save'); }
+  } catch(e) { 
+    showToast('⚠ Failed: ' + e.message);
+    console.error('markDelivered error:', e);
+  }
 }
 
 async function undoArrived(stopId) {
@@ -522,7 +526,7 @@ function showToast(msg) {
   t.textContent = msg;
   t.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 6000);
 }
 
 // ── DATE NAV ─────────────────────────────────────────────────────────────────
