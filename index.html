@@ -5478,7 +5478,29 @@ function renderTruck(c){
   const selWOs=state.wos.filter(w=>w.delivery===activeTruckDay);
   const _dayTrucks=state.trucks.map(t=>({t,stops:t.stops.filter(s=>s.delivery===activeTruckDay)})).map(o=>({...o,w:o.stops.reduce((s,st)=>s+getWOWeight(st.woId),0)}));
 
+  // Yearly stats
+  const thisYear = new Date().getFullYear();
+  const yearDelivered = state.wos.filter(w=>w.delivered && w.deliveredAt && new Date(w.deliveredAt).getFullYear()===thisYear);
+  const yearWeight = yearDelivered.reduce((s,w)=>s+getWOWeight(w.id),0);
+  const yearCount  = yearDelivered.length;
+
   c.innerHTML=`
+  <div class="card mb12" style="background:linear-gradient(135deg,#0d1f3c,#1a3a6b);border:none;color:#fff;padding:14px 20px">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;opacity:.7;margin-bottom:4px">${thisYear} Deliveries</div>
+        <div style="font-size:28px;font-weight:900;letter-spacing:-.5px">${yearWeight.toLocaleString()} <span style="font-size:14px;font-weight:400;opacity:.8">lbs delivered</span></div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;opacity:.7;margin-bottom:4px">Work Orders</div>
+        <div style="font-size:28px;font-weight:900">${yearCount} <span style="font-size:14px;font-weight:400;opacity:.8">completed</span></div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;opacity:.7;margin-bottom:4px">Avg per WO</div>
+        <div style="font-size:28px;font-weight:900">${yearCount?Math.round(yearWeight/yearCount).toLocaleString():0} <span style="font-size:14px;font-weight:400;opacity:.8">lbs</span></div>
+      </div>
+    </div>
+  </div>
   <div class="flex-between mb12" style="flex-wrap:wrap;gap:8px">
     <div class="flex gap6" style="align-items:center">
       <button class="btn btn-sm" onclick="navWeek(-1)">‹ Prev Week</button>
@@ -5589,9 +5611,9 @@ function renderTruckCard(t, filterDay){
       <div class="stop-num" style="${woDelivered?'background:var(--green-m);color:#fff;':''}">
         ${woDelivered?'✓':i+1}
       </div>
-      <div style="flex:1;min-width:0">
-        <div style="font-weight:600;font-size:13px;${woDelivered?'text-decoration:line-through;color:var(--text2);':''}">
-          ${s.customer}
+      <div style="flex:1;min-width:0;cursor:pointer" onclick="toggleStopDetail('${t.id}-${s.woId}')">
+        <div style="font-weight:600;font-size:13px;${woDelivered?'text-decoration:line-through;color:var(--text2);':''}cursor:pointer;display:flex;align-items:center;gap:4px">
+          ${s.customer} <span style="font-size:10px;color:var(--text3)">▾</span>
         </div>
         <div style="font-size:11px;color:var(--text2)">WO #${s.woNum}</div>
         <div class="stop-zone" style="margin-top:2px">${s.zone||''} · ${s.cityst||s.address||''}</div>
@@ -5609,10 +5631,69 @@ function renderTruckCard(t, filterDay){
           ${woDelivered?'✓ Delivered':'Mark Delivered'}
         </button>
       </div>
+    </div>
+    <div id="stop-detail-${t.id}-${s.woId}" style="display:none;padding:10px 12px;background:var(--surface);border-top:1px solid var(--border);font-size:12px;border-radius:0 0 var(--rad) var(--rad)">
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:8px">
+        <div><span style="color:var(--text3)">Weight:</span><br><strong>${getWOWeight(s.woId).toLocaleString()} lbs</strong></div>
+        <div><span style="color:var(--text3)">Status:</span><br><strong>${wo ? (wo.status||'Open') : '—'}</strong></div>
+        <div><span style="color:var(--text3)">Notes:</span><br><strong>${wo ? (wo.notes||'—') : '—'}</strong></div>
+      </div>
+      ${wo ? (
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px;align-items:flex-end">'
+        +'<div><div style="font-size:11px;color:var(--text3);margin-bottom:3px">Change Truck</div>'
+        +'<select onchange="changeTruckFromPlanner(\''+s.woId+'\',this.value)" style="padding:5px 8px;font-size:12px;border:1px solid var(--border);border-radius:var(--rad);background:var(--surface);color:var(--text)">'
+        +state.trucks.map(tr=>'<option value="'+tr.id+'" '+(String(tr.id)===String(t.id)?'selected':'')+'>'+tr.name+'</option>').join('')
+        +'</select></div>'
+        +'<div><div style="font-size:11px;color:var(--text3);margin-bottom:3px">Delivery Date</div>'
+        +'<input type="date" value="'+(s.delivery||'')+'" onchange="changeDateFromPlanner(\''+s.woId+'\',this.value)" style="padding:5px 8px;font-size:12px;border:1px solid var(--border);border-radius:var(--rad);background:var(--surface);color:var(--text)"></div>'
+        +'<button class="btn btn-sm btn-primary" onclick="openWOFromPlanner('+s.woId+')">✏ Edit WO</button>'
+        +'</div>'
+        +'<div style="font-size:11px;color:var(--text3)">Items: '+(wo.liItems ? wo.liItems.map(li=>(li.gauge?li.gauge+'Ga ':'')+' '+(li.size||li.productCat||'')+'×'+li.qty).join(' · ') : '—')+'</div>'
+      ) : ''}
     </div>`;
     }).join('');
   })():`<div style="text-align:center;padding:24px;color:var(--text3);font-size:13px">No stops on this date</div>`}
   </div>`;
+}
+
+function toggleStopDetail(key){
+  const el = document.getElementById('stop-detail-'+key);
+  if(!el) return;
+  el.style.display = el.style.display==='none' ? 'block' : 'none';
+}
+
+function changeTruckFromPlanner(woId, newTruckId){
+  const wo = state.wos.find(w=>String(w.id)===String(woId)); if(!wo) return;
+  const newT = state.trucks.find(t=>String(t.id)===String(newTruckId)); if(!newT) return;
+  // Remove from all trucks
+  state.trucks.forEach(t=>{ t.stops=t.stops.filter(s=>String(s.woId)!==String(woId)); });
+  // Add to new truck
+  wo.truck = String(newTruckId);
+  newT.stops.push({woId:wo.id,woNum:wo.woNum,customer:wo.customer,address:wo.address,cityst:wo.cityst,zone:wo.zone,delivery:wo.delivery,notes:wo.notes});
+  saveState(); renderTruck(document.getElementById('content'));
+  sbUpdateWO(wo).catch(e=>console.warn(e));
+  toast('✓ WO #'+wo.woNum+' moved to '+newT.name);
+}
+
+function changeDateFromPlanner(woId, newDate){
+  const wo = state.wos.find(w=>String(w.id)===String(woId)); if(!wo) return;
+  wo.delivery = newDate;
+  // Update stop record too
+  state.trucks.forEach(t=>{ const s=t.stops.find(s=>String(s.woId)===String(woId)); if(s) s.delivery=newDate; });
+  saveState(); renderTruck(document.getElementById('content'));
+  sbUpdateWO(wo).catch(e=>console.warn(e));
+  toast('✓ WO #'+wo.woNum+' date → '+fmtDate(newDate));
+}
+
+function openWOFromPlanner(woId){
+  const wo = state.wos.find(w=>w.id===woId); if(!wo) return;
+  // Navigate to assign view and open the WO
+  const navEl = document.querySelector('.nav-item[onclick*="assign"]');
+  nav('assign', navEl);
+  setTimeout(()=>{
+    const row = document.getElementById('wo-'+woId);
+    if(row){ row.scrollIntoView({behavior:'smooth',block:'center'}); row.click(); }
+  }, 300);
 }
 
 function quickAssignTruck(woId,tId){
@@ -7248,6 +7329,22 @@ async function deleteTruckSetting(id){
 }
 
 function renderSettingsData(){
+  // Populate truck dropdown after render
+  setTimeout(()=>{
+    const sel = document.getElementById('dh-truck');
+    if(sel && sel.options.length <= 1){
+      state.trucks.forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t.id; opt.textContent = t.name + (t.driver?' — '+t.driver:'');
+        sel.appendChild(opt);
+      });
+    }
+    // Set default dates — last 30 days
+    const dhFrom = document.getElementById('dh-from');
+    const dhTo   = document.getElementById('dh-to');
+    if(dhFrom && !dhFrom.value){ const d=new Date(); d.setDate(d.getDate()-30); dhFrom.value=d.toISOString().split('T')[0]; }
+    if(dhTo   && !dhTo.value)  { dhTo.value=new Date().toISOString().split('T')[0]; }
+  }, 100);
   return`
   <div class="card" style="max-width:520px;margin:0 auto">
     <div style="font-size:15px;font-weight:700;margin-bottom:4px">💾 Full Backup</div>
@@ -7266,12 +7363,124 @@ function renderSettingsData(){
   </div>
 
   <div class="card" style="max-width:520px;margin:16px auto 0">
+    <div style="font-size:15px;font-weight:700;margin-bottom:4px">🚚 Delivery History</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:12px">View and export delivery records with arrival times, departure times, driver, and mileage. Filter by truck or date range.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+      <select id="dh-truck" style="flex:1;min-width:140px;padding:8px;border:1px solid var(--border);border-radius:var(--rad);background:var(--surface);color:var(--text);font-size:13px">
+        <option value="">All Trucks</option>
+      </select>
+      <input type="date" id="dh-from" style="flex:1;min-width:120px;padding:8px;border:1px solid var(--border);border-radius:var(--rad);background:var(--surface);color:var(--text);font-size:13px">
+      <input type="date" id="dh-to" style="flex:1;min-width:120px;padding:8px;border:1px solid var(--border);border-radius:var(--rad);background:var(--surface);color:var(--text);font-size:13px">
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button class="btn btn-primary" onclick="loadDeliveryHistory()">🔍 Load</button>
+      <button class="btn" onclick="exportDeliveryHistory()">⬇ Export CSV</button>
+    </div>
+    <div id="dh-results" style="font-size:13px;color:var(--text3)">Select filters and click Load.</div>
+  </div>
+
+  <div class="card" style="max-width:520px;margin:16px auto 0">
     <div style="font-size:15px;font-weight:700;margin-bottom:4px">📂 Restore from Backup</div>
     <div style="font-size:13px;color:var(--text2);margin-bottom:4px">Upload a backup file to restore all data. <strong>Completely replaces</strong> all current Supabase data with the backup — including customers, line items, truck stops, and bundle history.</div>
     <div style="font-size:12px;color:var(--amber);margin-bottom:12px">⚠ This is a full overwrite. You will be asked to type YES to confirm. Only use this for disaster recovery.</div>
     <button class="btn btn-danger" onclick="document.getElementById('restore-file-input').click()">📂 Restore from Backup File</button>
     <input type="file" id="restore-file-input" accept=".json,application/json,text/plain" style="display:none" onchange="importBackup(this)">
   </div>`;
+}
+
+async function loadDeliveryHistory(){
+  const truckId = document.getElementById('dh-truck')?.value || '';
+  const from    = document.getElementById('dh-from')?.value || '';
+  const to      = document.getElementById('dh-to')?.value || '';
+  const el      = document.getElementById('dh-results');
+  if(!el) return;
+  el.innerHTML = '<div style="color:var(--text3)">Loading...</div>';
+
+  let params = 'order=delivery.desc,seq&limit=500';
+  if(truckId) params += `&truck_id=eq.${truckId}`;
+  if(from)    params += `&delivery=gte.${from}`;
+  if(to)      params += `&delivery=lte.${to}`;
+  // Only show delivered stops
+  params += '&delivered=eq.true';
+
+  try {
+    const stops = await _sbGet('truck_stops', params);
+    window._dhStops = stops;
+    if(!stops.length){ el.innerHTML='<div style="color:var(--text3);padding:8px 0">No delivered stops found for this filter.</div>'; return; }
+    
+    const rows = stops.map(s => {
+      const arrived  = s.arrived_at  ? new Date(s.arrived_at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}) : '—';
+      const departed = s.departed_at ? new Date(s.departed_at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}) : '—';
+      const duration = (s.arrived_at && s.departed_at)
+        ? Math.round((new Date(s.departed_at)-new Date(s.arrived_at))/60000)+' min' : '—';
+      return `<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:6px 8px;font-weight:600">${s.customer||'—'}</td>
+        <td style="padding:6px 8px;color:var(--text2)">${s.delivery||'—'}</td>
+        <td style="padding:6px 8px;color:var(--text2)">${arrived}</td>
+        <td style="padding:6px 8px;color:var(--text2)">${departed}</td>
+        <td style="padding:6px 8px;color:var(--text2)">${duration}</td>
+        <td style="padding:6px 8px;color:var(--text2)">${s.mileage ? s.mileage.toLocaleString()+' mi' : '—'}</td>
+        <td style="padding:6px 8px;color:var(--text2)">${s.driver_name||'—'}</td>
+      </tr>`;
+    }).join('');
+
+    el.innerHTML = `<div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:var(--surface);color:var(--text3);font-size:11px;text-transform:uppercase">
+          <th style="padding:6px 8px;text-align:left">Customer</th>
+          <th style="padding:6px 8px;text-align:left">Date</th>
+          <th style="padding:6px 8px;text-align:left">Arrived</th>
+          <th style="padding:6px 8px;text-align:left">Departed</th>
+          <th style="padding:6px 8px;text-align:left">On Site</th>
+          <th style="padding:6px 8px;text-align:left">Odometer</th>
+          <th style="padding:6px 8px;text-align:left">Driver</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <div style="margin-top:8px;color:var(--text3);font-size:11px">${stops.length} deliveries</div>
+    </div>`;
+
+    // Populate truck dropdown if not already done
+    const sel = document.getElementById('dh-truck');
+    if(sel && sel.options.length <= 1){
+      state.trucks.forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t.id; opt.textContent = t.name;
+        sel.appendChild(opt);
+        if(truckId && String(t.id)===truckId) opt.selected=true;
+      });
+    }
+  } catch(e) {
+    el.innerHTML='<div style="color:var(--red)">Error loading history: '+e.message+'</div>';
+  }
+}
+
+function exportDeliveryHistory(){
+  const stops = window._dhStops || [];
+  if(!stops.length){ toast('No data to export — click Load first'); return; }
+  const header = 'Customer,Date,WO#,Address,Arrived,Departed,On Site (min),Odometer,Driver';
+  const rows = stops.map(s => {
+    const arrived  = s.arrived_at  ? new Date(s.arrived_at).toLocaleString()  : '';
+    const departed = s.departed_at ? new Date(s.departed_at).toLocaleString() : '';
+    const duration = (s.arrived_at && s.departed_at)
+      ? Math.round((new Date(s.departed_at)-new Date(s.arrived_at))/60000) : '';
+    return [
+      `"${(s.customer||'').replace(/"/g,'""')}"`,
+      s.delivery||'',
+      s.wo_num||'',
+      `"${((s.address||'')+(s.cityst?' '+s.cityst:'')).replace(/"/g,'""')}"`,
+      arrived, departed, duration,
+      s.mileage||'',
+      `"${(s.driver_name||'').replace(/"/g,'""')}"`
+    ].join(',');
+  });
+  const csv = [header,...rows].join('\n');
+  const blob = new Blob([csv],{type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download='delivery-history-'+new Date().toISOString().split('T')[0]+'.csv';
+  a.click(); URL.revokeObjectURL(url);
+  toast('✓ Exported '+stops.length+' deliveries');
 }
 
 function renderSettingsOperators(){
