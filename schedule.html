@@ -330,8 +330,11 @@ async function loadStops() {
 
 function startPoll() {
   clearInterval(pollTimer);
-  pollTimer = setInterval(() => { if(activeTruck) loadStops(); }, 30000);
+  pollTimer = setInterval(() => { if(activeTruck && !document.hidden) loadStops(); }, 60000);
 }
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && activeTruck) loadStops();
+});
 
 // ── RENDER ────────────────────────────────────────────────────────────────────
 function renderStops() {

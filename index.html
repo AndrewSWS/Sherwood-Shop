@@ -1412,6 +1412,15 @@ async function sbLoadState() {
 
 // ── Poll Supabase every 15s for changes (for board view & multi-user sync) ──
 let _sbPollTimer = null;
+// Pause polling when tab is hidden to save bandwidth
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    clearInterval(_sbPollTimer);
+    _sbPollTimer = null;
+  } else {
+    startSBPoll();
+  }
+});
 function startSBPoll() {
   if (_sbPollTimer) return;
   _sbPollTimer = setInterval(async () => {
@@ -1474,7 +1483,7 @@ function startSBPoll() {
       }
       updateBadges();
     }
-  }, 10000);
+  }, 90000);
 }
 
 // ══════════════════════════════════════════════════════
@@ -1745,7 +1754,7 @@ async function syncFromCloud(){
 }
 
 // Auto-save every 30 seconds silently
-setInterval(saveState, 30000);
+setInterval(saveState, 90000);
 function loadState(){
   // Load from localStorage immediately as a quick first render (offline fallback only)
   // Supabase will overwrite this shortly after with authoritative data
