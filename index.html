@@ -8745,6 +8745,13 @@ function importQBInvoice(invNum){
 
       if(cust){
         selectCust(cust);
+        // Override cityst with QB ship-to city if available — more accurate than customer record city
+        const qbCityFinal  = (inv.qbCity  ||'').trim();
+        const qbStateFinal = (inv.qbState ||'').trim();
+        if(qbCityFinal){
+          const citystEl = document.getElementById('f-cityst');
+          if(citystEl) citystEl.value = qbCityFinal + (qbStateFinal ? ', ' + qbStateFinal : '');
+        }
       } else {
         // Brand new customer not in system at all — auto-add with blank zone
         const newCust = { name: inv.customer, address:'', city: inv.qbCity||'', state: inv.qbState||'', zip:'', zone:'' };
