@@ -5656,6 +5656,96 @@ function renderTruckCard(t, filterDay){
   </div>`;
 }
 
+function openDashWOPopout(woId){
+  const wo = state.wos.find(w=>w.id===woId);
+  if(!wo) return;
+  const modal = document.getElementById('dash-wo-popout');
+  const body  = document.getElementById('dash-wo-body');
+  if(!modal||!body) return;
+
+  const st = woStatus(wo);
+  const stColor = st==='Complete'?'var(--green)':st==='In Process'?'var(--amber)':'var(--text3)';
+  const truck = state.trucks.find(t=>String(t.id)===String(getWOTruckId(wo.id)));
+  const weight = getWOWeight(wo.id);
+
+  const items = (wo.items||[]).map(li=>{
+    const spec = [li.gauge?li.gauge+' Ga':'', li.size||li.productCat||''].filter(Boolean).join(' ');
+    const stCls = li.status==='Complete'?'color:var(--green)':li.status==='In Process'?'color:var(--amber)':'color:var(--text3)';
+    return `<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:7px 8px;font-weight:600">${spec||li.productCat||'—'}</td>
+      <td style="padding:7px 8px;color:var(--text2)">${li.qty||'—'}</td>
+      <td style="padding:7px 8px;color:var(--text2)">${li.weight?li.weight.toLocaleString()+' lbs':'—'}</td>
+      <td style="padding:7px 8px;font-size:11px;font-weight:700;${stCls}">${li.status||'Pending'}</td>
+      <td style="padding:7px 8px;color:var(--text3);font-size:11px">${li.assignee||'—'}</td>
+      <td style="padding:7px 8px;color:#8B4513;font-size:11px">${li.notes?'📝 '+li.notes:'—'}</td>
+    </tr>`;
+  }).join('');
+
+  body.innerHTML = `
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px">
+      <div>
+        <div style="font-size:20px;font-weight:900;margin-bottom:2px">${wo.customer}</div>
+        <div style="font-size:13px;color:var(--text2)">WO #${wo.woNum}${wo.po?' · PO: '+wo.po:''}</div>
+      </div>
+      <button onclick="closeDashWOPopout()" style="background:var(--border);border:none;border-radius:50%;width:28px;height:28px;font-size:16px;cursor:pointer;color:var(--text);flex-shrink:0">✕</button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+      <div style="background:var(--bg);border-radius:var(--rad);padding:10px">
+        <div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;margin-bottom:3px">Status</div>
+        <div style="font-weight:700;font-size:14px;color:${stColor}">${st}</div>
+      </div>
+      <div style="background:var(--bg);border-radius:var(--rad);padding:10px">
+        <div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;margin-bottom:3px">Weight</div>
+        <div style="font-weight:700;font-size:14px">${weight.toLocaleString()} lbs</div>
+      </div>
+      <div style="background:var(--bg);border-radius:var(--rad);padding:10px">
+        <div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;margin-bottom:3px">Delivery</div>
+        <div style="font-weight:700;font-size:14px">${wo.delivery?fmtDate(wo.delivery):'Not set'}</div>
+      </div>
+      <div style="background:var(--bg);border-radius:var(--rad);padding:10px">
+        <div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;margin-bottom:3px">Truck</div>
+        <div style="font-weight:700;font-size:14px">${truck?truck.name:'Not assigned'}</div>
+      </div>
+    </div>
+
+    ${wo.address||wo.cityst?`<div style="background:var(--bg);border-radius:var(--rad);padding:10px;margin-bottom:16px;font-size:13px">
+      <span style="color:var(--text3)">📍 </span>${[wo.address,wo.cityst].filter(Boolean).join(', ')}
+    </div>`:''}
+
+    ${wo.notes?`<div style="background:#fff8e1;border:1px solid #ffe082;border-radius:var(--rad);padding:10px;margin-bottom:16px;font-size:13px">
+      📝 ${wo.notes}
+    </div>`:''}
+
+    <div style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:8px">Line Items</div>
+    <div style="overflow-x:auto;margin-bottom:16px">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr style="background:var(--bg);color:var(--text3);font-size:10px;text-transform:uppercase">
+          <th style="padding:6px 8px;text-align:left">Product</th>
+          <th style="padding:6px 8px;text-align:left">Qty</th>
+          <th style="padding:6px 8px;text-align:left">Weight</th>
+          <th style="padding:6px 8px;text-align:left">Status</th>
+          <th style="padding:6px 8px;text-align:left">Operator</th>
+          <th style="padding:6px 8px;text-align:left">Packing Note</th>
+        </tr></thead>
+        <tbody>${items||'<tr><td colspan="6" style="padding:12px;color:var(--text3);text-align:center">No line items</td></tr>'}</tbody>
+      </table>
+    </div>
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="closeDashWOPopout();openWOFromPlanner(${wo.id})">✏ Edit WO</button>
+      <button class="btn" onclick="closeDashWOPopout()">Close</button>
+    </div>
+  `;
+
+  modal.style.display = 'flex';
+}
+
+function closeDashWOPopout(){
+  const modal = document.getElementById('dash-wo-popout');
+  if(modal) modal.style.display = 'none';
+}
+
 function toggleStopDetail(key){
   const el = document.getElementById('stop-detail-'+key);
   if(!el) return;
@@ -6216,8 +6306,8 @@ function renderDashboard(c){
             ondragend="calDragEnd(event)"
             onclick="event.stopPropagation()">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:4px">
-              <div style="flex:1;min-width:0">
-                <div class="mini-wo-cust" style="${woStatus(wo)==='Complete'?'text-decoration:line-through;opacity:0.6;':''}">${wo.customer}</div>
+              <div style="flex:1;min-width:0;cursor:pointer" onclick="event.stopPropagation();openDashWOPopout(${wo.id})">
+                <div class="mini-wo-cust" style="${woStatus(wo)==='Complete'?'text-decoration:line-through;opacity:0.6;':''}">${wo.customer} <span style="font-size:9px;color:var(--text3)">▸</span></div>
                 <div class="mini-wo-num" style="color:var(--text3)">WO #${wo.woNum}</div>
               </div>
               <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0">
@@ -6255,6 +6345,16 @@ function renderDashboard(c){
       ${isToday?'<div style="font-size:10px;text-align:center;color:var(--blue);margin-top:4px;font-weight:600">▼ click for details</div>':''}
     </div>`;
   }).join('');
+
+  // WO Detail Popout Modal (injected once)
+  if(!document.getElementById('dash-wo-popout')){
+    const modal = document.createElement('div');
+    modal.id = 'dash-wo-popout';
+    modal.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:2000;align-items:center;justify-content:center;padding:16px';
+    modal.innerHTML = '<div id="dash-wo-inner" style="background:var(--surface);border-radius:var(--rad);width:100%;max-width:560px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.4)"><div id="dash-wo-body" style="padding:20px"></div></div>';
+    modal.addEventListener('click', e=>{ if(e.target===modal) closeDashWOPopout(); });
+    document.body.appendChild(modal);
+  }
 
   // Operator summary
   const opRows=getOperators().map(op=>{
