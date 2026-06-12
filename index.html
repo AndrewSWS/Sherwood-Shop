@@ -5580,9 +5580,10 @@ function renderTruckCard(t, filterDay){
     </div>
   </div>
   <div class="truck-bar"><div class="truck-bar-fill" style="width:${dayPct}%;background:${dayPct>90?'#E24B4A':dayPct>70?'#BA7517':'#185FA5'}">${dayPct}%</div></div>
-  <div style="font-size:12px;color:var(--text2);margin-bottom:12px">
-    <strong>${dayW.toLocaleString()} lbs</strong> today &nbsp;·&nbsp; ${(t.max-dayW).toLocaleString()} lbs remaining &nbsp;·&nbsp; ${dayStops.length} stop${dayStops.length!==1?'s':''}
-    <span style="color:var(--text3);margin-left:8px">(${t.stops.reduce((s,st)=>s+getWOWeight(st.woId),0).toLocaleString()} lbs total all days)</span>
+  <div style="font-size:12px;color:var(--text2);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <div><strong>${dayW.toLocaleString()} lbs</strong> today &nbsp;·&nbsp; ${(t.max-dayW).toLocaleString()} lbs remaining &nbsp;·&nbsp; ${dayStops.length} stop${dayStops.length!==1?'s':''}
+    <span style="color:var(--text3);margin-left:8px">(${t.stops.reduce((s,st)=>s+getWOWeight(st.woId),0).toLocaleString()} lbs total all days)</span></div>
+    ${dayStops.length?`<button class="btn btn-sm no-print" onclick="printTruck('${t.id}','${filterDay||''}')" style="font-size:11px;padding:4px 10px">🖨 Print Load Sheet</button>`:''}
   </div>
   <divsection-head">Stops for ${fmtDate(filterDay)} (${dayStops.length})</div>
   ${dayStops.length?(()=>{
@@ -6694,18 +6695,90 @@ function printWO(id){
   win.document.write(html);win.document.close();
 }
 
-function printTruck(){
-  const lines=state.trucks.map(t=>{
-    const tw=t.stops.reduce((s,x)=>s+getWOWeight(x.woId),0);
-    return`<h3>${t.name} — Driver: ${t.driver||'TBD'} — Ship: ${fmtDate(t.shipDate)||'TBD'}</h3>
-    <p>Total: ${tw.toLocaleString()} / ${t.max.toLocaleString()} lbs (${Math.round(tw/t.max*100)}%)</p>
-    <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
-    <thead><tr><th style="background:#1a1a2e;color:#fff;padding:6px 8px;text-align:left">#</th><th style="background:#1a1a2e;color:#fff;padding:6px 8px;text-align:left">WO #</th><th style="background:#1a1a2e;color:#fff;padding:6px 8px;text-align:left">Customer</th><th style="background:#1a1a2e;color:#fff;padding:6px 8px;text-align:left">Address</th><th style="background:#1a1a2e;color:#fff;padding:6px 8px;text-align:left">Zone</th><th style="background:#1a1a2e;color:#fff;padding:6px 8px;text-align:left">Weight</th><th style="background:#1a1a2e;color:#fff;padding:6px 8px;text-align:left">Delivery</th></tr></thead>
-    <tbody>${t.stops.map((s,i)=>`<tr style="${i%2?'background:#f9f9f9':''}"><td style="padding:7px 8px;border-bottom:1px solid #ddd">${i+1}</td><td style="padding:7px 8px;border-bottom:1px solid #ddd">${s.woNum}</td><td style="padding:7px 8px;border-bottom:1px solid #ddd;font-weight:600">${s.customer}</td><td style="padding:7px 8px;border-bottom:1px solid #ddd">${s.address||''} ${s.cityst||''}</td><td style="padding:7px 8px;border-bottom:1px solid #ddd">${s.zone||''}</td><td style="padding:7px 8px;border-bottom:1px solid #ddd">${getWOWeight(s.woId)?getWOWeight(s.woId).toLocaleString()+' lbs':''}</td><td style="padding:7px 8px;border-bottom:1px solid #ddd">${fmtDate(s.delivery)||'—'}</td></tr>`).join('')}</tbody>
-    </table>`;
+function printTruck(truckId, filterDay){
+  // If specific truck+day passed, print just that. Otherwise print all trucks for selected day.
+  const selDay = filterDay || (document.getElementById('truck-day-select') ? document.getElementById('truck-day-select').value : '') || new Date().toISOString().split('T')[0];
+
+  const trucksToprint = truckId
+    ? state.trucks.filter(t=>String(t.id)===String(truckId))
+    : state.trucks;
+
+  const sections = trucksToprint.map(t=>{
+    const dayStops = t.stops.filter(s=> !selDay || s.delivery===selDay);
+    if(!dayStops.length) return '';
+    const tw = dayStops.reduce((s,x)=>s+getWOWeight(x.woId),0);
+    const pct = t.max ? Math.round(tw/t.max*100) : 0;
+
+    const stopRows = dayStops.map((s,i)=>{
+      const wo = state.wos.find(w=>w.id===s.woId)||{};
+      const items = (wo.items||[]);
+      const itemRows = items.map(li=>{
+        const spec = [li.gauge?li.gauge+' Ga':'', li.size||li.productCat||''].filter(Boolean).join(' ');
+        return `<tr>
+          <td style="padding:4px 8px;border-bottom:1px solid #eee;font-size:11px;color:#555">${spec||li.productCat||'—'}</td>
+          <td style="padding:4px 8px;border-bottom:1px solid #eee;font-size:11px;text-align:center">${li.qty||'—'}</td>
+          <td style="padding:4px 8px;border-bottom:1px solid #eee;font-size:11px;text-align:center">${li.weight?li.weight.toLocaleString()+' lbs':'—'}</td>
+          <td style="padding:4px 8px;border-bottom:1px solid #eee;font-size:11px;color:#8B4513">${li.notes||''}</td>
+        </tr>`;
+      }).join('');
+
+      return `<tr style="background:#f0f4ff;page-break-inside:avoid">
+        <td style="padding:8px;font-weight:900;font-size:16px;vertical-align:top;width:28px;border-bottom:2px solid #2D6A2D">${i+1}</td>
+        <td colspan="3" style="padding:8px;border-bottom:2px solid #2D6A2D;vertical-align:top">
+          <div style="font-size:15px;font-weight:900;margin-bottom:2px">${s.customer}</div>
+          <div style="font-size:11px;color:#555;margin-bottom:2px">📍 ${[s.address,s.cityst].filter(Boolean).join(', ')||'No address'} ${s.zone?'· '+s.zone:''}</div>
+          <div style="font-size:11px;color:#666">WO #${s.woNum} · ${getWOWeight(s.woId).toLocaleString()} lbs ${s.notes?'· 📝 '+s.notes:''}</div>
+        </td>
+      </tr>
+      ${itemRows ? `<tr style="page-break-inside:avoid">
+        <td style="border-bottom:1px solid #ddd"></td>
+        <td colspan="3" style="padding:0 0 8px 8px;border-bottom:1px solid #ddd">
+          <table style="width:100%;border-collapse:collapse">
+            <thead><tr style="background:#eef2ff">
+              <th style="padding:4px 8px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:#555">Product</th>
+              <th style="padding:4px 8px;text-align:center;font-size:10px;font-weight:700;text-transform:uppercase;color:#555">Qty</th>
+              <th style="padding:4px 8px;text-align:center;font-size:10px;font-weight:700;text-transform:uppercase;color:#555">Weight</th>
+              <th style="padding:4px 8px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:#8B4513">Packing Note</th>
+            </thead>
+            <tbody>${itemRows}</tbody>
+          </table>
+        </td>
+      </tr>` : ''}`;
+    }).join('');
+
+    return `
+      <div style="margin-bottom:32px;page-break-after:always">
+        <div style="background:#1a1a2e;color:#fff;padding:12px 16px;border-radius:6px 6px 0 0;display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-size:18px;font-weight:900">${t.name}</div>
+            <div style="font-size:12px;opacity:.8">Driver: ${t.driver||'TBD'} &nbsp;·&nbsp; ${selDay?new Date(selDay+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'}):'All dates'}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:20px;font-weight:900">${tw.toLocaleString()} lbs</div>
+            <div style="font-size:11px;opacity:.8">${dayStops.length} stops · ${pct}% capacity</div>
+          </div>
+        </div>
+        <table style="width:100%;border-collapse:collapse;border:1px solid #ddd;border-top:none">
+          <tbody>${stopRows}</tbody>
+        </table>
+      </div>`;
   }).join('');
-  const win=window.open('','_blank');
-  win.document.write(`<!DOCTYPE html><html><head><title>Truck Load Sheet</title><style>body{font-family:Arial,sans-serif;font-size:12px;margin:24px}h2{font-size:18px;margin-bottom:4px}h3{margin-top:20px;margin-bottom:6px;font-size:14px}p{font-size:12px;color:#555;margin-bottom:8px}@media print{button{display:none}}</style></head><body><h2>TRUCK LOAD SHEET — Sherwood Steel</h2><p>Printed: ${new Date().toLocaleString()}</p>${lines}<button onclick="window.print()" style="margin-top:16px;padding:10px 20px;background:#2D6A2D;color:#fff;border:none;border-radius:6px;cursor:pointer">🖨 Print</button></body></html>`);
+
+  if(!sections.trim()){ toast('No stops to print for this day'); return; }
+
+  const win = window.open('','_blank');
+  win.document.write(`<!DOCTYPE html><html><head><title>Load Sheet — Sherwood Steel</title>
+  <style>
+    body{font-family:Arial,sans-serif;font-size:12px;margin:24px;color:#1a1a2e}
+    @media print{.no-print{display:none}body{margin:12px}}
+    * { box-sizing: border-box; }
+  </style></head><body>
+  <div class="no-print" style="margin-bottom:16px;display:flex;gap:10px;align-items:center">
+    <button onclick="window.print()" style="padding:10px 24px;background:#2D6A2D;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;font-weight:700">🖨 Print Load Sheet</button>
+    <span style="font-size:12px;color:#666">Sherwood Steel — Load Sheet printed ${new Date().toLocaleString()}</span>
+  </div>
+  ${sections}
+  </body></html>`);
   win.document.close();
 }
 
