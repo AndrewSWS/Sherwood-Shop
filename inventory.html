@@ -505,21 +505,49 @@ document.getElementById('file-input').addEventListener('change',async function(e
 });
 
 async function importFromWorkbook(wb,fname){
-  const find=(...names)=>{for(const n of names){const m=wb.SheetNames.find(s=>s.toLowerCase().includes(n.toLowerCase()));if(m)return wb.Sheets[m];}return null;};
-  // Always prefer the dot-version sheets (current working version)
-  const findDot=(...names)=>{
-    // Prefer dot-version sheet that matches ALL names (not just any one)
-    const dotMatch=wb.SheetNames.find(s=>s.endsWith('.')&&names.every(n=>s.toLowerCase().includes(n.toLowerCase())));
-    if(dotMatch)return wb.Sheets[dotMatch];
-    return find(...names);
+  // Find sheet by trying exact names first, then partial match
+  // Always pick the sheet with the most rows when multiple match (avoids old/empty tabs)
+  const findSheet=(...names)=>{
+    const sheets=wb.SheetNames;
+    // Try to find a sheet matching ALL names
+    const allMatch=sheets.filter(s=>names.every(n=>s.toLowerCase().includes(n.toLowerCase())));
+    if(allMatch.length===1) return wb.Sheets[allMatch[0]];
+    if(allMatch.length>1){
+      // Multiple matches — pick the one with most data
+      let best=null,bestCount=0;
+      for(const s of allMatch){
+        const ws=wb.Sheets[s];
+        const ref=ws['!ref'];
+        if(!ref)continue;
+        const count=parseInt(ref.split(':')[1]?.replace(/[A-Z]/g,''))||0;
+        if(count>bestCount){bestCount=count;best=s;}
+      }
+      return best?wb.Sheets[best]:wb.Sheets[allMatch[0]];
+    }
+    // Fall back to any single name match — pick largest
+    for(const n of names){
+      const matches=sheets.filter(s=>s.toLowerCase().includes(n.toLowerCase()));
+      if(matches.length===1)return wb.Sheets[matches[0]];
+      if(matches.length>1){
+        let best=null,bestCount=0;
+        for(const s of matches){
+          const ws=wb.Sheets[s];
+          const ref=ws['!ref'];
+          const count=parseInt(ref?.split(':')[1]?.replace(/[A-Z]/g,''))||0;
+          if(count>bestCount){bestCount=count;best=s;}
+        }
+        if(best)return wb.Sheets[best];
+      }
+    }
+    return null;
   };
   let imported=0;
   const checks=[
-    [findDot('inv','sheets'),'invSheets',parseInvSheets],
-    [findDot('slip','drive'),'slipDrive',parseSlipDrive],
-    [findDot('alum','stain'),'alumStain',parseAlumStain],
-    [findDot('elgen'),'elgen',parseElgen],
-    [findDot('mjs','consign'),'mjsConsignment',parseMJS]
+    [findSheet('inv','sheets'),'invSheets',parseInvSheets],
+    [findSheet('slip','drive'),'slipDrive',parseSlipDrive],
+    [findSheet('alum','stain'),'alumStain',parseAlumStain],
+    [findSheet('elgen'),'elgen',parseElgen],
+    [findSheet('mjs','consignment'),'mjsConsignment',parseMJS]
   ];
   for(const [ws,key,parser] of checks){
     if(ws){const r=parser(ws);if(r.length){state[key]=r;imported++;}}
