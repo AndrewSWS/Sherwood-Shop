@@ -264,6 +264,8 @@ async function sbUpsert(table,body){
 // ── INIT ──
 async function init(){
   setSyncBadge('loading');
+  let needsSave=false;
+
   // Load forecast groups from Supabase
   const rows=await sbGet(SB_TABLE,'order=group_id.asc');
   if(rows&&rows.length>0){
@@ -271,12 +273,21 @@ async function init(){
     if(rows[0].target_months!=null)targetMonths=rows[0].target_months;
     setSyncBadge('ok');
   }else{
+    // Table empty — use seed data, flag for save after inventory pull
     groups=JSON.parse(JSON.stringify(SEED));
+    needsSave=true;
     setSyncBadge('warn');
   }
 
-  // Pull live E (shts in stock) and H (MJS lbs) from Supabase inventory tables
+  // Pull live E and H from inventory tables
   await refreshFromInventory();
+
+  // Now save to Supabase if first load — inventory values are baked in
+  if(needsSave){
+    console.log('[FORECAST] First load — saving seed data to Supabase...');
+    await saveChanges(true);
+    console.log('[FORECAST] Auto-save complete');
+  }
 
   renderAll();
 }
@@ -305,7 +316,9 @@ async function refreshFromInventory(){
     const neededKeys=[];
     groups.forEach(g=>g.rows.forEach(row=>{ if(!row.is_coil&&row.wkey) neededKeys.push(row.wkey); }));
     console.log('[INV] wkeys needed by forecast:', neededKeys.slice(0,10));
+    const missing = neededKeys.filter(k=>invLookup[k]==null);
     console.log('[INV] matches found:', neededKeys.filter(k=>invLookup[k]!=null).length, 'of', neededKeys.length);
+    console.log('[INV] missing wkeys:', missing);
     groups.forEach(g=>{
       g.rows.forEach(row=>{
         if(!row.is_coil&&row.wkey){
@@ -627,7 +640,7 @@ function markDirty(){
   dirty=true;
   document.getElementById('save-bar').classList.add('visible');
 }
-async function saveChanges(){
+async function saveChanges(silent=false){
   setSyncBadge('loading');
   const payload=groups.map(g=>({group_id:g.id,target_months:targetMonths,data:g}));
   try{
@@ -638,7 +651,7 @@ async function saveChanges(){
     setSyncBadge('ok');
     dirty=false;
     document.getElementById('save-bar').classList.remove('visible');
-    showToast('Saved to Supabase','success');
+    if(!silent) showToast('Saved to Supabase','success');
   }else{
     setSyncBadge('err');
     showToast('Save failed — check connection','error');
