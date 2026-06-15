@@ -508,10 +508,9 @@ async function importFromWorkbook(wb,fname){
   const find=(...names)=>{for(const n of names){const m=wb.SheetNames.find(s=>s.toLowerCase().includes(n.toLowerCase()));if(m)return wb.Sheets[m];}return null;};
   // Always prefer the dot-version sheets (current working version)
   const findDot=(...names)=>{
-    for(const n of names){
-      const m=wb.SheetNames.find(s=>s.toLowerCase().includes(n.toLowerCase())&&s.endsWith('.'));
-      if(m)return wb.Sheets[m];
-    }
+    // Prefer dot-version sheet that matches ALL names (not just any one)
+    const dotMatch=wb.SheetNames.find(s=>s.endsWith('.')&&names.every(n=>s.toLowerCase().includes(n.toLowerCase())));
+    if(dotMatch)return wb.Sheets[dotMatch];
     return find(...names);
   };
   let imported=0;
