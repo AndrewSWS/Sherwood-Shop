@@ -381,15 +381,10 @@ async function saveToSupabase(silent=false) {
   setSyncStatus('saving');
   let allOk = true;
   for (const [key, table] of Object.entries(SB_TABLES)) {
+    // Use UPSERT only — row_index is primary key so existing rows update, new rows insert
+    // No DELETE needed, avoids quota/permission issues
     const rows = state[key].map((data, idx) => ({ row_index: idx, data, updated_at: new Date().toISOString() }));
-    // Delete old rows then insert fresh (simplest approach for full replace)
     try {
-      // Delete all existing rows
-      await fetch(`${SB_URL}/rest/v1/${table}`, {
-        method: 'DELETE',
-        headers: { ...SB_HDR, 'Prefer': 'return=minimal' }
-      });
-      // Insert new rows in batches of 100
       for (let i = 0; i < rows.length; i += 100) {
         const ok = await sbUpsert(table, rows.slice(i, i + 100));
         if (!ok) allOk = false;
