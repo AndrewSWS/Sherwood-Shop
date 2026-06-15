@@ -539,7 +539,14 @@ function colIdx(headers,...names){for(const n of names){const i=headers.findInde
 function parseInvSheets(ws){
   const rows=sheetToRows(ws),hi=findHeader(rows);if(hi<0)return[];
   const h=rows[hi].map(c=>String(c||'').trim().toLowerCase());
-  const g=colIdx(h,'gauge'),sz=colIdx(h,'size'),vd=colIdx(h,'vendor'),pc=colIdx(h,'pcs','pieces','qty'),bn=colIdx(h,'bundle type','bundle'),bnum=colIdx(h,'bundle #','bundle#','bundlenum','bundle n'),pr=colIdx(h,'price'),to=colIdx(h,'total','ext');
+  // Column layout: A=Gauge, B=Size, C=Vendor, D=Pcs, E=BundleType(no header), F=Bundle#, G=Price, H=Total
+  // Use header detection for most cols but fix bundle cols by position
+  const g=colIdx(h,'gauge'),sz=colIdx(h,'size'),vd=colIdx(h,'vendor'),pc=colIdx(h,'pcs','pieces','qty');
+  const pr=colIdx(h,'price'),to=colIdx(h,'total','ext');
+  // Bundle TYPE is col E (index 4) — no header, always positional
+  // Bundle # is col F (index 5) — header is 'BUNDLE #'
+  const bn=4;   // bundle type — G90, w/s, etc. — used for filtering
+  const bnum=colIdx(h,'bundle #','bundle#','bundlenum','bundle n'); // bundle number
   const res=[];let sec='';
   for(let i=hi+1;i<rows.length;i++){
     const row=rows[i];if(!row||row.every(c=>!c))continue;
@@ -547,7 +554,7 @@ function parseInvSheets(ws){
     const fc=String(row[0]||'').trim();
     if(fc&&!gv&&!pv&&fc.toLowerCase().includes('gauge')){sec=fc;continue;}
     if(!gv&&!pv)continue;
-    res.push({section:sec,gauge:gv,size:sz>=0?String(row[sz]||'').trim():'',vendor:vd>=0?String(row[vd]||'').trim():'',pcs:parseInt(pv)||0,bundle:bn>=0?String(row[bn]||'').trim():'',bundleNum:bnum>=0?String(row[bnum]||'').trim():'',price:pr>=0?parseFloat(String(row[pr]||'').replace(/[$,]/g,''))||0:0,total:to>=0?parseFloat(String(row[to]||'').replace(/[$,]/g,''))||0:0});
+    res.push({section:sec,gauge:gv,size:sz>=0?String(row[sz]||'').trim():'',vendor:vd>=0?String(row[vd]||'').trim():'',pcs:parseInt(pv)||0,bundle:String(row[bn]||'').trim(),bundleNum:bnum>=0?String(row[bnum]||'').trim():'',price:pr>=0?parseFloat(String(row[pr]||'').replace(/[$,]/g,''))||0:0,total:to>=0?parseFloat(String(row[to]||'').replace(/[$,]/g,''))||0:0});
   }
   return res;
 }
