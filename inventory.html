@@ -711,13 +711,15 @@ function parseMJS(ws){
   for(let i=0;i<Math.min(15,rows.length);i++){const r=rows[i].map(c=>String(c||'').toLowerCase());if(r.some(c=>c.includes('heat')||c.includes('gauge')||c.includes('mjs'))){hi=i;break;}}
   if(hi<0)return[];
   const h=rows[hi].map(c=>String(c||'').trim().toLowerCase());
-  const g=colIdx(h,'gauge'),w=colIdx(h,'width'),co=colIdx(h,'coating','coat'),hn=colIdx(h,'heat'),mt=h.findIndex(c=>c.includes('mjs')&&c.includes('tag')),lf=colIdx(h,'lf','lin'),wt=colIdx(h,'weight','lbs'),cd=colIdx(h,'cpl','date'),pr=colIdx(h,'price'),tg=h.findIndex(c=>c.includes('tag')&&!c.includes('mjs'));
+  const g=colIdx(h,'gauge'),w=colIdx(h,'width'),co=colIdx(h,'coating','coat'),hn=colIdx(h,'heat'),mt=h.findIndex(c=>c.includes('mjs')&&c.includes('tag')),lf=colIdx(h,'lf','lin'),wt=colIdx(h,'weight','lbs'),cd=colIdx(h,'cpl','date'),ud=colIdx(h,'use date','use_date','usedate'),pr=colIdx(h,'price'),tg=h.findIndex(c=>c.includes('tag')&&!c.includes('mjs'));
   const res=[];
   for(let i=hi+1;i<rows.length;i++){
     const row=rows[i];if(!row||row.every(c=>!c))continue;
     const wtv=wt>=0?parseFloat(String(row[wt]||'').replace(/,/g,''))||0:0;
     const lfv=lf>=0?parseFloat(String(row[lf]||'').replace(/,/g,''))||0:0;
     if(!wtv&&!lfv)continue;
+    // Skip rows with a use date — those coils have been consumed and moved to Inv-Sheets
+    if(ud>=0&&row[ud])continue;
     const heatNum=hn>=0?String(row[hn]||'').trim():'';
     const mjsTag=mt>=0?String(row[mt]||'').trim():'';
     const bundleNum=heatNum||mjsTag||`mjs-${i}`;
