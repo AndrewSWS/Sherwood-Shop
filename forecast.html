@@ -265,28 +265,28 @@ async function sbUpsert(table,body){
 // ── INIT ──
 async function init(){
   setSyncBadge('loading');
-  let needsSave=false;
 
-  // Load forecast groups from Supabase
+  // Load manual inputs from Supabase (C, D, F, J, K, target months)
+  // E (sheets in stock) and H (MJS lbs) are ALWAYS pulled live from inventory
+  // and never stored in forecast_groups
   const rows=await sbGet(SB_TABLE,'order=group_id.asc');
   if(rows&&rows.length>0){
     groups=rows.map(r=>r.data);
     if(rows[0].target_months!=null)targetMonths=rows[0].target_months;
     setSyncBadge('ok');
   }else{
-    // Table empty — use seed data, flag for save after inventory pull
+    // First load — use seed data for manual inputs
     groups=JSON.parse(JSON.stringify(SEED));
-    needsSave=true;
     setSyncBadge('warn');
   }
 
-  // Pull live E and H from inventory tables
+  // Always pull live E and H — overrides whatever was in Supabase or seed
   await refreshFromInventory();
 
-  // Now save to Supabase if first load — inventory values are baked in
-  if(needsSave){
-      await saveChanges(true);
-    }
+  // Auto-save on first load (table was empty)
+  if(!rows||!rows.length){
+    await saveChanges(true);
+  }
 
   renderAll();
 }
