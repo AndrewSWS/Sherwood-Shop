@@ -647,8 +647,12 @@ function parseInvSheets(ws){
     const gv=g>=0?String(row[g]||'').trim():'',pv=pc>=0?row[pc]:null;
     if(fc&&!gv&&!pv&&fc.toLowerCase().includes('gauge')){sec=fc;continue;}
     if(!gv&&!pv)continue;
-    const bundleNum=bnum>=0?String(row[bnum]||'').trim():'';
-    if(!bundleNum)continue; // skip rows without a bundle number
+    let bundleNum=bnum>=0?String(row[bnum]||'').trim():'';
+    if(!bundleNum){
+      // Generate a stable key for rows without a bundle number
+      bundleNum=`${gv}-${(sz>=0?String(row[sz]||''):'')+''}-${vd>=0?String(row[vd]||''):''}`.replace(/\s+/g,'-').replace(/[^a-zA-Z0-9-]/g,'').toLowerCase()+'-nobundle';
+      if(!bundleNum||bundleNum==='-nobundle')continue;
+    }
     res.push({section:sec,gauge:gv,size:sz>=0?String(row[sz]||'').trim():'',vendor:vd>=0?String(row[vd]||'').trim():'',pcs:parseInt(pv)||0,bundle:String(row[bn]||'').trim(),bundleNum,price:pr>=0?parseFloat(String(row[pr]||'').replace(/[$,]/g,''))||0:0,total:to>=0?parseFloat(String(row[to]||'').replace(/[$,]/g,''))||0:0});
   }
   return res;
