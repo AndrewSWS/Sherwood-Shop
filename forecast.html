@@ -283,6 +283,7 @@ async function init(){
   // Always pull live E and H — overrides whatever was in Supabase or seed
   await refreshFromInventory();
 
+
   // Auto-save on first load (table was empty)
   if(!rows||!rows.length){
     await saveChanges(true);

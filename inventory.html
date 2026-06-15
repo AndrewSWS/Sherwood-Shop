@@ -528,6 +528,7 @@ async function importFromWorkbook(wb,fname){
   if(!imported){showToast('No matching sheets found','error');setSyncStatus('err');return;}
   updateBadges();
   renderTab(state.currentTab);
+
   await saveToSupabase();
 }
 
