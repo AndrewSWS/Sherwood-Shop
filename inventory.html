@@ -201,15 +201,27 @@ async function loadFromSupabase(){
 
 async function saveToSupabase(){
   setSyncStatus('saving');
-  // Truncate all inventory tables via Postgres function then upsert fresh data
-  const truncOk=await sbRpc('truncate_inventory');
-  if(!truncOk){setSyncStatus('err');showToast('Truncate failed — check Supabase','error');return;}
+  // Truncate via RPC with full error detail
+  let truncOk=false;
+  try{
+    const tr=await fetch(`${SB_URL}/rest/v1/rpc/truncate_inventory`,{
+      method:'POST',headers:{...SB_HDR,'Content-Type':'application/json'},body:'{}'
+    });
+    const txt=await tr.text();
+    console.log('[TRUNC] status:',tr.status,'body:',txt);
+    truncOk=tr.ok;
+    if(!truncOk){setSyncStatus('err');showToast('Truncate failed ('+tr.status+') — see console','error');return;}
+  }catch(e){
+    console.error('[TRUNC] error:',e);
+    setSyncStatus('err');showToast('Truncate error — see console','error');return;
+  }
   let allOk=true;
   for(const [key,table] of Object.entries(SB_TABLES)){
     const rows=state[key].map((data,idx)=>({row_index:idx,data,updated_at:new Date().toISOString()}));
+    console.log(`[UPSERT] ${table}: ${rows.length} rows`);
     for(let i=0;i<rows.length;i+=100){
       const ok=await sbUpsert(table,rows.slice(i,i+100));
-      if(!ok)allOk=false;
+      if(!ok){console.error(`[UPSERT] FAILED batch ${i}-${i+100} on ${table}`);allOk=false;}
     }
   }
   if(allOk){
