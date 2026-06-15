@@ -2512,16 +2512,59 @@ function showDupWOModal(existing, incoming){
   const removedItems = existing.items.filter(i=>!incomingByQty[qtyKey(i)]);
 
   // Match notes by QB item code (e.g. GlvSht:263696) — survives category/size edits
+  // Two-pass: first lock exact qty+code matches, then flag genuine changes.
+  // QB items already identified as NEW (newItems) are excluded from note comparison —
+  // a new item sharing a qty with an existing item is NOT a note change.
   const extractCode = n=>{ if(!n) return null; const m = n.match(/^[A-Za-z]+:([A-Za-z0-9.]+)/); return m ? m[1].toLowerCase() : null; };
-  const sysQtySetM = new Set(existing.items.map(i=>String(i.qty).trim()));
   const sysCodeSetM = new Set(existing.items.map(i=>extractCode(i.notes)).filter(Boolean));
-  const notesChanges = incoming.items.filter(qbItem=>{
-    if(!qbItem.notes) return false;
-    if(!sysQtySetM.has(String(qbItem.qty).trim())) return false;
+  const newItemSet = new Set(newItems); // QB items already classified as new additions
+
+  // Build a pool of sys items available for note matching (keyed by qty, multi-valued)
+  const sysPoolByQty = {};
+  existing.items.forEach(i=>{
+    const q = String(i.qty).trim();
+    if(!sysPoolByQty[q]) sysPoolByQty[q] = [];
+    sysPoolByQty[q].push(i);
+  });
+  const usedSysForNotes = new Set();
+
+  // Pass 1: lock exact qty+code matches — these are unchanged
+  incoming.items.forEach(qbItem=>{
+    if(!qbItem.notes || newItemSet.has(qbItem)) return;
     const qbCode = extractCode(qbItem.notes);
-    if(!qbCode) return false;
-    return !sysCodeSetM.has(qbCode); // only flag if code completely absent from system
-  }).map(qbItem=>({ qbItem, sysItem: existingByQty[qtyKey(qbItem)] }));
+    const qbQty  = String(qbItem.qty).trim();
+    const pool   = (sysPoolByQty[qbQty]||[]).filter(s=>!usedSysForNotes.has(s));
+    const exact  = pool.find(s=>extractCode(s.notes)===qbCode);
+    if(exact) usedSysForNotes.add(exact); // locked — no change
+  });
+
+  // Pass 2: remaining QB items with notes that didn't match in pass 1
+  const surplus = incoming.items.length - existing.items.length;
+  let noteNewSlots = surplus; // new-item budget — consume before flagging as changes
+  const notesChanges = [];
+  incoming.items.forEach(qbItem=>{
+    if(!qbItem.notes || newItemSet.has(qbItem)) return;
+    const qbCode = extractCode(qbItem.notes);
+    if(!qbCode) return;
+    const qbQty  = String(qbItem.qty).trim();
+    // Already handled in pass 1?
+    const pool   = (sysPoolByQty[qbQty]||[]).filter(s=>!usedSysForNotes.has(s));
+    if(!pool.length){
+      // No sys item left for this qty — treat as new
+      if(noteNewSlots > 0) noteNewSlots--;
+      return;
+    }
+    // Sys items exist with this qty but code didn't match in pass 1
+    if(noteNewSlots > 0){
+      // Still have surplus budget — this could be a new item sharing a qty, not a change
+      noteNewSlots--;
+      return;
+    }
+    // No budget left — genuine note change
+    const sysItem = pool[0];
+    usedSysForNotes.add(sysItem);
+    notesChanges.push({ qbItem, sysItem });
+  });
 
   const hasChanges = newItems.length > 0 || qtyChanges.length > 0 || removedItems.length > 0 || notesChanges.length > 0;
 
@@ -2634,13 +2677,22 @@ function mergeDupWO(existingId){
   const incoming = window._dupIncomingWO;
   if(!existing||!incoming) return;
 
-  // Match by qty — category/gauge/size may have been changed in system
-  const qtyKey2 = i=>String(i.qty).trim();
-  const existingByQty2 = {};
-  existing.items.forEach(i=>{ existingByQty2[qtyKey2(i)] = i; });
 
-  const newItems = incoming.items.filter(item=>!existingByQty2[qtyKey2(item)]);
-  const qtyUpdated = []; // matched by qty so no qty changes possible
+  // Match by qty using a pool (multi-value) so duplicate qtys are handled correctly.
+  // e.g. if system has one ×5 and QB has two ×5, the second ×5 is a new item.
+  const qtyKey2 = i=>String(i.qty).trim();
+  const existingQtyPool = existing.items.map(i=>qtyKey2(i)); // pool, not a map
+  const usedExistingIdxs = new Set();
+
+  // For each incoming item, try to consume one slot from the existing pool
+  const newItems = incoming.items.filter(item=>{
+    const q = qtyKey2(item);
+    const idx = existingQtyPool.findIndex((eq, i)=>eq===q && !usedExistingIdxs.has(i));
+    if(idx === -1) return true;  // no slot left — this is a new item
+    usedExistingIdxs.add(idx);
+    return false; // consumed a slot — existing item
+  });
+
 
   // IMPORTANT: preserve existing WO scheduling — never overwrite with blank
   // The incoming WO from QB import has no delivery date/truck/delivered info
@@ -2678,25 +2730,31 @@ function mergeDupWO(existingId){
     }).catch(e=>console.warn('merge new item error',e));
   });
 
-  // Update notes on existing items using QB item code matching
-  // This avoids wrong-item assignment when multiple items share the same qty
+  // Update notes on existing items — skip any QB item that was a new addition
+  // (new items already have their note set correctly from QB; updating would corrupt old items)
+  const newItemSet2 = new Set(newItems);
   const extractCode = n=>{ if(!n) return null; const m=n.match(/^[A-Za-z]+:([A-Za-z0-9.]+)/); return m?m[1].toLowerCase():null; };
   const notesUpdated = [];
+  const usedForNotes = new Set();
   incoming.items.forEach(qbItem=>{
     if(!qbItem.notes) return;
+    if(newItemSet2.has(qbItem)) return; // new addition — skip, don't touch existing items
+
     const qbCode = extractCode(qbItem.notes);
     // Find system item: 1) exact code match, 2) same qty+no code, 3) same qty any
+    // Exclude newly added items from matching (they weren't in the original WO)
+    const originalItems = existing.items.filter(i=>!newItemSet2.has(i)&&!usedForNotes.has(i));
     let sysItem = qbCode
-      ? existing.items.find(s=>extractCode(s.notes)===qbCode)  // exact code match
+      ? originalItems.find(s=>extractCode(s.notes)===qbCode)
       : null;
     if(!sysItem){
-      const sameQty = existing.items.filter(s=>String(s.qty).trim()===String(qbItem.qty).trim());
-      // Prefer item with no note or no extractable code (e.g. old note like "55")
-      sysItem = sameQty.find(s=>!(s.notes||'').trim()) // blank note
-             || sameQty.find(s=>!extractCode(s.notes)) // has note but no code pattern
-             || sameQty[0]; // last resort: first same-qty item
+      const sameQty = originalItems.filter(s=>String(s.qty).trim()===String(qbItem.qty).trim());
+      sysItem = sameQty.find(s=>!(s.notes||'').trim())
+             || sameQty.find(s=>!extractCode(s.notes))
+             || sameQty[0];
     }
     if(!sysItem) return;
+    usedForNotes.add(sysItem);
     const qbNote = qbItem.notes.trim();
     const sysNote = (sysItem.notes||'').trim();
     if(qbNote !== sysNote){
@@ -8560,50 +8618,55 @@ function renderQBList(invoices){
         }).join('');
         diffHtml += `</div>`;
 
-        // Packing notes comparison:
-        // Match each QB item to a WO item by:
-        //   Step 1 — find ALL WO items with the same qty as this QB item
-        //   Step 2 — among those, find one whose note code matches the QB code
-        //   Step 3 — if exactly one qty match exists and code doesn't match → note changed
-        //   Step 4 — if multiple qty matches and none have matching code → note changed
-        //   WO items with no notes are manual/system-only — excluded from comparison
+        // Packing notes comparison — two-pass to avoid confusing new items with note changes:
+        // Pass 1: lock in exact qty+code matches first (these are definitely unchanged)
+        // Pass 2: for remaining QB items, only match against remaining sys items by qty
+        //         BUT if QB has more items than sys (count surplus), unmatched QB items
+        //         with no sys counterpart are NEW additions — not note changes.
         const _nc = n=>{ if(!n) return ''; const m=n.match(/^([^\s(]+)/); return m?m[1].toLowerCase():''; };
-        const sysNoteItems = existing.items.filter(i=>i.notes); // only WO items that have a note
+        const sysNoteItems = existing.items.filter(i=>i.notes);
         const usedSysIds = new Set();
         const notesChanged = [];
+        const surplus = inv.items.length - existing.items.length;
 
+        // Pass 1: lock in exact qty + code matches
         inv.items.forEach(qbItem=>{
-          if(!qbItem.notes) return; // QB item has no note, nothing to compare
+          if(!qbItem.notes) return;
+          const qbCode = _nc(qbItem.notes);
+          const qbQty  = String(qbItem.qty).trim();
+          const exactMatch = sysNoteItems.find(s=>!usedSysIds.has(s)&&String(s.qty).trim()===qbQty&&_nc(s.notes)===qbCode);
+          if(exactMatch) usedSysIds.add(exactMatch);
+        });
+
+        // Pass 2: remaining QB items — new additions consume surplus slots before flagging changes
+        let newItemSlots = surplus;
+        inv.items.forEach(qbItem=>{
+          if(!qbItem.notes) return;
           const qbCode = _nc(qbItem.notes);
           const qbQty  = String(qbItem.qty).trim();
 
-          // Step 1: all WO items with matching qty (that haven't been used yet)
+          // Already locked in pass 1?
+          const alreadyLocked = sysNoteItems.find(s=>usedSysIds.has(s)&&String(s.qty).trim()===qbQty&&_nc(s.notes)===qbCode);
+          if(alreadyLocked) return;
+
           const qtyMatches = sysNoteItems.filter(s=>!usedSysIds.has(s)&&String(s.qty).trim()===qbQty);
 
-          let sysItem = null;
-
-          if(qtyMatches.length === 1){
-            // Only one WO item with this qty — that's our match regardless of code
-            sysItem = qtyMatches[0];
-          } else if(qtyMatches.length > 1){
-            // Multiple WO items share this qty — find the one whose code matches
-            const codeMatch = qtyMatches.find(s=>_nc(s.notes)===qbCode);
-            if(codeMatch){
-              // Found exact code match among the qty group — not changed
-              sysItem = codeMatch;
-            } else {
-              // No code match found among qty group — pick first unused, flag as changed
-              sysItem = qtyMatches[0];
-            }
-          } else {
-            // No qty match at all — try code match across all remaining WO items
-            sysItem = sysNoteItems.find(s=>!usedSysIds.has(s)&&_nc(s.notes)===qbCode)||null;
+          if(!qtyMatches.length){
+            // No sys item with this qty — new item, consume a surplus slot
+            if(newItemSlots > 0) newItemSlots--;
+            return;
           }
 
-          if(!sysItem) return; // no WO counterpart found, skip
+          // Sys items exist with this qty but none matched our code in pass 1.
+          // If surplus budget remains, treat as new addition sharing a qty — not a note change.
+          if(newItemSlots > 0){
+            newItemSlots--;
+            return;
+          }
 
+          // No surplus budget — genuine note change on an existing item
+          const sysItem = qtyMatches[0];
           usedSysIds.add(sysItem);
-
           const qbNote  = qbItem.notes.trim().toLowerCase();
           const sysNote = sysItem.notes.trim().toLowerCase();
           if(qbNote !== sysNote){
