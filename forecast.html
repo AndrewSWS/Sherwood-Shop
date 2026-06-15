@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sherwood Steel — Forecast & Dashboard</title>
+<style>
+:root{
+  --forest:#1C2E1C;--forest-mid:#2D6A2D;--forest-light:#3D7A3D;
+  --sage:#A8D5A8;--sage-dim:#7AB87A;
+  --cream:#F0F4F0;--white:#FFFFFF;--steel-light:#C8D8D4;
+  --rust:#C94F2A;--amber:#D4891A;--amber-light:#F5C842;
+  --green-ok:#1E7E34;--text-primary:#1A2A1A;--text-secondary:#4A6A4A;
+  --text-muted:#7A9A7A;--border:#D0DDD0;--border-dark:#A8C0A8;
+  --row-alt:#F5FAF5;--row-hover:#EBF5EB;--shadow:rgba(28,46,28,0.12);
+  --input-bg:rgba(168,213,168,0.13);--input-focus:rgba(168,213,168,0.28);
+  --calc-col:#F8FBF8;--theo-col:#FFFBF0;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--cream);color:var(--text-primary);min-height:100vh;}
+
+/* LOGIN */
+#login-overlay{position:fixed;inset:0;z-index:99999;background:var(--forest);display:flex;align-items:center;justify-content:center;}
+.login-card{background:var(--white);border-radius:12px;padding:40px;width:340px;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,0.4);}
+.login-card .brand{font-size:22px;font-weight:800;color:var(--forest);margin-bottom:4px;}
+.login-card .sub{font-size:12px;color:var(--text-muted);margin-bottom:28px;letter-spacing:1px;text-transform:uppercase;}
+.login-card input[type=password]{width:100%;padding:11px 14px;font-size:14px;border:2px solid var(--border-dark);border-radius:8px;margin-bottom:12px;outline:none;font-family:inherit;transition:border-color .15s;}
+.login-card input:focus{border-color:var(--forest-mid);}
+.login-card button{width:100%;padding:12px;font-size:14px;font-weight:700;background:var(--forest-mid);color:var(--white);border:none;border-radius:8px;cursor:pointer;}
+.login-card button:hover{background:var(--forest-light);}
+.login-error{color:var(--rust);font-size:12px;margin-top:10px;display:none;}
+
+/* HEADER */
+.app-header{background:var(--forest);color:var(--white);padding:0 20px;display:flex;align-items:center;gap:14px;height:56px;box-shadow:0 2px 8px var(--shadow);position:sticky;top:0;z-index:100;}
+.logo{font-size:11px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--sage);}
+.page-title{font-size:15px;font-weight:600;opacity:.9;}
+.hdiv{width:1px;height:24px;background:rgba(168,213,168,.3);}
+.hspace{flex:1;}
+.sync-badge{font-size:11px;padding:3px 8px;border-radius:4px;font-weight:600;}
+.sync-ok{background:rgba(168,213,168,.2);color:var(--sage);}
+.sync-loading{background:rgba(212,137,26,.2);color:var(--amber-light);}
+.sync-err{background:rgba(201,79,42,.2);color:#ff8a7a;}
+
+/* WEIGHT TOGGLE */
+.weight-toggle{display:flex;align-items:center;gap:0;border:1px solid var(--border-dark);border-radius:6px;overflow:hidden;}
+.wt-btn{padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;border:none;background:rgba(255,255,255,.1);color:rgba(168,213,168,.7);transition:all .15s;white-space:nowrap;}
+.wt-btn.active{background:var(--sage);color:var(--forest);}
+.wt-btn:hover:not(.active){background:rgba(168,213,168,.2);color:var(--sage);}
+
+.btn-sm{padding:6px 12px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border-dark);background:var(--white);color:var(--text-secondary);}
+.btn-sm:hover{background:var(--row-hover);}
+
+/* TABS */
+.tab-bar{background:var(--forest);border-bottom:2px solid var(--forest-mid);display:flex;padding:0 20px;gap:2px;overflow-x:auto;}
+.tab-btn{background:none;border:none;color:rgba(168,213,168,.6);padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;white-space:nowrap;transition:color .15s,border-color .15s;}
+.tab-btn:hover{color:var(--sage);}
+.tab-btn.active{color:var(--sage);border-bottom-color:var(--sage);}
+
+/* SAVE BAR */
+.save-bar{display:none;align-items:center;gap:12px;background:var(--amber);color:var(--white);padding:8px 16px;font-size:13px;font-weight:600;}
+.save-bar.visible{display:flex;}
+.save-bar .sba{margin-left:auto;display:flex;gap:8px;}
+.save-bar button{padding:5px 12px;border-radius:5px;font-size:12px;font-weight:700;cursor:pointer;border:none;}
+.sb-save{background:var(--white);color:var(--amber);}
+.sb-disc{background:rgba(255,255,255,.2);color:var(--white);}
+
+/* MAIN */
+.main{padding:16px 20px 40px;max-width:1900px;margin:0 auto;}
+
+/* KPI CARDS */
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:18px;}
+.kpi{background:var(--white);border:1px solid var(--border);border-radius:8px;padding:14px 16px;box-shadow:0 1px 3px var(--shadow);}
+.kpi.accent{background:var(--forest);border-color:var(--forest-mid);}
+.kpi .kl{font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:5px;}
+.kpi.accent .kl{color:var(--sage-dim);}
+.kpi .kv{font-size:24px;font-weight:800;color:var(--forest);line-height:1;}
+.kpi.accent .kv{color:var(--sage);}
+.kpi .ks{font-size:11px;color:var(--text-secondary);margin-top:3px;}
+.kpi.accent .ks{color:rgba(168,213,168,.7);}
+.kpi.warn .kv{color:var(--rust);}
+.kpi.good .kv{color:var(--green-ok);}
+
+/* THEO BANNER */
+.theo-banner{background:var(--theo-col);border:1px solid #e8c840;border-radius:8px;padding:8px 14px;margin-bottom:14px;font-size:12px;color:#7a6010;display:none;align-items:center;gap:8px;}
+.theo-banner.visible{display:flex;}
+
+/* TARGET CONTROL */
+.controls-row{display:flex;align-items:center;gap:16px;margin-bottom:16px;flex-wrap:wrap;}
+.target-ctrl{display:flex;align-items:center;gap:8px;background:var(--white);border:1px solid var(--border);border-radius:8px;padding:10px 14px;box-shadow:0 1px 3px var(--shadow);}
+.target-ctrl label{font-size:13px;font-weight:700;color:var(--forest);}
+.target-ctrl input{width:55px;padding:5px 8px;font-size:15px;font-weight:700;border:2px solid var(--border-dark);border-radius:6px;text-align:center;outline:none;font-family:inherit;color:var(--forest);}
+.target-ctrl input:focus{border-color:var(--forest-mid);}
+.target-ctrl span{font-size:12px;color:var(--text-muted);}
+
+/* DASHBOARD TABLE */
+.dtable-wrap{background:var(--white);border:1px solid var(--border);border-radius:8px;overflow:hidden;box-shadow:0 1px 4px var(--shadow);}
+.dtable-wrap table{width:100%;border-collapse:collapse;font-size:13px;}
+.dtable-wrap thead th{background:var(--forest);color:var(--sage);padding:9px 11px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;white-space:nowrap;}
+.dtable-wrap thead th.r{text-align:right;}
+.dtable-wrap thead th.theo-hdr{background:#4a3a00;color:#f5c842;}
+.dtable-wrap tbody tr{border-bottom:1px solid var(--border);transition:background .1s;}
+.dtable-wrap tbody tr:nth-child(even){background:var(--row-alt);}
+.dtable-wrap tbody tr:hover{background:var(--row-hover);}
+.dtable-wrap tbody td{padding:8px 11px;white-space:nowrap;}
+.dtable-wrap tbody td.r{text-align:right;font-variant-numeric:tabular-nums;}
+.dtable-wrap tfoot tr{background:#E8F0E8;border-top:2px solid var(--border-dark);}
+.dtable-wrap tfoot td{padding:9px 11px;font-weight:700;font-size:13px;}
+.dtable-wrap tfoot td.r{text-align:right;}
+.theo-cell{background:var(--theo-col);color:#7a6010;font-style:italic;}
+
+/* STATUS */
+.sbadge{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;}
+.s-over{background:#D4EDDA;color:#155724;}
+.s-near{background:#FFF3CD;color:#856404;}
+.s-below{background:#F8D7DA;color:#721C24;}
+.s-none{background:#eee;color:#888;}
+.gauge-chip{display:inline-block;background:var(--steel-light);color:var(--forest);font-size:11px;font-weight:700;padding:2px 6px;border-radius:3px;}
+
+/* MONTHS BAR */
+.mbar-wrap{display:flex;align-items:center;gap:6px;}
+.mbar-bg{width:70px;height:9px;background:#e0e0e0;border-radius:5px;overflow:hidden;flex-shrink:0;}
+.mbar-fill{height:100%;border-radius:5px;transition:width .3s;}
+.bar-over{background:var(--green-ok);}
+.bar-near{background:var(--amber);}
+.bar-below{background:var(--rust);}
+
+/* FORECAST TABLE */
+.gauge-header{background:var(--forest);color:var(--sage);padding:7px 14px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-top:12px;border-radius:6px 6px 0 0;}
+.fgroup{background:var(--white);border:1px solid var(--border);border-top:none;border-radius:0 0 6px 6px;overflow:hidden;margin-bottom:4px;}
+.fgroup table{width:100%;border-collapse:collapse;font-size:12.5px;}
+.fgroup thead th{background:var(--forest-mid);color:var(--sage);padding:7px 9px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;white-space:nowrap;}
+.fgroup thead th.r{text-align:right;}
+.fgroup thead th.inp-hdr{background:#1a4a1a;color:#c8f0c8;}
+.fgroup thead th.calc-hdr{background:#233023;color:#8dc08d;}
+.fgroup thead th.theo-hdr{background:#3a2e00;color:#f0c030;}
+.fgroup tbody tr{border-bottom:1px solid var(--border);}
+.fgroup tbody tr:hover{background:var(--row-hover);}
+.fgroup tbody tr.total-row{background:#E8F0E8;font-weight:700;border-top:2px solid var(--border-dark);}
+.fgroup tbody td{padding:6px 9px;white-space:nowrap;}
+.fgroup tbody td.r{text-align:right;font-variant-numeric:tabular-nums;}
+.fgroup tbody td.calc-cell{background:var(--calc-col);color:var(--text-secondary);}
+.fgroup tbody td.theo-cell{background:var(--theo-col);color:#7a6010;font-style:italic;}
+
+/* EDITABLE INPUTS */
+.einput{background:var(--input-bg);border:1px solid transparent;border-radius:4px;padding:4px 7px;width:80px;text-align:right;font-size:12.5px;font-family:inherit;color:var(--forest);outline:none;font-variant-numeric:tabular-nums;transition:all .15s;}
+.einput:focus{background:var(--input-focus);border-color:var(--forest-mid);box-shadow:0 0 0 2px rgba(45,106,45,.15);}
+.einput.zero{color:var(--text-muted);}
+.einput:focus.zero{color:var(--forest);}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--forest);color:var(--white);padding:12px 18px;border-radius:8px;font-size:13px;font-weight:600;box-shadow:0 4px 16px var(--shadow);z-index:9999;transform:translateY(80px);opacity:0;transition:all .25s ease;}
+.toast.show{transform:translateY(0);opacity:1;}
+.toast.success{background:var(--forest-mid);}
+.toast.error{background:var(--rust);}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-overlay">
+  <div class="login-card">
+    <div class="brand">Sherwood Steel</div>
+    <div class="sub">Forecast &amp; Dashboard</div>
+    <input type="password" id="login-pw" placeholder="Enter shop password"
+      onkeydown="if(event.key==='Enter')doLogin()">
+    <button onclick="doLogin()">Sign In</button>
+    <div class="login-error" id="login-error">Incorrect password. Try again.</div>
+  </div>
+</div>
+
+<header class="app-header" id="app-header" style="display:none">
+  <span class="logo">Sherwood Steel</span>
+  <div class="hdiv"></div>
+  <span class="page-title">Forecast &amp; Dashboard</span>
+  <div class="hspace"></div>
+  <span class="sync-badge sync-ok" id="sync-badge" style="display:none">✓ Synced</span>
+  <div class="weight-toggle" title="Switch between actual and theoretical sheet weights">
+    <button class="wt-btn active" id="wt-actual" onclick="setWeightMode('actual')">Actual Wt</button>
+    <button class="wt-btn" id="wt-theo" onclick="setWeightMode('theoretical')">Theoretical</button>
+  </div>
+  <button class="btn-sm" onclick="logout()">↩ Out</button>
+</header>
+
+<nav class="tab-bar" id="tab-bar" style="display:none">
+  <button class="tab-btn active" id="tab-dashboard" onclick="switchTab('dashboard')">Dashboard</button>
+  <button class="tab-btn" id="tab-forecast" onclick="switchTab('forecast')">Forecast Detail</button>
+</nav>
+
+<div class="save-bar" id="save-bar">
+  <span id="save-msg">Unsaved changes</span>
+  <div class="sba">
+    <button class="sb-disc" onclick="discardChanges()">Discard</button>
+    <button class="sb-save" onclick="saveChanges()">Save to Supabase</button>
+  </div>
+</div>
+
+<main class="main" id="app-main" style="display:none">
+  <div id="pane-dashboard"></div>
+  <div id="pane-forecast" style="display:none"></div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CONFIG ──
+const SB_URL='https://ecndvwmbycyppqkbvuzs.supabase.co';
+const SB_KEY='sb_publishable_DPSLNDOI___sDI-lt3YbpQ_TGJbHaV-';
+const SB_HDR={'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY};
+const SESSION_KEY='kzn_session';
+const SB_TABLE='forecast_groups';
+
+// ── WEIGHT TABLES ──
+const WEIGHTS={"actual":{"28|24|96":10.9375,"28|30|96":13.67188,"28|36|96":16.40625,"28|48|96":21.875,"26|24|96":12.6875,"26|30|96":15.85938,"26|36|96":19.03125,"26|48|96":25.375,"26|48|120":31.71875,"26|60|96":31.71875,"26|60|120":39.64844,"24|36|96":24.28125,"24|48|96":32.375,"24|48|120":40.46875,"24|60|120":50.58594,"22|36|95":29.53125,"22|48|96":39.375,"22|48|120":49.21875,"22|60|120":61.52344,"20|48|96":46.375,"20|48|120":57.96875,"20|60|120":72.46094,"18|48|96":60.375,"18|48|120":75.46875,"18|60|120":94.33594,"16|48|96":74.375,"16|48|120":92.96875,"16|60|120":116.21094,"14|48|96":91.875,"14|48|120":114.84375,"11|48|96":144.375,"12|48|120":158.59375,"12|60|120":198.24219,"10|48|120":202.34375,"10|60|120":252.92969},"theoretical":{"28|24|96":12.5,"28|30|96":15.625,"28|36|96":18.75,"28|48|96":25.0,"26|24|96":14.5,"26|30|96":18.125,"26|36|96":21.75,"26|48|96":29.0,"26|48|120":36.25,"26|60|96":36.25,"26|60|120":45.3125,"24|36|96":27.75,"24|48|96":37.0,"24|48|120":46.25,"24|60|120":57.8125,"22|36|95":33.75,"22|48|96":45.0,"22|48|120":56.25,"22|60|120":70.3125,"20|48|96":53.0,"20|48|120":66.25,"20|60|120":82.8125,"18|48|96":69.0,"18|48|120":86.25,"18|60|120":107.8125,"16|48|96":85.0,"16|48|120":106.25,"16|60|120":132.8125,"14|48|96":105.0,"14|48|120":131.25,"11|48|96":165.0,"12|48|120":181.25,"12|60|120":226.5625,"10|48|120":231.25,"10|60|120":289.0625}};
+
+// ── SEED DATA ──
+const SEED=[{"id":1,"gauge":28,"label":"36\" Sheet + Coil","rows":[{"r":3,"size":"36\" x 96\"","wkey":"28|36|96","is_coil":false,"C":1300,"E":1897},{"r":4,"size":"36\" Coil","is_coil":true,"D":0,"F":32350,"H":0,"J":0,"K":0}]},{"id":2,"gauge":28,"label":"48\" Sheet + Coil","rows":[{"r":7,"size":"48\" x 96\"","wkey":"28|48|96","is_coil":false,"C":260,"E":635},{"r":8,"size":"48\" Coil","is_coil":true,"D":0,"F":0,"H":0,"J":0,"K":0}]},{"id":3,"gauge":26,"label":"36\" Sheet + Coil","rows":[{"r":11,"size":"36\" x 96\"","wkey":"26|36|96","is_coil":false,"C":3100,"E":2041},{"r":12,"size":"36\" Coil","is_coil":true,"D":0,"F":108280,"H":34930,"J":0,"K":0}]},{"id":4,"gauge":26,"label":"48\" Standard","rows":[{"r":15,"size":"48\" x 96\"","wkey":"26|48|96","is_coil":false,"C":3800,"E":1235},{"r":16,"size":"48\" x 120\"","wkey":"26|48|120","is_coil":false,"C":220,"E":0},{"r":17,"size":"48\" Coil","is_coil":true,"D":13000,"F":40000,"H":160000,"J":0,"K":90000}]},{"id":5,"gauge":26,"label":"48\" G-90","rows":[{"r":20,"size":"48\" x 96\" G-90","wkey":"26|48|96","is_coil":false,"C":0,"E":0},{"r":21,"size":"48\" x 120\" G-90","wkey":"26|48|120","is_coil":false,"C":200,"E":215},{"r":22,"size":"48\" G-90 Coil","is_coil":true,"D":1,"F":21000,"H":0,"J":0,"K":0}]},{"id":6,"gauge":26,"label":"60\" Standard","rows":[{"r":25,"size":"60\" x 120\"","wkey":"26|60|120","is_coil":false,"C":880,"E":640},{"r":26,"size":"60\" Coil","is_coil":true,"D":40000,"F":78590,"H":89300,"J":0,"K":0}]},{"id":7,"gauge":26,"label":"60\" G-90","rows":[{"r":29,"size":"60\" x 120\" G-90","wkey":"26|60|120","is_coil":false,"C":725,"E":466},{"r":30,"size":"60\" G-90 Coil","is_coil":true,"D":8000,"F":56260,"H":45420,"J":0,"K":0}]},{"id":8,"gauge":24,"label":"36\" Sheet + Coil","rows":[{"r":40,"size":"36\" x 96\"","wkey":"24|36|96","is_coil":false,"C":150,"E":171},{"r":41,"size":"36\" Coil","is_coil":true,"D":0,"F":10280,"H":0,"J":0,"K":0}]},{"id":9,"gauge":24,"label":"48\" Standard","rows":[{"r":44,"size":"48\" x 96\"","wkey":"24|48|96","is_coil":false,"C":2000,"E":93},{"r":45,"size":"48\" x 120\"","wkey":"24|48|120","is_coil":false,"C":135,"E":0},{"r":46,"size":"48\" Coil","is_coil":true,"D":12000,"F":235010,"H":46320,"J":0,"K":0}]},{"id":10,"gauge":24,"label":"48\" G-90","rows":[{"r":49,"size":"48\" x 96\" G-90","wkey":"24|48|96","is_coil":false,"C":195,"E":381},{"r":50,"size":"48\" x 120\" G-90","wkey":"24|48|120","is_coil":false,"C":100,"E":184},{"r":51,"size":"48\" G-90 Coil","is_coil":true,"D":5000,"F":14720,"H":0,"J":0,"K":0}]},{"id":11,"gauge":24,"label":"60\" Standard","rows":[{"r":54,"size":"60\" x 120\"","wkey":"24|60|120","is_coil":false,"C":200,"E":254},{"r":55,"size":"60\" Coil","is_coil":true,"D":23300,"F":17860,"H":44330,"J":0,"K":0}]},{"id":12,"gauge":24,"label":"60\" G-90","rows":[{"r":58,"size":"60\" x 120\" G-90","wkey":"24|60|120","is_coil":false,"C":750,"E":455},{"r":59,"size":"60\" G-90 Coil","is_coil":true,"D":18000,"F":127000,"H":0,"J":0,"K":0}]},{"id":13,"gauge":22,"label":"48\" Standard","rows":[{"r":77,"size":"48\" x 96\"","wkey":"22|48|96","is_coil":false,"C":215,"E":138},{"r":78,"size":"48\" x 120\"","wkey":"22|48|120","is_coil":false,"C":180,"E":105},{"r":79,"size":"48\" Coil","is_coil":true,"D":0,"F":7820,"H":22210,"J":0,"K":0}]},{"id":14,"gauge":22,"label":"48\" G-90","rows":[{"r":82,"size":"48\" x 96\" G-90","wkey":"22|48|96","is_coil":false,"C":0,"E":50},{"r":83,"size":"48\" x 120\" G-90","wkey":"22|48|120","is_coil":false,"C":200,"E":100},{"r":84,"size":"48\" G-90 Coil","is_coil":true,"D":0,"F":12240,"H":23350,"J":0,"K":0}]},{"id":15,"gauge":22,"label":"60\" Standard","rows":[{"r":87,"size":"60\" x 120\"","wkey":"22|60|120","is_coil":false,"C":75,"E":146},{"r":88,"size":"60\" Coil","is_coil":true,"D":10000,"F":35360,"H":0,"J":0,"K":0}]},{"id":16,"gauge":22,"label":"60\" G-90","rows":[{"r":91,"size":"60\" x 120\" G-90","wkey":"22|60|120","is_coil":false,"C":275,"E":125},{"r":92,"size":"60\" G-90 Coil","is_coil":true,"D":8000,"F":18000,"H":0,"J":0,"K":0}]},{"id":17,"gauge":20,"label":"48\" G-90","rows":[{"r":95,"size":"48\" x 96\" G-90","wkey":"20|48|96","is_coil":false,"C":50,"E":124},{"r":96,"size":"48\" x 120\" G-90","wkey":"20|48|120","is_coil":false,"C":150,"E":103},{"r":97,"size":"48\" G-90 Coil","is_coil":true,"D":0,"F":17780,"H":0,"J":0,"K":0}]},{"id":18,"gauge":20,"label":"60\" G-90","rows":[{"r":100,"size":"60\" x 120\" G-90","wkey":"20|60|120","is_coil":false,"C":50,"E":106},{"r":101,"size":"60\" G-90 Coil","is_coil":true,"D":3000,"F":9030,"H":0,"J":0,"K":0}]},{"id":19,"gauge":18,"label":"48\" Standard","rows":[{"r":113,"size":"48\" x 96\"","wkey":"18|48|96","is_coil":false,"C":0,"E":321},{"r":114,"size":"48\" x 120\"","wkey":"18|48|120","is_coil":false,"C":50,"E":35},{"r":115,"size":"48\" Coil","is_coil":true,"D":27000,"F":67650,"H":16100,"J":0,"K":0}]},{"id":20,"gauge":18,"label":"48\" G-90","rows":[{"r":118,"size":"48\" x 120\" G-90","wkey":"18|48|120","is_coil":false,"C":25,"E":42},{"r":119,"size":"48\" G-90 Coil","is_coil":true,"D":0,"F":15680,"H":0,"J":0,"K":0}]},{"id":21,"gauge":18,"label":"60\" Standard","rows":[{"r":122,"size":"60\" x 120\"","wkey":"18|60|120","is_coil":false,"C":0,"E":0},{"r":123,"size":"60\" Coil","is_coil":true,"D":50000,"F":106374,"H":44350,"J":0,"K":0}]},{"id":22,"gauge":18,"label":"60\" G-90","rows":[{"r":126,"size":"60\" x 120\" G-90","wkey":"18|60|120","is_coil":false,"C":110,"E":52},{"r":127,"size":"60\" G-90 Coil","is_coil":true,"D":0,"F":23175,"H":0,"J":0,"K":0}]},{"id":23,"gauge":16,"label":"48\" Standard","rows":[{"r":148,"size":"48\" x 96\"","wkey":"16|48|96","is_coil":false,"C":265,"E":19},{"r":149,"size":"48\" x 120\"","wkey":"16|48|120","is_coil":false,"C":25,"E":0},{"r":150,"size":"48\" Coil","is_coil":true,"D":0,"F":8800,"H":46000,"J":0,"K":0}]},{"id":24,"gauge":16,"label":"48\" G-90","rows":[{"r":153,"size":"48\" x 96\" G-90","wkey":"16|48|96","is_coil":false,"C":0,"E":34},{"r":154,"size":"48\" x 120\" G-90","wkey":"16|48|120","is_coil":false,"C":75,"E":44},{"r":155,"size":"48\" G-90 Coil","is_coil":true,"D":0,"F":14480,"H":0,"J":0,"K":0}]},{"id":25,"gauge":16,"label":"60\" Standard","rows":[{"r":158,"size":"60\" x 120\"","wkey":"16|60|120","is_coil":false,"C":23,"E":0},{"r":159,"size":"60\" Coil","is_coil":true,"D":0,"F":0,"H":0,"J":0,"K":0}]},{"id":26,"gauge":16,"label":"60\" G-90","rows":[{"r":162,"size":"60\" x 120\" G-90","wkey":"16|60|120","is_coil":false,"C":100,"E":74},{"r":163,"size":"60\" G-90 Coil","is_coil":true,"D":0,"F":19940,"H":0,"J":0,"K":0}]},{"id":27,"gauge":16,"label":"60\" Gr55","rows":[{"r":166,"size":"60\" x 120\" Gr55","wkey":"16|60|120","is_coil":false,"C":240,"E":0},{"r":167,"size":"60\" Gr55 Coil","is_coil":true,"D":0,"F":62027,"H":0,"J":0,"K":0}]},{"id":28,"gauge":14,"label":"48\" Standard","rows":[{"r":171,"size":"48\" x 96\"","wkey":"14|48|96","is_coil":false,"C":50,"E":48},{"r":172,"size":"48\" x 120\"","wkey":"14|48|120","is_coil":false,"C":100,"E":42},{"r":173,"size":"48\" Coil","is_coil":true,"D":0,"F":15960,"H":22670,"J":0,"K":0}]},{"id":29,"gauge":26,"label":"5.394\" Coil","rows":[{"r":185,"size":"5.394\" Coil","is_coil":true,"D":4000,"F":1980,"H":15720,"J":0,"K":0}]},{"id":30,"gauge":26,"label":"5.394\" G-90 Coil","rows":[{"r":188,"size":"5.394\" G-90 Coil","is_coil":true,"D":7000,"F":3840,"H":7190,"J":10000,"K":0}]},{"id":31,"gauge":24,"label":"5.394\" Coil","rows":[{"r":191,"size":"5.394\" Coil","is_coil":true,"D":300,"F":2030,"H":0,"J":0,"K":0}]},{"id":32,"gauge":24,"label":"5.394\" G-90 Coil","rows":[{"r":194,"size":"5.394\" G-90 Coil","is_coil":true,"D":1000,"F":0,"H":8280,"J":0,"K":0}]}];
+
+// ── STATE ──
+let groups=[];
+let targetMonths=5;
+let weightMode='actual'; // 'actual' or 'theoretical'
+let currentTab='dashboard';
+let dirty=false;
+
+// ── AUTH ──
+function isLoggedIn(){return localStorage.getItem(SESSION_KEY)==='authenticated';}
+async function doLogin(){
+  const pw=(document.getElementById('login-pw').value||'').trim();
+  if(!pw)return;
+  try{
+    const r=await fetch(`${SB_URL}/rest/v1/admin_config?key=eq.shop_password&select=value`,{headers:SB_HDR});
+    const cfg=await r.json();
+    const stored=cfg&&cfg[0]?cfg[0].value:'sherwood';
+    const correct=typeof stored==='string'?stored:JSON.stringify(stored).replace(/^"|"$/g,'');
+    if(pw===correct){
+      localStorage.setItem(SESSION_KEY,'authenticated');
+      document.getElementById('login-overlay').remove();
+      showApp();
+    }else{
+      document.getElementById('login-error').style.display='block';
+      document.getElementById('login-pw').value='';
+    }
+  }catch(e){
+    if(pw==='sherwood'){localStorage.setItem(SESSION_KEY,'authenticated');document.getElementById('login-overlay').remove();showApp();}
+    else{document.getElementById('login-error').textContent='Cannot reach server.';document.getElementById('login-error').style.display='block';}
+  }
+}
+function logout(){localStorage.removeItem(SESSION_KEY);location.reload();}
+function showApp(){
+  ['app-header','tab-bar','app-main'].forEach(id=>document.getElementById(id).style.display='');
+  init();
+}
+
+// ── SUPABASE ──
+async function sbGet(table,params=''){
+  try{const r=await fetch(`${SB_URL}/rest/v1/${table}${params?'?'+params:''}`,{headers:SB_HDR});if(!r.ok)return null;return await r.json();}
+  catch(e){return null;}
+}
+async function sbUpsert(table,body){
+  try{const r=await fetch(`${SB_URL}/rest/v1/${table}`,{method:'POST',headers:{...SB_HDR,'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(body)});return r.ok;}
+  catch(e){return false;}
+}
+
+// ── INIT ──
+async function init(){
+  setSyncBadge('loading');
+  // Load forecast groups from Supabase
+  const rows=await sbGet(SB_TABLE,'order=group_id.asc');
+  if(rows&&rows.length>0){
+    groups=rows.map(r=>r.data);
+    if(rows[0].target_months!=null)targetMonths=rows[0].target_months;
+    setSyncBadge('ok');
+  }else{
+    groups=JSON.parse(JSON.stringify(SEED));
+    setSyncBadge('warn');
+  }
+
+  // Pull live E (shts in stock) and H (MJS lbs) from Supabase inventory tables
+  await refreshFromInventory();
+
+  renderAll();
+}
+
+// ── LIVE INVENTORY PULL ──
+async function refreshFromInventory(){
+  const invRows=await sbGet('inventory_sheets','select=data');
+  const mjsRows=await sbGet('inventory_mjs_consignment','select=data');
+
+  if(invRows&&invRows.length){
+    // Build lookup: "gauge|width|length" → total pcs
+    // Gauge stored as string in inventory ("28") — normalise to string for key match
+    const invLookup={};
+    invRows.forEach(r=>{
+      const d=r.data;
+      if(!d||!d.gauge||!d.size) return;
+      const m=String(d.size).replace(/[^0-9x.]/gi,'').match(/^(\d+)x(\d+)/i);
+      if(!m) return; // coil rows (size="48") have no x — skip
+      const key=String(d.gauge)+'|'+m[1]+'|'+m[2];
+      invLookup[key]=(invLookup[key]||0)+(parseInt(d.pcs)||0);
+    });
+    // wkey format matches: "28|36|96" — gauge already a string in wkey
+    groups.forEach(g=>{
+      g.rows.forEach(row=>{
+        if(!row.is_coil&&row.wkey){
+          const val=invLookup[row.wkey];
+          if(val!=null) row.E=val;
+        }
+      });
+    });
+  }
+
+  if(mjsRows&&mjsRows.length){
+    // Build lookup: "gauge|width" → total weight
+    const mjsLookup={};
+    mjsRows.forEach(r=>{
+      const d=r.data;
+      if(!d||!d.gauge||!d.width) return;
+      const key=String(d.gauge)+'|'+String(d.width);
+      mjsLookup[key]=(mjsLookup[key]||0)+(parseFloat(d.weight)||0);
+    });
+    groups.forEach(g=>{
+      g.rows.forEach(row=>{
+        if(row.is_coil){
+          const m=String(row.size||'').replace(/[^0-9.]/g,'').match(/^(\d+)/);
+          if(m){
+            const key=String(g.gauge)+'|'+m[1];
+            if(mjsLookup[key]!=null) row.H=Math.round(mjsLookup[key]);
+          }
+        }
+      });
+    });
+  }
+}
+
+// ── WEIGHT LOOKUP ──
+function getWeight(wkey){
+  return WEIGHTS[weightMode]?.[wkey]||0;
+}
+
+// ── FORMULAS ──
+function computeGroup(g){
+  let D_total=0,F_total=0,H_total=0,J_total=0,K_total=0;
+  g.rows.forEach(row=>{
+    if(row.is_coil){
+      row._D=parseFloat(row.D)||0;
+      row._F=parseFloat(row.F)||0;
+    }else{
+      const w=getWeight(row.wkey);
+      row._D=(parseFloat(row.C)||0)*w;
+      row._F=(parseFloat(row.E)||0)*w;
+      row._W=w; // store weight used for display
+    }
+    D_total+=row._D;
+    F_total+=row._F;
+    H_total+=parseFloat(row.H)||0;
+    J_total+=parseFloat(row.J)||0;
+    K_total+=parseFloat(row.K)||0;
+  });
+  const I_months = D_total>0?(F_total+H_total)/D_total:0;
+  const L_months = D_total>0?(F_total+H_total+J_total+K_total)/D_total:0;
+  const N_target = targetMonths*D_total;
+  const O_net    = N_target-(F_total+H_total+J_total+K_total);
+  return{D_total,F_total,H_total,J_total,K_total,I_months,L_months,N_target,O_net};
+}
+
+// ── FORMAT ──
+function fN(n,d=0){if(n==null)return'—';const v=parseFloat(n);if(isNaN(v))return'—';return v.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});}
+function fM(n){if(!n&&n!==0)return'—';const v=parseFloat(n);if(isNaN(v)||!isFinite(v))return'—';return v.toFixed(2);}
+function fSign(n){const v=parseFloat(n)||0;return(v>=0?'+':'')+fN(v);}
+function statLabel(mo,tgt){if(!mo&&mo!==0)return'none';if(mo>=tgt)return'over';if(mo>=tgt-1)return'near';return'below';}
+
+// ── WEIGHT MODE ──
+function setWeightMode(mode){
+  weightMode=mode;
+  document.getElementById('wt-actual').classList.toggle('active',mode==='actual');
+  document.getElementById('wt-theo').classList.toggle('active',mode==='theoretical');
+  const banner=document.getElementById('theo-banner');
+  if(banner) banner.classList.toggle('visible',mode==='theoretical');
+  renderTab();
+}
+
+// ── TABS ──
+function switchTab(tab){
+  currentTab=tab;
+  ['dashboard','forecast'].forEach(t=>{
+    document.getElementById('tab-'+t).classList.toggle('active',t===tab);
+    document.getElementById('pane-'+t).style.display=t===tab?'':'none';
+  });
+  renderTab();
+}
+function renderAll(){switchTab(currentTab);}
+function renderTab(){if(currentTab==='dashboard')renderDashboard();else renderForecast();}
+
+// ── DASHBOARD ──
+function renderDashboard(){
+  const computed=groups.map(g=>({...g,...computeGroup(g)}));
+  const tgt=targetMonths;
+  const totalToOrder=computed.reduce((s,g)=>s+Math.max(0,g.O_net),0);
+  const totalOver=Math.abs(computed.reduce((s,g)=>s+Math.min(0,g.O_net),0));
+  const below=computed.filter(g=>statLabel(g.L_months,tgt)==='below').length;
+  const over=computed.filter(g=>statLabel(g.L_months,tgt)==='over').length;
+  const avgMo=computed.reduce((s,g)=>s+(g.L_months||0),0)/computed.length;
+  const totalD=computed.reduce((s,g)=>s+g.D_total,0);
+  const totalF=computed.reduce((s,g)=>s+g.F_total,0);
+  const totalN=computed.reduce((s,g)=>s+g.N_target,0);
+  const totalO=computed.reduce((s,g)=>s+g.O_net,0);
+
+  const isTheo=weightMode==='theoretical';
+
+  const rows=computed.map(g=>{
+    const sl=statLabel(g.L_months,tgt);
+    const sc=sl==='over'?'s-over':sl==='near'?'s-near':sl==='below'?'s-below':'s-none';
+    const st=sl==='over'?'At / Over':sl==='near'?'Near':sl==='below'?'Below':'—';
+    const bp=Math.min(100,(g.L_months/(tgt||3))*100);
+    const bc=sl==='over'?'bar-over':sl==='near'?'bar-near':'bar-below';
+    const oColor=g.O_net>0?'color:var(--rust)':g.O_net<0?'color:var(--green-ok)':'';
+    return `<tr>
+      <td>${g.id}</td>
+      <td><span class="gauge-chip">${g.gauge}</span></td>
+      <td>${g.label}</td>
+      <td class="r${isTheo?' theo-cell':''}">${fN(g.D_total)}</td>
+      <td class="r${isTheo?' theo-cell':''}">${fN(g.F_total)}</td>
+      <td class="r">${fN(g.H_total)}</td>
+      <td class="r">${fN(g.J_total)}</td>
+      <td class="r">${fN(g.K_total)}</td>
+      <td>
+        <div class="mbar-wrap">
+          <div class="mbar-bg"><div class="mbar-fill ${bc}" style="width:${bp}%"></div></div>
+          <span style="font-variant-numeric:tabular-nums;min-width:34px;font-size:12px">${fM(g.L_months)}</span>
+        </div>
+      </td>
+      <td class="r${isTheo?' theo-cell':''}">${fN(g.N_target)}</td>
+      <td class="r" style="${oColor};font-weight:600">${fSign(g.O_net)}</td>
+      <td><span class="sbadge ${sc}">${st}</span></td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('pane-dashboard').innerHTML=`
+    <div class="theo-banner${isTheo?' visible':''}" id="theo-banner">
+      ⚠ Viewing <strong>Theoretical</strong> weights — shaded columns use Col C (standard). Switch to Actual for ordering decisions.
+    </div>
+    <div class="controls-row">
+      <div class="target-ctrl">
+        <label>Desired Inventory:</label>
+        <input type="number" id="tgt-input" value="${targetMonths}" min="1" max="24" step="0.5"
+          oninput="updateTarget(this.value)">
+        <span>months</span>
+      </div>
+    </div>
+    <div class="kpi-row">
+      <div class="kpi accent"><div class="kl">Total Lbs to Order</div><div class="kv">${fN(totalToOrder)}</div><div class="ks">lbs across all groups</div></div>
+      <div class="kpi good"><div class="kl">Lbs Overstocked</div><div class="kv">${fN(totalOver)}</div><div class="ks">excess inventory</div></div>
+      <div class="kpi ${below>0?'warn':'good'}"><div class="kl">Groups Below Target</div><div class="kv">${below}</div><div class="ks">of ${computed.length} groups</div></div>
+      <div class="kpi good"><div class="kl">Groups At / Over</div><div class="kv">${over}</div><div class="ks">at or above target</div></div>
+      <div class="kpi"><div class="kl">Avg Inventory Months</div><div class="kv">${fM(avgMo)}</div><div class="ks">all groups incl. OO</div></div>
+    </div>
+    <div class="dtable-wrap">
+      <table>
+        <thead><tr>
+          <th>#</th><th>Gauge</th><th>Product Group</th>
+          <th class="r${isTheo?' theo-hdr':''}">Lbs/Mo${isTheo?' (T)':''}</th>
+          <th class="r${isTheo?' theo-hdr':''}">Lbs in Stk${isTheo?' (T)':''}</th>
+          <th class="r">MJS Lbs</th>
+          <th class="r">MJ OO</th>
+          <th class="r">Other OO</th>
+          <th>Inv. Months</th>
+          <th class="r${isTheo?' theo-hdr':''}">Target Wt${isTheo?' (T)':''}</th>
+          <th class="r">Net to Order</th>
+          <th>Status</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+        <tfoot><tr>
+          <td colspan="3">TOTALS</td>
+          <td class="r">${fN(totalD)}</td>
+          <td class="r">${fN(totalF)}</td>
+          <td class="r">${fN(computed.reduce((s,g)=>s+g.H_total,0))}</td>
+          <td class="r">${fN(computed.reduce((s,g)=>s+g.J_total,0))}</td>
+          <td class="r">${fN(computed.reduce((s,g)=>s+g.K_total,0))}</td>
+          <td>${fM(avgMo)}</td>
+          <td class="r">${fN(totalN)}</td>
+          <td class="r" style="${totalO>0?'color:var(--rust)':'color:var(--green-ok)'};font-weight:700">${fSign(totalO)}</td>
+          <td></td>
+        </tr></tfoot>
+      </table>
+    </div>`;
+}
+
+function updateTarget(v){
+  const n=parseFloat(v);
+  if(isNaN(n)||n<=0)return;
+  targetMonths=n;
+  markDirty();
+  renderTab();
+}
+
+// ── FORECAST ──
+function renderForecast(){
+  const isTheo=weightMode==='theoretical';
+  let html=`<div class="theo-banner${isTheo?' visible':''}" id="theo-banner">
+    ⚠ Viewing <strong>Theoretical</strong> weights — shaded columns use Col C (standard). Switch to Actual for ordering decisions.
+  </div>`;
+
+  let lastGauge=null;
+  groups.forEach(g=>{
+    const comp=computeGroup(g);
+    if(g.gauge!==lastGauge){
+      if(lastGauge!==null) html+='<div style="height:8px"></div>';
+      html+=`<div class="gauge-header">▪ ${g.gauge} Gauge</div>`;
+      lastGauge=g.gauge;
+    }
+
+    // Build detail rows
+    let tbody='';
+    g.rows.forEach(row=>{
+      if(row.is_coil){
+        tbody+=`<tr>
+          <td>${g.gauge}</td>
+          <td style="color:var(--text-secondary)">${row.size}</td>
+          <td class="r">${inp(g.id,row.r,'D',row.D)}</td>
+          <td class="r calc-cell">—</td>
+          <td class="r" style="color:var(--text-muted);font-size:11px">from inv.</td>
+          <td class="r calc-cell">—</td>
+          <td class="r" style="color:var(--text-muted);font-size:11px">from MJS</td>
+          <td class="r calc-cell">${fM(row._D>0?(row._F+row.H)/row._D:0)}</td>
+          <td class="r">${inp(g.id,row.r,'J',row.J)}</td>
+          <td class="r">${inp(g.id,row.r,'K',row.K)}</td>
+          <td class="r calc-cell">—</td>
+          <td class="r calc-cell">—</td>
+          <td class="r calc-cell">—</td>
+        </tr>`;
+      }else{
+        const actW=getWeight(row.wkey);
+        const theoW=WEIGHTS['theoretical']?.[row.wkey]||0;
+        const wDisp=isTheo
+          ?`<span title="Actual: ${actW}">${theoW}</span>`
+          :`${actW} <span style="color:var(--text-muted);font-size:10px">(T:${theoW})</span>`;
+        tbody+=`<tr>
+          <td>${g.gauge}</td>
+          <td>${row.size}</td>
+          <td class="r">${inp(g.id,row.r,'C',row.C)}</td>
+          <td class="r ${isTheo?'theo-cell':'calc-cell'}">${fN(row._D)}</td>
+          <td class="r" style="color:var(--text-muted);font-size:11px">from inv.</td>
+          <td class="r ${isTheo?'theo-cell':'calc-cell'}">${fN(row._F)}</td>
+          <td class="r" style="color:var(--text-muted);font-size:11px;padding:6px 4px">${wDisp}</td>
+          <td class="r calc-cell">${fM(row._D>0?row._F/row._D:0)}</td>
+          <td class="r" style="color:var(--text-muted);font-size:11px">—</td>
+          <td class="r" style="color:var(--text-muted);font-size:11px">—</td>
+          <td class="r calc-cell">—</td>
+          <td class="r calc-cell">—</td>
+          <td class="r calc-cell">—</td>
+        </tr>`;
+      }
+    });
+
+    // Total row
+    const oColor=comp.O_net>0?'color:var(--rust)':comp.O_net<0?'color:var(--green-ok)':'';
+    tbody+=`<tr class="total-row">
+      <td colspan="2">${g.gauge} ga — ${g.label}</td>
+      <td class="r">${fN(comp.D_total/Math.max(1,g.rows.filter(r=>!r.is_coil).reduce((s,r)=>s+(getWeight(r.wkey)?1:0),0)))}</td>
+      <td class="r ${isTheo?'theo-cell':''}">${fN(comp.D_total)}</td>
+      <td class="r">${fN(comp.F_total+comp.H_total)}</td>
+      <td class="r ${isTheo?'theo-cell':''}">${fN(comp.F_total)}</td>
+      <td class="r">${fN(comp.H_total)}</td>
+      <td class="r">${fM(comp.I_months)}</td>
+      <td class="r">${fN(comp.J_total)}</td>
+      <td class="r">${fN(comp.K_total)}</td>
+      <td class="r">${fM(comp.L_months)}</td>
+      <td class="r ${isTheo?'theo-cell':''}">${fN(comp.N_target)}</td>
+      <td class="r" style="${oColor}">${fSign(comp.O_net)}</td>
+    </tr>`;
+
+    html+=`<div class="fgroup">
+      <table>
+        <thead><tr>
+          <th>Ga</th><th>Size</th>
+          <th class="r inp-hdr">Shts/Mo ✎</th>
+          <th class="r ${isTheo?'theo-hdr':'calc-hdr'}">Lbs/Mo${isTheo?' (T)':''}</th>
+          <th class="r calc-hdr">Shts (live)</th>
+          <th class="r ${isTheo?'theo-hdr':'calc-hdr'}">Lbs in Stk${isTheo?' (T)':''}</th>
+          <th class="r calc-hdr">Wt/Sht</th>
+          <th class="r calc-hdr">I. Months</th>
+          <th class="r inp-hdr">MJ OO ✎</th>
+          <th class="r inp-hdr">Other OO ✎</th>
+          <th class="r calc-hdr">Inv. Mo (w/OO)</th>
+          <th class="r ${isTheo?'theo-hdr':'calc-hdr'}">Target Wt${isTheo?' (T)':''}</th>
+          <th class="r calc-hdr">Net to Order</th>
+        </tr></thead>
+        <tbody>${tbody}</tbody>
+      </table>
+    </div>`;
+  });
+
+  document.getElementById('pane-forecast').innerHTML=html;
+}
+
+// ── INPUT HELPER ──
+function inp(gid,rowR,field,val){
+  const v=parseFloat(val)||0;
+  return `<input class="einput${v===0?' zero':''}" type="number" min="0"
+    value="${v}"
+    oninput="updateField(${gid},${rowR},'${field}',this.value)"
+    onfocus="this.select();this.classList.remove('zero')"
+    onblur="if(!parseFloat(this.value))this.classList.add('zero')"
+    title="Enter ${field} value">`;
+}
+
+function updateField(gid,rowR,field,val){
+  const g=groups.find(x=>x.id===gid);
+  if(!g)return;
+  const row=g.rows.find(r=>r.r===rowR);
+  if(!row)return;
+  row[field]=parseFloat(val)||0;
+  markDirty();
+  // Re-render totals only (lightweight)
+  renderTab();
+}
+
+// ── DIRTY / SAVE ──
+function markDirty(){
+  dirty=true;
+  document.getElementById('save-bar').classList.add('visible');
+}
+async function saveChanges(){
+  setSyncBadge('loading');
+  const payload=groups.map(g=>({group_id:g.id,target_months:targetMonths,data:g}));
+  try{
+    await fetch(`${SB_URL}/rest/v1/${SB_TABLE}`,{method:'DELETE',headers:{...SB_HDR,'Prefer':'return=minimal'}});
+  }catch(e){}
+  const ok=await sbUpsert(SB_TABLE,payload);
+  if(ok){
+    setSyncBadge('ok');
+    dirty=false;
+    document.getElementById('save-bar').classList.remove('visible');
+    showToast('Saved to Supabase','success');
+  }else{
+    setSyncBadge('err');
+    showToast('Save failed — check connection','error');
+  }
+}
+async function discardChanges(){
+  dirty=false;
+  document.getElementById('save-bar').classList.remove('visible');
+  await init();
+}
+
+// ── SYNC BADGE ──
+function setSyncBadge(s){
+  const el=document.getElementById('sync-badge');
+  if(!el)return;
+  el.className='sync-badge';
+  const map={ok:['sync-ok','✓ Synced'],loading:['sync-loading','↓ Loading…'],warn:['sync-loading','⚠ Seed data'],err:['sync-err','✗ Error']};
+  const [cls,txt]=map[s]||['sync-ok',''];
+  el.className+=' '+cls; el.textContent=txt; el.style.display='';
+}
+
+// ── TOAST ──
+function showToast(msg,type=''){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast'+(type?' '+type:'');
+  t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3200);
+}
+
+// ── BOOT ──
+document.getElementById('login-pw').focus();
+if(isLoggedIn()){document.getElementById('login-overlay').remove();showApp();}
+</script>
+</body>
+</html>
