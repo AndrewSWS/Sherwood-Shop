@@ -633,9 +633,9 @@ function markDirty(){
 }
 async function saveChanges(silent=false){
   setSyncBadge('loading');
-  // Use UPSERT only — no DELETE needed, avoids quota/permission issues
-  // group_id is the primary key so existing rows get updated, new rows inserted
+  // Truncate via RPC then upsert fresh — ensures clean replace every time
   const payload=groups.map(g=>({group_id:g.id,target_months:targetMonths,data:g}));
+  try{ await fetch(`${SB_URL}/rest/v1/rpc/truncate_forecast_groups`,{method:'POST',headers:SB_HDR,body:'{}'}); }catch(e){}
   const ok=await sbUpsert(SB_TABLE,payload);
   if(ok){
     setSyncBadge('ok');

@@ -7,178 +7,107 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root {
-    --forest: #1C2E1C;
-    --forest-mid: #2D6A2D;
-    --forest-light: #3D7A3D;
-    --sage: #A8D5A8;
-    --sage-dim: #7AB87A;
-    --cream: #F0F4F0;
-    --white: #FFFFFF;
-    --steel: #8FA8A0;
-    --steel-light: #C8D8D4;
-    --rust: #C94F2A;
-    --amber: #D4891A;
-    --text-primary: #1A2A1A;
-    --text-secondary: #4A6A4A;
-    --text-muted: #7A9A7A;
-    --border: #D0DDD0;
-    --border-dark: #A8C0A8;
-    --row-alt: #F5FAF5;
-    --row-hover: #EBF5EB;
-    --shadow: rgba(28,46,28,0.12);
+    --forest:#1C2E1C;--forest-mid:#2D6A2D;--forest-light:#3D7A3D;
+    --sage:#A8D5A8;--sage-dim:#7AB87A;--cream:#F0F4F0;--white:#FFFFFF;
+    --steel-light:#C8D8D4;--rust:#C94F2A;--amber:#D4891A;
+    --text-primary:#1A2A1A;--text-secondary:#4A6A4A;--text-muted:#7A9A7A;
+    --border:#D0DDD0;--border-dark:#A8C0A8;--row-alt:#F5FAF5;
+    --row-hover:#EBF5EB;--shadow:rgba(28,46,28,0.12);
   }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--cream); color: var(--text-primary); min-height: 100vh; }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--cream);color:var(--text-primary);min-height:100vh;}
 
-  /* ── LOGIN OVERLAY ── */
-  #login-overlay {
-    position: fixed; inset: 0; z-index: 99999;
-    background: var(--forest);
-    display: flex; align-items: center; justify-content: center;
-  }
-  .login-card {
-    background: var(--white); border-radius: 12px;
-    padding: 40px; width: 340px; text-align: center;
-    box-shadow: 0 8px 40px rgba(0,0,0,0.4);
-  }
-  .login-card .brand { font-size: 22px; font-weight: 800; color: var(--forest); letter-spacing: -0.5px; margin-bottom: 4px; }
-  .login-card .sub { font-size: 12px; color: var(--text-muted); margin-bottom: 28px; letter-spacing: 1px; text-transform: uppercase; }
-  .login-card input[type="password"] {
-    width: 100%; padding: 11px 14px; font-size: 14px;
-    border: 2px solid var(--border-dark); border-radius: 8px;
-    margin-bottom: 12px; outline: none; font-family: inherit;
-    transition: border-color 0.15s;
-  }
-  .login-card input[type="password"]:focus { border-color: var(--forest-mid); }
-  .login-card button {
-    width: 100%; padding: 12px; font-size: 14px; font-weight: 700;
-    background: var(--forest-mid); color: var(--white);
-    border: none; border-radius: 8px; cursor: pointer; transition: background 0.15s;
-  }
-  .login-card button:hover { background: var(--forest-light); }
-  .login-error { color: var(--rust); font-size: 12px; margin-top: 10px; display: none; }
+  #login-overlay{position:fixed;inset:0;z-index:99999;background:var(--forest);display:flex;align-items:center;justify-content:center;}
+  .login-card{background:var(--white);border-radius:12px;padding:40px;width:340px;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.4);}
+  .login-card .brand{font-size:22px;font-weight:800;color:var(--forest);margin-bottom:4px;}
+  .login-card .sub{font-size:12px;color:var(--text-muted);margin-bottom:28px;letter-spacing:1px;text-transform:uppercase;}
+  .login-card input[type=password]{width:100%;padding:11px 14px;font-size:14px;border:2px solid var(--border-dark);border-radius:8px;margin-bottom:12px;outline:none;font-family:inherit;}
+  .login-card input:focus{border-color:var(--forest-mid);}
+  .login-card button{width:100%;padding:12px;font-size:14px;font-weight:700;background:var(--forest-mid);color:var(--white);border:none;border-radius:8px;cursor:pointer;}
+  .login-card button:hover{background:var(--forest-light);}
+  .login-error{color:var(--rust);font-size:12px;margin-top:10px;display:none;}
 
-  /* ── HEADER ── */
-  .app-header {
-    background: var(--forest); color: var(--white);
-    padding: 0 24px; display: flex; align-items: center; gap: 16px;
-    height: 56px; box-shadow: 0 2px 8px var(--shadow);
-    position: sticky; top: 0; z-index: 100;
-  }
-  .app-header .logo { font-size: 11px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; color: var(--sage); white-space: nowrap; }
-  .app-header .page-title { font-size: 15px; font-weight: 600; color: var(--white); opacity: 0.9; }
-  .header-divider { width: 1px; height: 24px; background: rgba(168,213,168,0.3); }
-  .header-spacer { flex: 1; }
-  .header-actions { display: flex; align-items: center; gap: 10px; }
-  .btn-import {
-    display: flex; align-items: center; gap: 7px;
-    background: var(--forest-mid); color: var(--white);
-    border: 1px solid var(--forest-light); padding: 7px 14px;
-    border-radius: 6px; font-size: 13px; font-weight: 600;
-    cursor: pointer; transition: background 0.15s; white-space: nowrap;
-  }
-  .btn-import:hover { background: var(--forest-light); }
-  .last-updated { font-size: 11px; color: var(--sage-dim); opacity: 0.8; }
-  .sync-status { font-size: 11px; padding: 3px 8px; border-radius: 4px; font-weight: 600; }
-  .sync-ok { background: rgba(168,213,168,0.2); color: var(--sage); }
-  .sync-saving { background: rgba(212,137,26,0.2); color: var(--amber); }
-  .sync-err { background: rgba(201,79,42,0.2); color: var(--rust); }
+  .app-header{background:var(--forest);color:var(--white);padding:0 24px;display:flex;align-items:center;gap:16px;height:56px;box-shadow:0 2px 8px var(--shadow);position:sticky;top:0;z-index:100;}
+  .logo{font-size:11px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--sage);}
+  .page-title{font-size:15px;font-weight:600;opacity:.9;}
+  .hdiv{width:1px;height:24px;background:rgba(168,213,168,.3);}
+  .hspace{flex:1;}
+  .sync-status{font-size:11px;padding:3px 8px;border-radius:4px;font-weight:600;}
+  .sync-ok{background:rgba(168,213,168,.2);color:var(--sage);}
+  .sync-saving{background:rgba(212,137,26,.2);color:#f5c842;}
+  .sync-err{background:rgba(201,79,42,.2);color:#ff8a7a;}
+  .btn-import{display:flex;align-items:center;gap:7px;background:var(--forest-mid);color:var(--white);border:1px solid var(--forest-light);padding:7px 14px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;}
+  .btn-import:hover{background:var(--forest-light);}
 
-  /* ── TAB NAV ── */
-  .tab-bar { background: var(--forest); border-bottom: 2px solid var(--forest-mid); display: flex; padding: 0 24px; gap: 2px; overflow-x: auto; }
-  .tab-btn { background: none; border: none; color: rgba(168,213,168,0.65); padding: 10px 18px; font-size: 13px; font-weight: 600; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px; white-space: nowrap; transition: color 0.15s, border-color 0.15s; letter-spacing: 0.3px; }
-  .tab-btn:hover { color: var(--sage); }
-  .tab-btn.active { color: var(--sage); border-bottom-color: var(--sage); }
-  .tab-badge { display: inline-block; background: rgba(168,213,168,0.18); color: var(--sage-dim); font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 10px; margin-left: 5px; vertical-align: middle; }
-  .tab-btn.active .tab-badge { background: rgba(168,213,168,0.3); color: var(--sage); }
+  .tab-bar{background:var(--forest);border-bottom:2px solid var(--forest-mid);display:flex;padding:0 24px;gap:2px;overflow-x:auto;}
+  .tab-btn{background:none;border:none;color:rgba(168,213,168,.65);padding:10px 18px;font-size:13px;font-weight:600;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;white-space:nowrap;}
+  .tab-btn:hover{color:var(--sage);}
+  .tab-btn.active{color:var(--sage);border-bottom-color:var(--sage);}
+  .tab-badge{display:inline-block;background:rgba(168,213,168,.18);color:var(--sage-dim);font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;margin-left:5px;}
+  .tab-btn.active .tab-badge{background:rgba(168,213,168,.3);color:var(--sage);}
 
-  /* ── MAIN ── */
-  .main { padding: 20px 24px 40px; max-width: 1600px; margin: 0 auto; }
+  .main{padding:20px 24px 40px;max-width:1600px;margin:0 auto;}
 
-  /* ── SUMMARY CARDS ── */
-  .summary-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px; }
-  .summary-card { background: var(--white); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; box-shadow: 0 1px 3px var(--shadow); }
-  .summary-card .card-label { font-size: 10px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 5px; }
-  .summary-card .card-value { font-size: 22px; font-weight: 700; color: var(--forest); line-height: 1; }
-  .summary-card .card-sub { font-size: 11px; color: var(--text-secondary); margin-top: 4px; }
-  .summary-card.accent { background: var(--forest); border-color: var(--forest-mid); }
-  .summary-card.accent .card-label { color: var(--sage-dim); }
-  .summary-card.accent .card-value { color: var(--sage); }
-  .summary-card.accent .card-sub { color: rgba(168,213,168,0.7); }
+  .summary-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:20px;}
+  .summary-card{background:var(--white);border:1px solid var(--border);border-radius:8px;padding:14px 16px;box-shadow:0 1px 3px var(--shadow);}
+  .summary-card .card-label{font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:5px;}
+  .summary-card .card-value{font-size:22px;font-weight:700;color:var(--forest);line-height:1;}
+  .summary-card .card-sub{font-size:11px;color:var(--text-secondary);margin-top:4px;}
+  .summary-card.accent{background:var(--forest);border-color:var(--forest-mid);}
+  .summary-card.accent .card-label{color:var(--sage-dim);}
+  .summary-card.accent .card-value{color:var(--sage);}
+  .summary-card.accent .card-sub{color:rgba(168,213,168,.7);}
 
-  /* ── TOOLBAR ── */
-  .toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
-  .search-wrap { position: relative; flex: 1; min-width: 200px; max-width: 380px; }
-  .search-wrap svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; }
-  .search-input { width: 100%; padding: 8px 10px 8px 34px; border: 1px solid var(--border-dark); border-radius: 6px; font-size: 13px; background: var(--white); color: var(--text-primary); outline: none; transition: border-color 0.15s; }
-  .search-input:focus { border-color: var(--forest-mid); }
-  .filter-select { padding: 8px 10px; border: 1px solid var(--border-dark); border-radius: 6px; font-size: 13px; background: var(--white); color: var(--text-primary); outline: none; cursor: pointer; }
-  .filter-select:focus { border-color: var(--forest-mid); }
-  .toolbar-right { margin-left: auto; display: flex; gap: 8px; }
-  .btn-sm { padding: 7px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid var(--border-dark); background: var(--white); color: var(--text-secondary); transition: all 0.15s; }
-  .btn-sm:hover { background: var(--row-hover); border-color: var(--forest-mid); color: var(--forest); }
-  .btn-sm.primary { background: var(--forest-mid); color: var(--white); border-color: var(--forest-mid); }
-  .btn-sm.primary:hover { background: var(--forest-light); }
+  .toolbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+  .search-wrap{position:relative;flex:1;min-width:200px;max-width:380px;}
+  .search-wrap svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-muted);pointer-events:none;}
+  .search-input{width:100%;padding:8px 10px 8px 34px;border:1px solid var(--border-dark);border-radius:6px;font-size:13px;background:var(--white);outline:none;}
+  .search-input:focus{border-color:var(--forest-mid);}
+  .filter-select{padding:8px 10px;border:1px solid var(--border-dark);border-radius:6px;font-size:13px;background:var(--white);outline:none;cursor:pointer;}
+  .btn-sm{padding:7px 12px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border-dark);background:var(--white);color:var(--text-secondary);}
+  .btn-sm:hover{background:var(--row-hover);}
+  .toolbar-right{margin-left:auto;}
 
-  /* ── TABLE ── */
-  .table-wrap { background: var(--white); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px var(--shadow); }
-  .table-container { overflow-x: auto; max-height: calc(100vh - 320px); overflow-y: auto; }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  thead { position: sticky; top: 0; z-index: 10; }
-  thead th { background: var(--forest); color: var(--sage); padding: 10px 12px; text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; white-space: nowrap; cursor: pointer; user-select: none; border-right: 1px solid rgba(168,213,168,0.1); }
-  thead th:last-child { border-right: none; }
-  thead th:hover { background: var(--forest-mid); }
-  thead th.sorted-asc::after { content: ' ▲'; font-size: 9px; }
-  thead th.sorted-desc::after { content: ' ▼'; font-size: 9px; }
-  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
-  tbody tr:nth-child(even) { background: var(--row-alt); }
-  tbody tr:hover { background: var(--row-hover); }
-  tbody tr.section-header { background: #E8F0E8; }
-  tbody tr.section-header td { font-weight: 700; color: var(--forest); font-size: 12px; letter-spacing: 0.5px; padding: 8px 12px 6px; border-bottom: 2px solid var(--border-dark); }
-  tbody td { padding: 9px 12px; color: var(--text-primary); white-space: nowrap; }
-  .td-num { text-align: right; font-variant-numeric: tabular-nums; }
-  .td-money { text-align: right; font-variant-numeric: tabular-nums; color: var(--forest); font-weight: 600; }
-  .td-total { text-align: right; font-variant-numeric: tabular-nums; color: var(--forest-mid); font-weight: 700; }
-  .vendor-badge { display: inline-block; background: var(--forest); color: var(--sage); font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 3px; letter-spacing: 0.5px; }
-  .gauge-chip { display: inline-block; background: var(--steel-light); color: var(--forest); font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 3px; }
-  .editable { cursor: text; }
-  .editable:hover { background: rgba(168,213,168,0.2); border-radius: 3px; }
-  .editing-input { width: 70px; padding: 2px 6px; border: 1px solid var(--forest-mid); border-radius: 3px; font-size: 13px; font-family: inherit; background: var(--white); text-align: right; }
-  .row-modified td { background: rgba(212,137,26,0.08) !important; }
-  .row-modified:hover td { background: rgba(212,137,26,0.14) !important; }
-  .table-footer { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-top: 1px solid var(--border); background: var(--row-alt); font-size: 12px; color: var(--text-secondary); }
-  .table-footer strong { color: var(--forest); }
-  .empty-state { padding: 60px 20px; text-align: center; color: var(--text-muted); }
-  .empty-state p { font-size: 14px; }
-
-  /* ── TOAST ── */
-  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--forest); color: var(--white); padding: 12px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; box-shadow: 0 4px 16px var(--shadow); z-index: 999; transform: translateY(80px); opacity: 0; transition: all 0.25s ease; }
-  .toast.show { transform: translateY(0); opacity: 1; }
-  .toast.error { background: var(--rust); }
-  .toast.success { background: var(--forest-mid); }
-
-  /* ── SAVE BAR ── */
-  .save-bar { display: none; align-items: center; gap: 12px; background: var(--amber); color: var(--white); padding: 8px 16px; font-size: 13px; font-weight: 600; }
-  .save-bar.visible { display: flex; }
-  .save-bar .save-actions { margin-left: auto; display: flex; gap: 8px; }
-  .save-bar button { padding: 5px 12px; border-radius: 5px; font-size: 12px; font-weight: 700; cursor: pointer; border: none; }
-  .save-bar .btn-save { background: var(--white); color: var(--amber); }
-  .save-bar .btn-discard { background: rgba(255,255,255,0.2); color: var(--white); }
-
-  #file-input { display: none; }
-  @media (max-width: 768px) { .main { padding: 12px; } .summary-row { grid-template-columns: repeat(2, 1fr); } .app-header .last-updated { display: none; } }
+  .table-wrap{background:var(--white);border:1px solid var(--border);border-radius:8px;overflow:hidden;box-shadow:0 1px 4px var(--shadow);}
+  .table-container{overflow-x:auto;max-height:calc(100vh - 320px);overflow-y:auto;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  thead{position:sticky;top:0;z-index:10;}
+  thead th{background:var(--forest);color:var(--sage);padding:10px 12px;text-align:left;font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;white-space:nowrap;cursor:pointer;user-select:none;}
+  thead th:hover{background:var(--forest-mid);}
+  thead th.sorted-asc::after{content:' ▲';font-size:9px;}
+  thead th.sorted-desc::after{content:' ▼';font-size:9px;}
+  tbody tr{border-bottom:1px solid var(--border);}
+  tbody tr:nth-child(even){background:var(--row-alt);}
+  tbody tr:hover{background:var(--row-hover);}
+  tbody tr.section-header{background:#E8F0E8;}
+  tbody tr.section-header td{font-weight:700;color:var(--forest);font-size:12px;padding:8px 12px 6px;border-bottom:2px solid var(--border-dark);}
+  tbody td{padding:9px 12px;white-space:nowrap;}
+  .td-num{text-align:right;font-variant-numeric:tabular-nums;}
+  .td-money{text-align:right;font-variant-numeric:tabular-nums;color:var(--forest);font-weight:600;}
+  .td-total{text-align:right;font-variant-numeric:tabular-nums;color:var(--forest-mid);font-weight:700;}
+  .vendor-badge{display:inline-block;background:var(--forest);color:var(--sage);font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;}
+  .gauge-chip{display:inline-block;background:var(--steel-light);color:var(--forest);font-size:11px;font-weight:700;padding:2px 7px;border-radius:3px;}
+  .table-footer{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-top:1px solid var(--border);background:var(--row-alt);font-size:12px;color:var(--text-secondary);}
+  .table-footer strong{color:var(--forest);}
+  .empty-state{padding:60px 20px;text-align:center;color:var(--text-muted);}
+  .empty-state .icon{font-size:48px;margin-bottom:12px;}
+  .empty-state p{font-size:14px;margin-bottom:8px;}
+  .empty-state .hint{font-size:12px;color:var(--text-muted);}
+  .toast{position:fixed;bottom:24px;right:24px;background:var(--forest);color:var(--white);padding:12px 18px;border-radius:8px;font-size:13px;font-weight:600;box-shadow:0 4px 16px var(--shadow);z-index:999;transform:translateY(80px);opacity:0;transition:all .25s ease;}
+  .toast.show{transform:translateY(0);opacity:1;}
+  .toast.error{background:var(--rust);}
+  .toast.success{background:var(--forest-mid);}
+  #file-input{display:none;}
 </style>
 </head>
 <body>
 <input type="file" id="file-input" accept=".xlsx,.xls">
 
-<!-- LOGIN OVERLAY -->
 <div id="login-overlay">
   <div class="login-card">
     <div class="brand">Sherwood Steel</div>
-    <div class="sub">Inventory Management</div>
-    <input type="password" id="login-pw" placeholder="Enter shop password"
-      onkeydown="if(event.key==='Enter')doLogin()">
+    <div class="sub">Inventory</div>
+    <input type="password" id="login-pw" placeholder="Enter shop password" onkeydown="if(event.key==='Enter')doLogin()">
     <button onclick="doLogin()">Sign In</button>
     <div class="login-error" id="login-error">Incorrect password. Try again.</div>
   </div>
@@ -186,19 +115,16 @@
 
 <header class="app-header" id="app-header" style="display:none">
   <span class="logo">Sherwood Steel</span>
-  <div class="header-divider"></div>
+  <div class="hdiv"></div>
   <span class="page-title">Inventory</span>
-  <div class="header-spacer"></div>
-  <span class="last-updated" id="last-updated-label">Loading...</span>
-  <span class="sync-status sync-ok" id="sync-status" style="display:none">✓ Synced</span>
-  <div class="header-actions">
-    <button class="btn-import" onclick="document.getElementById('file-input').click()">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-      Import Excel
-    </button>
-
-    <button class="btn-sm" onclick="logout()" title="Sign out">↩ Sign Out</button>
-  </div>
+  <div class="hspace"></div>
+  <span class="sync-status" id="sync-status" style="display:none"></span>
+  <span id="last-updated" style="font-size:11px;color:var(--sage-dim);opacity:.8"></span>
+  <button class="btn-import" onclick="document.getElementById('file-input').click()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    Import Excel
+  </button>
+  <button class="btn-sm" onclick="logout()">↩ Out</button>
 </header>
 
 <nav class="tab-bar" id="tab-bar" style="display:none">
@@ -209,310 +135,170 @@
   <button class="tab-btn" onclick="switchTab('mjs')" id="tab-mjs">MJS Consignment <span class="tab-badge" id="badge-mjs">0</span></button>
 </nav>
 
-<div class="save-bar" id="save-bar">
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-  <span id="save-bar-msg">Unsaved changes</span>
-  <div class="save-actions">
-    <button class="btn-discard" onclick="discardChanges()">Discard</button>
-    <button class="btn-save" onclick="saveChanges()">Save to Supabase</button>
-  </div>
-</div>
-
 <main class="main" id="app-main" style="display:none">
-  <div id="tab-content-inv-sheets" class="tab-content"></div>
-  <div id="tab-content-slip-drive" class="tab-content" style="display:none"></div>
-  <div id="tab-content-alum-ss" class="tab-content" style="display:none"></div>
-  <div id="tab-content-elgen" class="tab-content" style="display:none"></div>
-  <div id="tab-content-mjs" class="tab-content" style="display:none"></div>
+  <div id="tab-content-inv-sheets"></div>
+  <div id="tab-content-slip-drive" style="display:none"></div>
+  <div id="tab-content-alum-ss" style="display:none"></div>
+  <div id="tab-content-elgen" style="display:none"></div>
+  <div id="tab-content-mjs" style="display:none"></div>
 </main>
 
 <div class="toast" id="toast"></div>
 
 <script>
-// ── CONFIG ──
-const SB_URL = 'https://ecndvwmbycyppqkbvuzs.supabase.co';
-const SB_KEY = 'sb_publishable_DPSLNDOI___sDI-lt3YbpQ_TGJbHaV-';
-const SB_HDR = { 'Content-Type': 'application/json', 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY };
-const SESSION_KEY = 'kzn_session';
-const DEFAULT_PW  = 'sherwood';
+const SB_URL='https://ecndvwmbycyppqkbvuzs.supabase.co';
+const SB_KEY='sb_publishable_DPSLNDOI___sDI-lt3YbpQ_TGJbHaV-';
+const SB_HDR={'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY};
+const SESSION_KEY='kzn_session';
+const SB_TABLES={invSheets:'inventory_sheets',slipDrive:'inventory_slip_drive',alumStain:'inventory_alum_stain',elgen:'inventory_elgen',mjsConsignment:'inventory_mjs_consignment'};
+const TAB_KEYS={'inv-sheets':'invSheets','slip-drive':'slipDrive','alum-ss':'alumStain','elgen':'elgen','mjs':'mjsConsignment'};
 
 // ── AUTH ──
-function isLoggedIn() {
-  return localStorage.getItem(SESSION_KEY) === 'authenticated';
-}
-
-async function doLogin() {
-  const pw = (document.getElementById('login-pw').value || '').trim();
-  if (!pw) return;
-  try {
-    const r = await fetch(`${SB_URL}/rest/v1/admin_config?key=eq.shop_password&select=value`, { headers: SB_HDR });
-    const cfg = await r.json();
-    const stored = cfg && cfg[0] ? cfg[0].value : DEFAULT_PW;
-    const correct = typeof stored === 'string' ? stored : JSON.stringify(stored).replace(/^"|"$/g,'');
-    if (pw === correct || (pw === DEFAULT_PW && !cfg?.length)) {
-      localStorage.setItem(SESSION_KEY, 'authenticated');
-      document.getElementById('login-overlay').remove();
-      showApp();
-    } else {
-      document.getElementById('login-error').style.display = 'block';
-      document.getElementById('login-pw').value = '';
-      document.getElementById('login-pw').focus();
-    }
-  } catch(e) {
-    // Fallback to default password if Supabase unreachable
-    if (pw === DEFAULT_PW) {
-      localStorage.setItem(SESSION_KEY, 'authenticated');
-      document.getElementById('login-overlay').remove();
-      showApp();
-    } else {
-      document.getElementById('login-error').textContent = 'Cannot reach server. Try again.';
-      document.getElementById('login-error').style.display = 'block';
-    }
+function isLoggedIn(){return localStorage.getItem(SESSION_KEY)==='authenticated';}
+async function doLogin(){
+  const pw=(document.getElementById('login-pw').value||'').trim();
+  if(!pw)return;
+  try{
+    const r=await fetch(`${SB_URL}/rest/v1/admin_config?key=eq.shop_password&select=value`,{headers:SB_HDR});
+    const cfg=await r.json();
+    const stored=cfg&&cfg[0]?cfg[0].value:'sherwood';
+    const correct=typeof stored==='string'?stored:JSON.stringify(stored).replace(/^"|"$/g,'');
+    if(pw===correct){localStorage.setItem(SESSION_KEY,'authenticated');document.getElementById('login-overlay').remove();showApp();}
+    else{document.getElementById('login-error').style.display='block';document.getElementById('login-pw').value='';}
+  }catch(e){
+    if(pw==='sherwood'){localStorage.setItem(SESSION_KEY,'authenticated');document.getElementById('login-overlay').remove();showApp();}
+    else{document.getElementById('login-error').textContent='Cannot reach server.';document.getElementById('login-error').style.display='block';}
   }
 }
+function logout(){localStorage.removeItem(SESSION_KEY);location.reload();}
+function showApp(){['app-header','tab-bar','app-main'].forEach(id=>document.getElementById(id).style.display='');init();}
 
-function logout() {
-  localStorage.removeItem(SESSION_KEY);
-  location.reload();
-}
-
-function showApp() {
-  document.getElementById('app-header').style.display = '';
-  document.getElementById('tab-bar').style.display = '';
-  document.getElementById('app-main').style.display = '';
-  init();
-}
-
-// ── SUPABASE HELPERS ──
-async function sbGet(table, params='') {
-  try {
-    const r = await fetch(`${SB_URL}/rest/v1/${table}${params ? '?' + params : ''}`, { headers: SB_HDR });
-    if (!r.ok) return null;
-    return await r.json();
-  } catch(e) { return null; }
-}
-
-async function sbUpsert(table, body) {
-  try {
-    const r = await fetch(`${SB_URL}/rest/v1/${table}`, {
-      method: 'POST',
-      headers: { ...SB_HDR, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
-      body: JSON.stringify(body)
-    });
-    return r.ok;
-  } catch(e) { return false; }
-}
-
-async function sbPatch(table, match, body) {
-  try {
-    const params = Object.entries(match).map(([k,v]) => `${k}=eq.${encodeURIComponent(v)}`).join('&');
-    const r = await fetch(`${SB_URL}/rest/v1/${table}?${params}`, {
-      method: 'PATCH',
-      headers: { ...SB_HDR, 'Prefer': 'return=minimal' },
-      body: JSON.stringify(body)
-    });
-    return r.ok;
-  } catch(e) { return false; }
-}
-
-// ── SEED DATA ──
-const SEED_DATA = {"invSheets":[{"section":"10 Gauge Sheets","gauge":"10","size":"48 x 120","vendor":"PHX","pcs":8,"bundle":"G90","bundleNum":"4485","price":171.12,"total":1368.96},{"section":"10 Gauge Sheets","gauge":"10","size":"60 x 120","vendor":"PHX","pcs":10,"bundle":"G90","bundleNum":"4486","price":213.9,"total":2139.0},{"section":"11 Gauge sheets","gauge":"11","size":"48 x 120","vendor":"HS","pcs":1,"bundle":"G90","bundleNum":"4360","price":177.33,"total":177.33},{"section":"12 Gauge sheets","gauge":"12","size":"48 x 120","vendor":"MJS","pcs":2,"bundle":"G90","bundleNum":"4343","price":106.6,"total":213.2},{"section":"12 Gauge sheets","gauge":"12","size":"60 x 53.6875","vendor":"PHX","pcs":2,"bundle":"G90","bundleNum":"4351","price":70.27,"total":140.54},{"section":"12 Gauge sheets","gauge":"12","size":"60 x 120","vendor":"MJS","pcs":7,"bundle":"G90","bundleNum":"4342","price":133.2,"total":932.3999999999999},{"section":"12 Gauge sheets","gauge":"12","size":"60 x 120","vendor":"MJS","pcs":12,"bundle":"G90","bundleNum":"4509","price":148.4,"total":1780.8000000000002},{"section":"14 Gauge 48\" Coil","gauge":"14","size":"48","vendor":"MJS","pcs":8180,"bundle":"G90","bundleNum":"0007","price":0.6795,"total":5558.3099999999995},{"section":"14 Gauge 48\" Coil","gauge":"14","size":"48","vendor":"MJS","pcs":22160,"bundle":"G90","bundleNum":"0071","price":0.7005,"total":15523.08},{"section":"14 Gauge 48 x 96","gauge":"14","size":"48 x 96","vendor":"MJS","pcs":21,"bundle":"G90","bundleNum":"0879A","price":52.74,"total":1107.54},{"section":"14 Gauge 48 x 96","gauge":"14","size":"48 x 96","vendor":"MJS","pcs":20,"bundle":"G90","bundleNum":"0007A","price":63.77,"total":1275.4},{"section":"14 Gauge 48 x 120","gauge":"14","size":"48 x 120","vendor":"MJS","pcs":29,"bundle":"G90","bundleNum":"0007B","price":79.72,"total":2311.88},{"section":"14 Gauge 48 x 120","gauge":"14","size":"48 x 120","vendor":"MJS","pcs":25,"bundle":"G90","bundleNum":"0007C","price":78.55,"total":1963.75},{"section":"14 Gauge 60 x 120","gauge":"14","size":"60 x 120","vendor":"PHX","pcs":3,"bundle":"G90","bundleNum":"4487A","price":121.4,"total":364.20000000000005},{"section":"14 Gauge 60 x 120","gauge":"14","size":"60 x 120","vendor":"MJS","pcs":29,"bundle":"G90","bundleNum":"4508","price":105.45,"total":3058.05},{"section":"16 Gauge 48\" Coil","gauge":"16","size":"48","vendor":"MJS","pcs":22650,"bundle":"G90","bundleNum":"0920","price":0.621,"total":14065.65},{"section":"16 Gauge 48\" Coil","gauge":"16","size":"48","vendor":"MJS","pcs":21210,"bundle":"G90","bundleNum":"0082","price":0.7075,"total":15006.075},{"section":"16 Gauge 48\" Coil","gauge":"16","size":"48","vendor":"MJS","pcs":21950,"bundle":"CR","bundleNum":"4514","price":0.686,"total":15057.7},{"section":"16 Gauge 48 x 96","gauge":"16","size":"48 x 96","vendor":"MJS","pcs":30,"bundle":"G90","bundleNum":"0646A","price":43.66,"total":1309.8},{"section":"16 Gauge 48 x 96","gauge":"16","size":"48 x 96","vendor":"MJS","pcs":41,"bundle":"G90","bundleNum":"0851A","price":44.03,"total":1805.23},{"section":"16 Gauge 48 x 96","gauge":"16","size":"48 x 96","vendor":"MJS","pcs":48,"bundle":"G90","bundleNum":"0852A","price":44.59,"total":2140.32},{"section":"16 Gauge 48 x 120","gauge":"16","size":"48 x 120","vendor":"MJS","pcs":15,"bundle":"G90","bundleNum":"0852B","price":55.74,"total":836.1},{"section":"16 Gauge 48 x 120","gauge":"16","size":"48 x 120","vendor":"DR","pcs":4,"bundle":"G90","bundleNum":"4503A","price":51.0,"total":204.0},{"section":"16 Gauge 48 x 120","gauge":"16","size":"48 x 120","vendor":"MJS","pcs":33,"bundle":"G90","bundleNum":"0919A","price":59.13,"total":1951.2900000000002},{"section":"16 Gauge 48 x 120","gauge":"16","size":"48 x 120","vendor":"MJS","pcs":27,"bundle":"CR","bundleNum":"4286A","price":55.7,"total":1503.9},{"section":"16 Gauge 48 x 120","gauge":"16","size":"48 x 120","vendor":"MJS","pcs":30,"bundle":"CR","bundleNum":"4286E","price":55.16,"total":1654.8},{"section":"16 Gauge 60\" Coil","gauge":"16","size":"60","vendor":"MJS","pcs":8850,"bundle":"G90","bundleNum":"0943","price":0.6175,"total":5464.875},{"section":"16 Gauge 60\" Coil","gauge":"16","size":"60","vendor":"OS","pcs":8760,"bundle":"G90","bundleNum":"4461","price":0.6045,"total":5295.42},{"section":"16 Gauge 60\" Coil","gauge":"16","size":"60","vendor":"OS","pcs":8750,"bundle":"G90","bundleNum":"4463","price":0.6045,"total":5289.375},{"section":"16 Gauge 60\" Coil","gauge":"16","size":"60","vendor":"OS","pcs":8770,"bundle":"G90","bundleNum":"4465","price":0.6045,"total":5301.465},{"section":"16 Gauge 60\" Coil","gauge":"16","size":"60","vendor":"ASS","pcs":23160,"bundle":"Grade 50, 53\" coil","bundleNum":"4526","price":0.7785,"total":18030.059999999998},{"section":"16 Gauge 60\" Coil","gauge":"16","size":"60","vendor":"MJS","pcs":15320,"bundle":"CR","bundleNum":"4530","price":0.686,"total":10509.52},{"section":"16 Gauge 60 x 120","gauge":"16","size":"60 x 120","vendor":"OS","pcs":38,"bundle":"G90","bundleNum":"4464A","price":73.76,"total":2802.88},{"section":"16 Gauge 60 x 120","gauge":"16","size":"60 x 120","vendor":"OS","pcs":12,"bundle":"G90, For CMS","bundleNum":"4464C","price":73.76,"total":885.1200000000001},{"section":"16 Gauge 60 x 120","gauge":"16","size":"60 x 120","vendor":"MJS","pcs":33,"bundle":"CR","bundleNum":"4530A","price":81.13,"total":2677.29},{"section":"16 Gauge Random Sizes","gauge":"16","size":"36 x 48","vendor":"2020","pcs":173,"bundle":"CR","bundleNum":"4209D","price":11.79,"total":2039.6699999999998},{"section":"16 Gauge Random Sizes","gauge":"16","size":"36 x 67.875","vendor":"2020","pcs":12,"bundle":"CR","bundleNum":"4210C","price":17.06,"total":204.71999999999997},{"section":"16 Gauge Random Sizes","gauge":"16","size":"48 x 48","vendor":"OS","pcs":10,"bundle":"CR","bundleNum":"4033C","price":22.54,"total":225.39999999999998},{"section":"16 Gauge Random Sizes","gauge":"16","size":"48 x 49","vendor":"ASS","pcs":10,"bundle":"CR","bundleNum":"3486G","price":21.51,"total":215.10000000000002},{"section":"16 Gauge Random Sizes","gauge":"16","size":"48 x 55.875","vendor":"MJS","pcs":33,"bundle":"CR","bundleNum":"4286D","price":25.94,"total":856.0200000000001},{"section":"16 Gauge Random Sizes","gauge":"16","size":"48 x 55.875","vendor":"MJS","pcs":105,"bundle":"CR","bundleNum":"4286G","price":25.68,"total":2696.4},{"section":"16 Gauge Random Sizes","gauge":"16","size":"48 x 67.875","vendor":"MJS","pcs":75,"bundle":"CR","bundleNum":"4286F","price":31.2,"total":2340.0},{"section":"16 Gauge Random Sizes","gauge":"16","size":"60 x 55.875","vendor":"MJS","pcs":4,"bundle":"CR","bundleNum":"4170C","price":31.42,"total":125.68},{"section":"16 Gauge Random Sizes","gauge":"16","size":"60 x 72","vendor":"MJS","pcs":45,"bundle":"CR","bundleNum":"4285B","price":42.1,"total":1894.5},{"section":"18 Gauge 48\" Coil","gauge":"18","size":"48","vendor":"OS","pcs":17680,"bundle":"","bundleNum":"4229","price":0.5773,"total":10206.664},{"section":"18 Gauge 48\" Coil","gauge":"18","size":"48","vendor":"MJS","pcs":16100,"bundle":"","bundleNum":"0878","price":0.5773,"total":9294.53},{"section":"18 Gauge 48\" Coil","gauge":"18","size":"48","vendor":"CS","pcs":22850,"bundle":"","bundleNum":"4510","price":0.5773,"total":13191.305},{"section":"18 Gauge 48\" Coil","gauge":"18","size":"48","vendor":"HMB","pcs":9680,"bundle":"G90","bundleNum":"4103","price":0.5773,"total":5588.264},{"section":"18 Gauge 48 x 96","gauge":"18","size":"48 x 96","vendor":"OS","pcs":50,"bundle":"","bundleNum":"4230A","price":32.6,"total":1630.0},{"section":"18 Gauge 48 x 96","gauge":"18","size":"48 x 96","vendor":"OS","pcs":50,"bundle":"","bundleNum":"4230B","price":32.6,"total":1630.0},{"section":"18 Gauge 48 x 96","gauge":"18","size":"48 x 96","vendor":"OS","pcs":50,"bundle":"","bundleNum":"4230C","price":32.6,"total":1630.0},{"section":"18 Gauge 48 x 96","gauge":"18","size":"48 x 96","vendor":"OS","pcs":47,"bundle":"","bundleNum":"4230E","price":32.6,"total":1532.2},{"section":"18 Gauge 48 x 96","gauge":"18","size":"48 x 96","vendor":"OS","pcs":50,"bundle":"","bundleNum":"4230F","price":32.6,"total":1630.0},{"section":"18 Gauge 48 x 96","gauge":"18","size":"36 x 96","vendor":"MJS","pcs":5,"bundle":"G90","bundleNum":"4367","price":34.64,"total":173.2},{"section":"18 Gauge 48 x 120","gauge":"18","size":"48 x 120","vendor":"OS","pcs":13,"bundle":"","bundleNum":"4229A","price":41.8,"total":543.4},{"section":"18 Gauge 60\" Coil","gauge":"18","size":"60","vendor":"CS","pcs":22480,"bundle":"","bundleNum":"4480","price":0.6489,"total":14587.272},{"section":"18 Gauge 60\" Coil","gauge":"18","size":"60","vendor":"CS","pcs":22160,"bundle":"","bundleNum":"4511","price":0.6489,"total":14379.624000000002},{"section":"18 Gauge 60\" Coil","gauge":"18","size":"60","vendor":"CS","pcs":23400,"bundle":"","bundleNum":"4516","price":0.6489,"total":15184.26},{"section":"18 Gauge 60\" Coil","gauge":"18","size":"60","vendor":"MJS","pcs":22040,"bundle":"","bundleNum":"0036","price":0.6489,"total":14301.756000000001},{"section":"18 Gauge 60 x 120","gauge":"18","size":"60 x 120","vendor":"OS","pcs":3,"bundle":"G90","bundleNum":"4456B","price":61.02,"total":183.06},{"section":"20 Gauge 48\" Coil","gauge":"20","size":"48","vendor":"MJS","pcs":22510,"bundle":"G90","bundleNum":"0959","price":0.6355,"total":14305.105},{"section":"20 Gauge 48\" Coil","gauge":"20","size":"48","vendor":"MJS","pcs":8700,"bundle":"G90","bundleNum":"0960","price":0.657,"total":5715.900000000001},{"section":"20 Gauge 48\" Coil","gauge":"20","size":"48","vendor":"MJS","pcs":23630,"bundle":"G90","bundleNum":"0081","price":0.76,"total":17958.8},{"section":"20 Gauge 48 x 96","gauge":"20","size":"36 x 96","vendor":"MJS","pcs":26,"bundle":"","bundleNum":"4369","price":21.44,"total":557.44},{"section":"20 Gauge 48 x 96","gauge":"20","size":"48 x 96","vendor":"MJS","pcs":18,"bundle":"","bundleNum":"4371","price":28.16,"total":506.88},{"section":"20 Gauge 48 x 96","gauge":"20","size":"48 x 96","vendor":"MJS","pcs":25,"bundle":"G90","bundleNum":"0781B","price":28.1,"total":702.5},{"section":"20 Gauge 48 x 96","gauge":"20","size":"48 x 96","vendor":"MJS","pcs":24,"bundle":"G90","bundleNum":"0781C","price":28.39,"total":681.36},{"section":"20 Gauge 48 x 120","gauge":"20","size":"48 x 120","vendor":"MJS","pcs":15,"bundle":"G90","bundleNum":"0781A","price":35.13,"total":526.95},{"section":"20 Gauge 48 x 120","gauge":"20","size":"48 x 120","vendor":"ASS","pcs":21,"bundle":"G90","bundleNum":"4535","price":39.77,"total":835.1700000000001},{"section":"20 Gauge 60\" Coil","gauge":"20","size":"60","vendor":"BRS","pcs":8720,"bundle":"G90","bundleNum":"4333","price":0.6671,"total":5817.112},{"section":"20 Gauge 60\" Coil","gauge":"20","size":"60","vendor":"OS","pcs":8950,"bundle":"G90","bundleNum":"4566","price":0.6671,"total":5970.545},{"section":"20 Gauge 60\" Coil","gauge":"20","size":"60","vendor":"OS","pcs":9800,"bundle":"G90","bundleNum":"4567","price":0.6671,"total":6537.58},{"section":"20 Gauge 60\" Coil","gauge":"20","size":"60","vendor":"OS","pcs":9160,"bundle":"G90","bundleNum":"4569","price":0.6671,"total":6110.636},{"section":"20 Gauge 60\" Coil","gauge":"20","size":"60","vendor":"OS","pcs":8140,"bundle":"G90","bundleNum":"4570","price":0.6671,"total":5430.194},{"section":"20 Gauge 60\" Coil","gauge":"20","size":"60","vendor":"BRS","pcs":8640,"bundle":"G90","bundleNum":"4579","price":0.6671,"total":5763.744000000001},{"section":"20 Gauge 60\" Coil","gauge":"20","size":"60","vendor":"BRS","pcs":8710,"bundle":"G90","bundleNum":"4580","price":0.6671,"total":5810.441},{"section":"20 Gauge 60\" Coil","gauge":"20","size":"60","vendor":"BRS","pcs":8380,"bundle":"G90","bundleNum":"","price":0.6671,"total":5590.298},{"section":"20 Gauge 60\" Coil","gauge":"20","size":"60","vendor":"BRS","pcs":6520,"bundle":"G90","bundleNum":"","price":0.6671,"total":4349.492},{"section":"20 Gauge 60\" Coil","gauge":"20","size":"60","vendor":"MJS","pcs":8720,"bundle":"G90","bundleNum":"0100","price":0.0,"total":0.0},{"section":"20 Gauge 60\" Coil","gauge":"20","size":"60","vendor":"MJS","pcs":8720,"bundle":"G90","bundleNum":"0101","price":0.0,"total":0.0},{"section":"20 Gauge 60\" Coil","gauge":"20","size":"60","vendor":"MJS","pcs":8720,"bundle":"G90","bundleNum":"0102","price":0.0,"total":0.0},{"section":"20 Gauge 60 x 120","gauge":"20","size":"60 x 120","vendor":"BRS","pcs":17,"bundle":"G90","bundleNum":"4336A","price":36.84,"total":626.2800000000001},{"section":"20 Gauge Random Sizes","gauge":"20","size":"60 x 48","vendor":"DR","pcs":53,"bundle":"G90","bundleNum":"4506C","price":16.13,"total":854.89},{"section":"20 Gauge Random Sizes","gauge":"20","size":"60 x 59.75","vendor":"DR","pcs":54,"bundle":"G90","bundleNum":"4506B","price":20.08,"total":1084.32},{"section":"20 Gauge Random Sizes","gauge":"20","size":"60 x 60","vendor":"DR","pcs":46,"bundle":"G90","bundleNum":"4506A","price":20.16,"total":927.36},{"section":"22 Gauge 48\" Coil","gauge":"22","size":"48","vendor":"MJS","pcs":22500,"bundle":"","bundleNum":"0006","price":0.678,"total":15255.000000000002},{"section":"22 Gauge 48\" Coil","gauge":"22","size":"48","vendor":"MJS","pcs":22420,"bundle":"","bundleNum":"0017","price":0.678,"total":15200.76},{"section":"22 Gauge 48\" Coil","gauge":"22","size":"48","vendor":"MJS","pcs":4760,"bundle":"G90","bundleNum":"0003","price":0.6875,"total":3272.5},{"section":"22 Gauge 48\" Coil","gauge":"22","size":"48","vendor":"MJS","pcs":22910,"bundle":"G90","bundleNum":"0037","price":0.731,"total":16747.21},{"section":"22 Gauge 48 x 96","gauge":"22","size":"48 x 96","vendor":"MJS","pcs":73,"bundle":"","bundleNum":"0899A","price":22.85,"total":1668.0500000000002},{"section":"22 Gauge 48 x 120","gauge":"22","size":"48 x 120","vendor":"MJS","pcs":40,"bundle":"","bundleNum":"0899D","price":28.56,"total":1142.3999999999999},{"section":"22 Gauge 48 x 120","gauge":"22","size":"48 x 120","vendor":"MJS","pcs":9,"bundle":"","bundleNum":"0899E","price":28.36,"total":255.24},{"section":"22 Gauge 48 x 120","gauge":"22","size":"48 x 120","vendor":"MJS","pcs":50,"bundle":"","bundleNum":"0004B","price":33.01,"total":1650.5},{"section":"22 Gauge 48 x 120","gauge":"22","size":"48 x 120","vendor":"MJS","pcs":29,"bundle":"G90","bundleNum":"0900C","price":30.31,"total":878.99},{"section":"22 Gauge 48 x 120","gauge":"22","size":"48 x 120","vendor":"ASS","pcs":42,"bundle":"G90","bundleNum":"4361B","price":33.99,"total":1427.5800000000002},{"section":"22 Gauge 60\" Coil","gauge":"22","size":"60","vendor":"MJS","pcs":8640,"bundle":"","bundleNum":"0955","price":0.6554,"total":5662.656},{"section":"22 Gauge 60\" Coil","gauge":"22","size":"60","vendor":"MJS","pcs":8390,"bundle":"","bundleNum":"0012","price":0.6554,"total":5498.806},{"section":"22 Gauge 60\" Coil","gauge":"22","size":"60","vendor":"MJS","pcs":7820,"bundle":"","bundleNum":"0043","price":0.6554,"total":5125.228},{"section":"22 Gauge 60\" Coil","gauge":"22","size":"60","vendor":"MJS","pcs":7880,"bundle":"","bundleNum":"0044","price":0.6554,"total":5164.552},{"section":"22 Gauge 60\" Coil","gauge":"22","size":"60","vendor":"MJS","pcs":7840,"bundle":"","bundleNum":"0045","price":0.6554,"total":5138.336},{"section":"22 Gauge 60\" Coil","gauge":"22","size":"60","vendor":"DR","pcs":9110,"bundle":"G90","bundleNum":"4422","price":0.6223,"total":5669.152999999999},{"section":"22 Gauge 60\" Coil","gauge":"22","size":"60","vendor":"DR","pcs":9260,"bundle":"G90","bundleNum":"4423","price":0.6223,"total":5762.498},{"section":"22 Gauge 60\" Coil","gauge":"22","size":"60","vendor":"DR","pcs":9680,"bundle":"G90","bundleNum":"4424","price":0.6223,"total":6023.864},{"section":"22 Gauge 60\" Coil","gauge":"22","size":"60","vendor":"CS","pcs":9820,"bundle":"G90","bundleNum":"4425","price":0.6223,"total":6110.986},{"section":"22 Gauge 60\" Coil","gauge":"22","size":"60","vendor":"DR","pcs":8500,"bundle":"G90, 8440","bundleNum":"4501","price":0.6223,"total":5289.549999999999},{"section":"22 Gauge 60\" Coil","gauge":"22","size":"60","vendor":"HMB","pcs":9460,"bundle":"G90","bundleNum":"4534","price":0.6495,"total":6144.2699999999995},{"section":"22 Gauge 60\" Coil","gauge":"22","size":"60","vendor":"MJS","pcs":9550,"bundle":"G90","bundleNum":"0093","price":0.7725,"total":7377.375},{"section":"22 Gauge 60\" Coil","gauge":"22","size":"60","vendor":"MJS","pcs":9190,"bundle":"G90","bundleNum":"0094","price":0.7725,"total":7099.275},{"section":"22 Gauge 60\" Coil","gauge":"22","size":"60","vendor":"MJS","pcs":9160,"bundle":"G90","bundleNum":"0095","price":0.7725,"total":7076.099999999999},{"section":"22 Gauge 60\" Coil","gauge":"22","size":"60","vendor":"MJS","pcs":9200,"bundle":"G90","bundleNum":"0096","price":0.7725,"total":7107.0},{"section":"22 Gauge 60\" Coil","gauge":"22","size":"60","vendor":"MJS","pcs":9340,"bundle":"G90","bundleNum":"0097","price":0.7725,"total":7215.15},{"section":"22 Gauge 60\" Coil","gauge":"22","size":"60","vendor":"MJS","pcs":7260,"bundle":"Perf","bundleNum":"4546","price":1.333,"total":9677.58},{"section":"22 Gauge 60 x 120","gauge":"22","size":"60 x 120","vendor":"HMB","pcs":50,"bundle":"","bundleNum":"4349A","price":40.11,"total":2005.5},{"section":"22 Gauge 60 x 120","gauge":"22","size":"60 x 120","vendor":"HMB","pcs":50,"bundle":"","bundleNum":"4349B","price":40.11,"total":2005.5},{"section":"22 Gauge 60 x 120","gauge":"22","size":"60 x 120","vendor":"DR","pcs":50,"bundle":"G90","bundleNum":"4500A","price":37.83,"total":1891.5},{"section":"22 Gauge 60 x 120","gauge":"22","size":"60 x 120","vendor":"DR","pcs":50,"bundle":"G90","bundleNum":"4500B","price":37.83,"total":1891.5},{"section":"22 Gauge 60 x 120","gauge":"22","size":"60 x 120","vendor":"DR","pcs":50,"bundle":"G90","bundleNum":"4500C","price":37.83,"total":1891.5},{"section":"22 Gauge 60 x 120","gauge":"22","size":"60 x 120","vendor":"DR","pcs":60,"bundle":"G90","bundleNum":"4502A","price":37.83,"total":2269.7999999999997},{"section":"22 Gauge 60 x 120","gauge":"22","size":"60 x 120","vendor":"DR","pcs":31,"bundle":"G90","bundleNum":"4502C","price":37.83,"total":1172.73},{"section":"24 Gauge 36\" Coil","gauge":"24","size":"36","vendor":"MJS","pcs":9410,"bundle":"","bundleNum":"0014","price":0.695,"total":6539.95},{"section":"24 Gauge 48\" Coil","gauge":"24","size":"48","vendor":"OS","pcs":4320,"bundle":"","bundleNum":"3988","price":0.6595,"total":2849.04},{"section":"24 Gauge 48\" Coil","gauge":"24","size":"48","vendor":"OS","pcs":4880,"bundle":"","bundleNum":"4238","price":0.6595,"total":3218.3599999999997},{"section":"24 Gauge 48\" Coil","gauge":"24","size":"48","vendor":"MJS","pcs":23140,"bundle":"","bundleNum":"0865","price":0.6595,"total":15260.83},{"section":"24 Gauge 48\" Coil","gauge":"24","size":"48","vendor":"MJS","pcs":23180,"bundle":"","bundleNum":"0866","price":0.6595,"total":15287.21},{"section":"24 Gauge 48\" Coil","gauge":"24","size":"48","vendor":"MJS","pcs":23750,"bundle":"","bundleNum":"0924","price":0.6595,"total":15663.125},{"section":"24 Gauge 48\" Coil","gauge":"24","size":"48","vendor":"MJS","pcs":20290,"bundle":"","bundleNum":"0019","price":0.6595,"total":13381.255},{"section":"24 Gauge 48\" Coil","gauge":"24","size":"48","vendor":"MJS","pcs":23030,"bundle":"","bundleNum":"0026","price":0.6595,"total":15188.285},{"section":"24 Gauge 48\" Coil","gauge":"24","size":"48","vendor":"MJS","pcs":7960,"bundle":"G60","bundleNum":"0034","price":0.6595,"total":5249.62},{"section":"24 Gauge 48\" Coil","gauge":"24","size":"48","vendor":"MJS","pcs":22550,"bundle":"","bundleNum":"0057","price":0.6595,"total":14871.724999999999},{"section":"24 Gauge 48\" Coil","gauge":"24","size":"48","vendor":"MJS","pcs":22880,"bundle":"","bundleNum":"0058","price":0.6595,"total":15089.359999999999},{"section":"24 Gauge 48\" Coil","gauge":"24","size":"48","vendor":"HMB","pcs":8260,"bundle":"G60","bundleNum":"4533","price":0.6495,"total":5364.87},{"section":"24 Gauge 48\" Coil","gauge":"24","size":"48","vendor":"DR","pcs":16680,"bundle":"","bundleNum":"4573","price":0.5975,"total":9966.300000000001},{"section":"24 Gauge 48\" Coil","gauge":"24","size":"48","vendor":"MJS","pcs":21760,"bundle":"G90","bundleNum":"0925","price":0.6595,"total":14350.72},{"section":"24 Gauge 48\" Coil","gauge":"24","size":"48","vendor":"MJS","pcs":4780,"bundle":"G90","bundleNum":"0992","price":0.6595,"total":3152.41},{"section":"24 Gauge 48\" Coil","gauge":"24","size":"48","vendor":"HMB","pcs":9320,"bundle":"G90","bundleNum":"4532","price":0.6495,"total":6053.339999999999},{"section":"24 Gauge 48 x 96","gauge":"24","size":"48 x 96","vendor":"OS","pcs":10,"bundle":"w/s","bundleNum":"3828E","price":17.48,"total":174.8},{"section":"24 Gauge 48 x 96","gauge":"24","size":"48 x 96","vendor":"OS","pcs":100,"bundle":"w/s, skid says 145 sheets","bundleNum":"3828F","price":0.0,"total":0.0},{"section":"24 Gauge 48 x 96","gauge":"24","size":"48 x 96","vendor":"OS","pcs":30,"bundle":"","bundleNum":"4237C","price":17.69,"total":530.7},{"section":"24 Gauge 48 x 96","gauge":"24","size":"48 x 96","vendor":"OS","pcs":100,"bundle":"","bundleNum":"4239B","price":18.19,"total":1819.0000000000002},{"section":"24 Gauge 48 x 96","gauge":"24","size":"48 x 96","vendor":"OS","pcs":97,"bundle":"","bundleNum":"4239D","price":18.19,"total":1764.43},{"section":"24 Gauge 48 x 96","gauge":"24","size":"48 x 96","vendor":"DR","pcs":100,"bundle":"","bundleNum":"4575A","price":18.69,"total":1869.0000000000002},{"section":"24 Gauge 48 x 96","gauge":"24","size":"48 x 96","vendor":"DR","pcs":100,"bundle":"","bundleNum":"4575B","price":18.69,"total":1869.0000000000002},{"section":"24 Gauge 48 x 96","gauge":"24","size":"48 x 96","vendor":"DR","pcs":100,"bundle":"","bundleNum":"4575C","price":18.69,"total":1869.0000000000002},{"section":"24 Gauge 48 x 96","gauge":"24","size":"48 x 96","vendor":"DR","pcs":90,"bundle":"","bundleNum":"4575D","price":18.69,"total":1682.1000000000001},{"section":"24 Gauge 48 x 96","gauge":"24","size":"48 x 96","vendor":"DR","pcs":100,"bundle":"","bundleNum":"4574A","price":19.23,"total":1923.0},{"section":"24 Gauge 48 x 96","gauge":"24","size":"48 x 96","vendor":"DR","pcs":100,"bundle":"","bundleNum":"4574B","price":19.23,"total":1923.0},{"section":"24 Gauge 48 x 96","gauge":"24","size":"48 x 96","vendor":"DR","pcs":100,"bundle":"","bundleNum":"4574C","price":19.23,"total":1923.0},{"section":"24 Gauge 48 x 96","gauge":"24","size":"48 x 96","vendor":"DR","pcs":110,"bundle":"","bundleNum":"4574D","price":19.23,"total":2115.3},{"section":"24 Gauge 48 x 120","gauge":"24","size":"48 x 120","vendor":"OS","pcs":9,"bundle":"","bundleNum":"4238B","price":22.77,"total":204.93},{"section":"24 Gauge 48 x 120","gauge":"24","size":"48 x 120","vendor":"OS","pcs":35,"bundle":"","bundleNum":"4239A","price":22.74,"total":795.9},{"section":"24 Gauge 48 x 120","gauge":"24","size":"48 x 120","vendor":"ASS","pcs":18,"bundle":"G90","bundleNum":"3881A","price":24.35,"total":438.3},{"section":"24 Gauge 48 x 120","gauge":"24","size":"48 x 120","vendor":"ASS","pcs":35,"bundle":"G90","bundleNum":"4536","price":30.07,"total":1052.45},{"section":"24 Gauge 48 x 120","gauge":"24","size":"48 x 120","vendor":"ASS","pcs":109,"bundle":"G90","bundleNum":"4537","price":28.21,"total":3074.89},{"section":"24 Gauge 60\" Coil","gauge":"24","size":"60","vendor":"MJS","pcs":8870,"bundle":"","bundleNum":"0978","price":0.684,"total":6067.080000000001},{"section":"24 Gauge 60\" Coil","gauge":"24","size":"60","vendor":"MJS","pcs":8870,"bundle":"","bundleNum":"0979","price":0.684,"total":6067.080000000001},{"section":"24 Gauge 60\" Coil","gauge":"24","size":"60","vendor":"MJS","pcs":8870,"bundle":"","bundleNum":"0981","price":0.684,"total":6067.080000000001},{"section":"24 Gauge 60\" Coil","gauge":"24","size":"60","vendor":"MJS","pcs":6610,"bundle":"","bundleNum":"0028","price":0.684,"total":4521.240000000001},{"section":"24 Gauge 60\" Coil","gauge":"24","size":"60","vendor":"MJS","pcs":6940,"bundle":"","bundleNum":"0029","price":0.684,"total":4746.96},{"section":"24 Gauge 60\" Coil","gauge":"24","size":"60","vendor":"MJS","pcs":6900,"bundle":"","bundleNum":"0030","price":0.684,"total":4719.6},{"section":"24 Gauge 60\" Coil","gauge":"24","size":"60","vendor":"MJS","pcs":8410,"bundle":"","bundleNum":"0038","price":0.684,"total":5752.4400000000005},{"section":"24 Gauge 60\" Coil","gauge":"24","size":"60","vendor":"MJS","pcs":8410,"bundle":"","bundleNum":"0039","price":0.684,"total":5752.4400000000005},{"section":"24 Gauge 60\" Coil","gauge":"24","size":"60","vendor":"MJS","pcs":8510,"bundle":"","bundleNum":"0040","price":0.684,"total":5820.84},{"section":"24 Gauge 60\" Coil","gauge":"24","size":"60","vendor":"BRS","pcs":14330,"bundle":"","bundleNum":"4522","price":0.684,"total":9801.720000000001},{"section":"24 Gauge 60\" Coil","gauge":"24","size":"60","vendor":"MJS","pcs":8950,"bundle":"","bundleNum":"0072","price":0.684,"total":6121.8},{"section":"24 Gauge 60\" Coil","gauge":"24","size":"60","vendor":"MJS","pcs":9280,"bundle":"","bundleNum":"0073","price":0.684,"total":6347.52},{"section":"24 Gauge 60\" Coil","gauge":"24","size":"60","vendor":"MJS","pcs":8940,"bundle":"","bundleNum":"0074","price":0.684,"total":6114.96},{"section":"24 Gauge 60\" Coil","gauge":"24","size":"60","vendor":"MJS","pcs":8940,"bundle":"","bundleNum":"0075","price":0.684,"total":6114.96},{"section":"24 Gauge 60\" Coil","gauge":"24","size":"60","vendor":"MJS","pcs":9090,"bundle":"","bundleNum":"0076","price":0.684,"total":6217.56},{"section":"24 Gauge 60\" Coil","gauge":"24","size":"60","vendor":"OS","pcs":9230,"bundle":"G90","bundleNum":"4417","price":0.6682,"total":6167.486},{"section":"24 Gauge 60\" Coil","gauge":"24","size":"60","vendor":"OS","pcs":9170,"bundle":"G90","bundleNum":"4419","price":0.6682,"total":6127.394},{"section":"24 Gauge 60\" Coil","gauge":"24","size":"60","vendor":"OS","pcs":9430,"bundle":"G90","bundleNum":"4435","price":0.6682,"total":6301.126},{"section":"24 Gauge 60\" Coil","gauge":"24","size":"60","vendor":"MJS","pcs":9120,"bundle":"G90","bundleNum":"0973","price":0.6682,"total":6093.984},{"section":"24 Gauge 60\" Coil","gauge":"24","size":"60","vendor":"MJS","pcs":9340,"bundle":"G90","bundleNum":"0974","price":0.6682,"total":6240.988},{"section":"24 Gauge 60\" Coil","gauge":"24","size":"60","vendor":"BRS","pcs":6950,"bundle":"G90","bundleNum":"4521","price":0.6682,"total":4643.99},{"section":"24 Gauge 60\" Coil","gauge":"24","size":"60","vendor":"MJS","pcs":9260,"bundle":"G90","bundleNum":"0084","price":0.6682,"total":6187.532},{"section":"24 Gauge 60\" Coil","gauge":"24","size":"60","vendor":"MJS","pcs":8860,"bundle":"G90","bundleNum":"0085","price":0.6682,"total":5920.252},{"section":"24 Gauge 60\" Coil","gauge":"24","size":"60","vendor":"MJS","pcs":8860,"bundle":"G90","bundleNum":"0086","price":0.6682,"total":5920.252},{"section":"24 Gauge 60\" Coil","gauge":"24","size":"60","vendor":"MJS","pcs":8000,"bundle":"G90","bundleNum":"0087","price":0.6682,"total":5345.6},{"section":"24 Gauge 60\" Coil","gauge":"24","size":"60","vendor":"BRS","pcs":7720,"bundle":"G90","bundleNum":"4562","price":0.6682,"total":5158.504},{"section":"24 Gauge 60\" Coil","gauge":"24","size":"60","vendor":"BRS","pcs":7750,"bundle":"G90","bundleNum":"4563","price":0.6682,"total":5178.55},{"section":"24 Gauge 60\" Coil","gauge":"24","size":"60","vendor":"BRS","pcs":8960,"bundle":"G90","bundleNum":"4564","price":0.6682,"total":5987.072},{"section":"24 Gauge 60\" Coil","gauge":"24","size":"60","vendor":"BRS","pcs":8950,"bundle":"G90","bundleNum":"4565","price":0.6682,"total":5980.39},{"section":"24 Gauge 60\" Coil","gauge":"24","size":"60","vendor":"BRS","pcs":8970,"bundle":"G90","bundleNum":"4576","price":0.6682,"total":5993.754},{"section":"24 Gauge 60\" Coil","gauge":"24","size":"60","vendor":"BRS","pcs":9320,"bundle":"G90","bundleNum":"4577","price":0.6682,"total":6227.624},{"section":"24 Gauge 60\" Coil","gauge":"24","size":"60","vendor":"BRS","pcs":12120,"bundle":"G90","bundleNum":"4578","price":0.6682,"total":8098.584},{"section":"24 Gauge 60\" Coil","gauge":"24","size":"60","vendor":"BRS","pcs":9340,"bundle":"G90","bundleNum":"","price":0.6682,"total":6240.988},{"section":"24 Gauge 60 x 120","gauge":"24","size":"60 x 120","vendor":"2020","pcs":58,"bundle":"G60, wavy","bundleNum":"4228B","price":22.23,"total":1289.34},{"section":"24 Gauge 60 x 120","gauge":"24","size":"60 x 120","vendor":"HMB","pcs":14,"bundle":"","bundleNum":"4348B","price":27.5,"total":385.0},{"section":"24 Gauge 60 x 120","gauge":"24","size":"60 x 120","vendor":"MJS","pcs":34,"bundle":"","bundleNum":"0954A","price":33.31,"total":1132.54},{"section":"24 Gauge 60 x 120","gauge":"24","size":"60 x 120","vendor":"MJS","pcs":75,"bundle":"","bundleNum":"0982A","price":35.14,"total":2635.5},{"section":"24 Gauge 60 x 120","gauge":"24","size":"60 x 120","vendor":"MJS","pcs":43,"bundle":"","bundleNum":"0982B","price":35.14,"total":1511.02},{"section":"24 Gauge 60 x 120","gauge":"24","size":"60 x 96","vendor":"MJS","pcs":12,"bundle":"G90","bundleNum":"4380","price":25.76,"total":309.12},{"section":"24 Gauge 60 x 120","gauge":"24","size":"60 x 120","vendor":"BRS","pcs":50,"bundle":"G90, w/s","bundleNum":"4207B","price":22.84,"total":1142.0},{"section":"24 Gauge 60 x 120","gauge":"24","size":"60 x 120","vendor":"DR","pcs":115,"bundle":"G90","bundleNum":"4483A","price":33.35,"total":3835.25},{"section":"24 Gauge 60 x 120","gauge":"24","size":"60 x 120","vendor":"DR","pcs":108,"bundle":"G90","bundleNum":"4483B","price":33.35,"total":3601.8},{"section":"24 Gauge 60 x 120","gauge":"24","size":"60 x 120","vendor":"DR","pcs":60,"bundle":"G90","bundleNum":"4492A","price":33.35,"total":2001.0},{"section":"24 Gauge 60 x 120","gauge":"24","size":"60 x 120","vendor":"DR","pcs":60,"bundle":"G90","bundleNum":"4492B","price":33.35,"total":2001.0},{"section":"24 Gauge 60 x 120","gauge":"24","size":"60 x 120","vendor":"DR","pcs":60,"bundle":"G90","bundleNum":"4492C","price":33.35,"total":2001.0},{"section":"24 Gauge 60 x 120","gauge":"24","size":"60 x 120","vendor":"DR","pcs":60,"bundle":"G90","bundleNum":"4493A","price":33.35,"total":2001.0},{"section":"24 Gauge 60 x 120","gauge":"24","size":"60 x 120","vendor":"MJS","pcs":18,"bundle":"G90","bundleNum":"0061A","price":33.35,"total":600.3000000000001},{"section":"24 Gauge 60 x 120","gauge":"24","size":"60 x 120","vendor":"BRS","pcs":8,"bundle":"G90, w/s","bundleNum":"4561A","price":35.21,"total":281.68},{"section":"24 Gauge 60 x 120","gauge":"24","size":"60 x 120","vendor":"BRS","pcs":60,"bundle":"G90","bundleNum":"4561B","price":35.21,"total":2112.6},{"section":"24 Gauge 60 x 120","gauge":"24","size":"60 x 120","vendor":"BRS","pcs":84,"bundle":"G90","bundleNum":"4561C","price":35.21,"total":2957.64},{"section":"24 Gauge 60 x 120","gauge":"24","size":"60 x 120","vendor":"MJS","pcs":59,"bundle":"G90","bundleNum":"0083A","price":32.74,"total":1931.66},{"section":"26 Gauge 30\" Coil","gauge":"26","size":"22.25","vendor":"DR","pcs":3455,"bundle":"","bundleNum":"4356","price":0.5775,"total":1995.2625},{"section":"26 Gauge 30\" Coil","gauge":"26","size":"22.25","vendor":"DR","pcs":3041,"bundle":"","bundleNum":"4357","price":0.5775,"total":1756.1775},{"section":"26 Gauge 30\" Coil","gauge":"26","size":"26.25","vendor":"MJS","pcs":2420,"bundle":"","bundleNum":"0476A","price":0.5785,"total":1399.97},{"section":"26 Gauge 30\" Coil","gauge":"26","size":"30","vendor":"DR","pcs":4095,"bundle":"","bundleNum":"4359","price":0.5775,"total":2364.8625},{"section":"26 Gauge 36\" Coil","gauge":"26","size":"36","vendor":"DR","pcs":17430,"bundle":"","bundleNum":"4471","price":0.7172,"total":12500.795999999998},{"section":"26 Gauge 36\" Coil","gauge":"26","size":"36","vendor":"MJS","pcs":17420,"bundle":"","bundleNum":"0995","price":0.7172,"total":12493.624},{"section":"26 Gauge 36\" Coil","gauge":"26","size":"36","vendor":"HMB","pcs":9020,"bundle":"","bundleNum":"4512","price":0.7172,"total":6469.143999999999},{"section":"26 Gauge 36\" Coil","gauge":"26","size":"36","vendor":"MJS","pcs":16580,"bundle":"","bundleNum":"0035","price":0.7172,"total":11891.176},{"section":"26 Gauge 36\" Coil","gauge":"26","size":"36","vendor":"MJS","pcs":14170,"bundle":"","bundleNum":"0053","price":0.7172,"total":10162.724},{"section":"26 Gauge 36\" Coil","gauge":"26","size":"36","vendor":"MJS","pcs":16760,"bundle":"","bundleNum":"0054","price":0.7172,"total":12020.271999999999},{"section":"26 Gauge 36\" Coil","gauge":"26","size":"36","vendor":"MJS","pcs":17400,"bundle":"","bundleNum":"0066","price":0.7172,"total":12479.279999999999},{"section":"26 Gauge 36\" Coil","gauge":"26","size":"36","vendor":"MJS","pcs":14600,"bundle":"","bundleNum":"0067","price":0.7172,"total":10471.119999999999},{"section":"26 Gauge 36\" Coil","gauge":"26","size":"36","vendor":"MJS","pcs":14410,"bundle":"","bundleNum":"0068","price":0.7172,"total":10334.851999999999},{"section":"26 Gauge 36\" Coil","gauge":"26","size":"36","vendor":"HMB","pcs":8070,"bundle":"","bundleNum":"4531","price":0.7172,"total":5787.803999999999},{"section":"26 Gauge 36\" Coil","gauge":"26","size":"36","vendor":"MJS","pcs":15170,"bundle":"","bundleNum":"0090","price":0.7172,"total":10879.923999999999},{"section":"26 Gauge 36\" Coil","gauge":"26","size":"36","vendor":"MJS","pcs":15990,"bundle":"","bundleNum":"0091","price":0.7172,"total":11468.027999999998},{"section":"26 Gauge 36\" Coil","gauge":"26","size":"36","vendor":"MJS","pcs":16120,"bundle":"","bundleNum":"0092","price":0.7172,"total":11561.264},{"section":"26 Gauge 36\" Coil","gauge":"26","size":"36","vendor":"MJS","pcs":17270,"bundle":"","bundleNum":"0112","price":0.0,"total":0.0},{"section":"26 Gauge 36\" Coil","gauge":"26","size":"36","vendor":"MJS","pcs":17550,"bundle":"","bundleNum":"0113","price":0.0,"total":0.0},{"section":"26 Gauge 36\" Coil","gauge":"26","size":"36","vendor":"MJS","pcs":10020,"bundle":"","bundleNum":"0114","price":0.0,"total":0.0},{"section":"26 Gauge 36 x 96","gauge":"26","size":"36 x 96","vendor":"DR","pcs":183,"bundle":"oily","bundleNum":"4470A","price":11.98,"total":2192.34},{"section":"26 Gauge 36 x 96","gauge":"26","size":"36 x 96","vendor":"DR","pcs":30,"bundle":"w/s","bundleNum":"4355A","price":12.07,"total":362.1},{"section":"26 Gauge 36 x 96","gauge":"26","size":"36 x 96","vendor":"MJS","pcs":200,"bundle":"","bundleNum":"0987A","price":12.87,"total":2574.0},{"section":"26 Gauge 36 x 96","gauge":"26","size":"36 x 96","vendor":"MJS","pcs":200,"bundle":"","bundleNum":"0987B","price":12.87,"total":2574.0},{"section":"26 Gauge 36 x 96","gauge":"26","size":"36 x 96","vendor":"MJS","pcs":200,"bundle":"","bundleNum":"0987C","price":12.87,"total":2574.0},{"section":"26 Gauge 36 x 96","gauge":"26","size":"36 x 96","vendor":"MJS","pcs":100,"bundle":"","bundleNum":"0987D","price":12.87,"total":1287.0},{"section":"26 Gauge 36 x 96","gauge":"26","size":"36 x 96","vendor":"MJS","pcs":100,"bundle":"","bundleNum":"0987E","price":12.87,"total":1287.0},{"section":"26 Gauge 36 x 96","gauge":"26","size":"36 x 96","vendor":"MJS","pcs":100,"bundle":"","bundleNum":"0987F","price":12.87,"total":1287.0},{"section":"26 Gauge 36 x 96","gauge":"26","size":"36 x 96","vendor":"MJS","pcs":100,"bundle":"","bundleNum":"0987G","price":12.87,"total":1287.0},{"section":"26 Gauge 36 x 96","gauge":"26","size":"36 x 96","vendor":"MJS","pcs":100,"bundle":"","bundleNum":"0989A","price":12.87,"total":1287.0},{"section":"26 Gauge 36 x 96","gauge":"26","size":"36 x 96","vendor":"MJS","pcs":100,"bundle":"","bundleNum":"0989B","price":12.87,"total":1287.0},{"section":"26 Gauge 36 x 96","gauge":"26","size":"36 x 96","vendor":"MJS","pcs":100,"bundle":"","bundleNum":"0989C","price":12.87,"total":1287.0},{"section":"26 Gauge 36 x 96","gauge":"26","size":"36 x 96","vendor":"MJS","pcs":100,"bundle":"","bundleNum":"0989D","price":12.87,"total":1287.0},{"section":"26 Gauge 36 x 96","gauge":"26","size":"36 x 96","vendor":"MJS","pcs":100,"bundle":"","bundleNum":"0989E","price":12.87,"total":1287.0},{"section":"26 Gauge 36 x 96","gauge":"26","size":"36 x 96","vendor":"MJS","pcs":90,"bundle":"","bundleNum":"0989F","price":12.87,"total":1158.3},{"section":"26 Gauge 36 x 96","gauge":"26","size":"36 x 96","vendor":"MJS","pcs":100,"bundle":"","bundleNum":"0989G","price":12.87,"total":1287.0},{"section":"26 Gauge 36 x 96","gauge":"26","size":"36 x 96","vendor":"MJS","pcs":118,"bundle":"","bundleNum":"0989H","price":12.87,"total":1518.6599999999999},{"section":"26 Gauge 36 x 96","gauge":"26","size":"36 x 96","vendor":"MJS","pcs":100,"bundle":"","bundleNum":"0027A","price":13.07,"total":1307.0},{"section":"26 Gauge 36 x 96","gauge":"26","size":"36 x 96","vendor":"MJS","pcs":109,"bundle":"","bundleNum":"0027B","price":13.07,"total":1424.63},{"section":"26 Gauge 48\" Coil","gauge":"26","size":"48","vendor":"ADV","pcs":17227,"bundle":"G60, Foreign","bundleNum":"4316","price":0.708,"total":12196.715999999999},{"section":"26 Gauge 48\" Coil","gauge":"26","size":"48","vendor":"ADV","pcs":16607,"bundle":"G60, Foreign","bundleNum":"4317","price":0.708,"total":11757.756},{"section":"26 Gauge 48\" Coil","gauge":"26","size":"48","vendor":"ADV","pcs":16715,"bundle":"G60, Foreign","bundleNum":"4319","price":0.708,"total":11834.22},{"section":"26 Gauge 48\" Coil","gauge":"26","size":"48","vendor":"ADV","pcs":16740,"bundle":"G60, Foreign","bundleNum":"4320","price":0.708,"total":11851.92},{"section":"26 Gauge 48\" Coil","gauge":"26","size":"48","vendor":"MJS","pcs":22340,"bundle":"","bundleNum":"0965","price":0.708,"total":15816.72},{"section":"26 Gauge 48\" Coil","gauge":"26","size":"48","vendor":"MJS","pcs":22880,"bundle":"","bundleNum":"0966","price":0.708,"total":16199.039999999999},{"section":"26 Gauge 48\" Coil","gauge":"26","size":"48","vendor":"MJS","pcs":23380,"bundle":"","bundleNum":"0941","price":0.708,"total":16553.04},{"section":"26 Gauge 48\" Coil","gauge":"26","size":"48","vendor":"MJS","pcs":23690,"bundle":"","bundleNum":"0942","price":0.708,"total":16772.52},{"section":"26 Gauge 48\" Coil","gauge":"26","size":"48","vendor":"MJS","pcs":20430,"bundle":"","bundleNum":"0020","price":0.708,"total":14464.439999999999},{"section":"26 Gauge 48\" Coil","gauge":"26","size":"48","vendor":"MJS","pcs":22420,"bundle":"","bundleNum":"0056","price":0.708,"total":15873.359999999999},{"section":"26 Gauge 48\" Coil","gauge":"26","size":"48","vendor":"MJS","pcs":21480,"bundle":"","bundleNum":"0060","price":0.708,"total":15207.839999999998},{"section":"26 Gauge 48\" Coil","gauge":"26","size":"48","vendor":"OS","pcs":21980,"bundle":"","bundleNum":"4523","price":0.708,"total":15561.839999999998},{"section":"26 Gauge 48\" Coil","gauge":"26","size":"48","vendor":"MJS","pcs":22110,"bundle":"","bundleNum":"0069","price":0.708,"total":15653.88},{"section":"26 Gauge 48\" Coil","gauge":"26","size":"48","vendor":"MJS","pcs":22030,"bundle":"","bundleNum":"0070","price":0.708,"total":15597.24},{"section":"26 Gauge 48\" Coil","gauge":"26","size":"48","vendor":"OS","pcs":22050,"bundle":"","bundleNum":"4524","price":0.708,"total":15611.4},{"section":"26 Gauge 48\" Coil","gauge":"26","size":"48","vendor":"OS","pcs":21960,"bundle":"","bundleNum":"4525","price":0.708,"total":15547.679999999998},{"section":"26 Gauge 48\" Coil","gauge":"26","size":"48","vendor":"MJS","pcs":22360,"bundle":"","bundleNum":"0077","price":0.708,"total":15830.88},{"section":"26 Gauge 48\" Coil","gauge":"26","size":"48","vendor":"MJS","pcs":22610,"bundle":"","bundleNum":"0078","price":0.708,"total":16007.88},{"section":"26 Gauge 48\" Coil","gauge":"26","size":"48","vendor":"MJS","pcs":22350,"bundle":"","bundleNum":"0079","price":0.708,"total":15823.8},{"section":"26 Gauge 48\" Coil","gauge":"26","size":"48","vendor":"MJS","pcs":22330,"bundle":"","bundleNum":"0080","price":0.708,"total":15809.64},{"section":"26 Gauge 48\" Coil","gauge":"26","size":"48","vendor":"MJS","pcs":22300,"bundle":"","bundleNum":"0088","price":0.708,"total":15788.4},{"section":"26 Gauge 48\" Coil","gauge":"26","size":"48","vendor":"MJS","pcs":22490,"bundle":"","bundleNum":"0089","price":0.708,"total":15922.919999999998},{"section":"26 Gauge 48\" Coil","gauge":"26","size":"48","vendor":"MJS","pcs":21900,"bundle":"","bundleNum":"0098","price":0.0,"total":0.0},{"section":"26 Gauge 48\" Coil","gauge":"26","size":"48","vendor":"MJS","pcs":22370,"bundle":"","bundleNum":"0099","price":0.0,"total":0.0},{"section":"26 Gauge 48\" Coil","gauge":"26","size":"48","vendor":"MJS","pcs":16020,"bundle":"G90","bundleNum":"0002","price":0.708,"total":11342.16},{"section":"26 Gauge 48 x 96","gauge":"26","size":"48 x 96","vendor":"MJS","pcs":100,"bundle":"","bundleNum":"0055B","price":17.76,"total":1776.0000000000002},{"section":"26 Gauge 48 x 96","gauge":"26","size":"48 x 96","vendor":"MJS","pcs":100,"bundle":"","bundleNum":"0055C","price":17.76,"total":1776.0000000000002},{"section":"26 Gauge 48 x 96","gauge":"26","size":"48 x 96","vendor":"MJS","pcs":100,"bundle":"","bundleNum":"0055D","price":17.76,"total":1776.0000000000002},{"section":"26 Gauge 48 x 96","gauge":"26","size":"48 x 96","vendor":"MJS","pcs":100,"bundle":"","bundleNum":"0055E","price":17.76,"total":1776.0000000000002},{"section":"26 Gauge 48 x 96","gauge":"26","size":"48 x 96","vendor":"MJS","pcs":100,"bundle":"","bundleNum":"0055F","price":17.76,"total":1776.0000000000002},{"section":"26 Gauge 48 x 96","gauge":"26","size":"48 x 96","vendor":"MJS","pcs":100,"bundle":"","bundleNum":"0055G","price":17.76,"total":1776.0000000000002},{"section":"26 Gauge 48 x 96","gauge":"26","size":"48 x 96","vendor":"MJS","pcs":100,"bundle":"","bundleNum":"0055H","price":17.76,"total":1776.0000000000002},{"section":"26 Gauge 48 x 96","gauge":"26","size":"48 x 96","vendor":"MJS","pcs":100,"bundle":"","bundleNum":"0055I","price":17.76,"total":1776.0000000000002},{"section":"26 Gauge 48 x 96","gauge":"26","size":"48 x 96","vendor":"MJS","pcs":100,"bundle":"","bundleNum":"0059A","price":17.76,"total":1776.0000000000002},{"section":"26 Gauge 48 x 96","gauge":"26","size":"48 x 96","vendor":"MJS","pcs":100,"bundle":"","bundleNum":"0059B","price":17.76,"total":1776.0000000000002},{"section":"26 Gauge 48 x 96","gauge":"26","size":"48 x 96","vendor":"MJS","pcs":100,"bundle":"","bundleNum":"0059C","price":17.76,"total":1776.0000000000002},{"section":"26 Gauge 48 x 96","gauge":"26","size":"48 x 96","vendor":"MJS","pcs":100,"bundle":"","bundleNum":"0059D","price":17.76,"total":1776.0000000000002},{"section":"26 Gauge 48 x 96","gauge":"26","size":"48 x 96","vendor":"MJS","pcs":135,"bundle":"","bundleNum":"0059I","price":17.76,"total":2397.6000000000004},{"section":"26 Gauge 48 x 96","gauge":"26","size":"48 x 96","vendor":"ADV","pcs":100,"bundle":"","bundleNum":"4310A","price":17.99,"total":1798.9999999999998},{"section":"26 Gauge 48 x 96","gauge":"26","size":"48 x 96","vendor":"ADV","pcs":100,"bundle":"","bundleNum":"4310B","price":17.99,"total":1798.9999999999998},{"section":"26 Gauge 48 x 96","gauge":"26","size":"48 x 96","vendor":"ADV","pcs":100,"bundle":"","bundleNum":"4310C","price":17.99,"total":1798.9999999999998},{"section":"26 Gauge 48 x 120","gauge":"26","size":"48 x 120","vendor":"MJS","pcs":30,"bundle":"","bundleNum":"0911D","price":19.08,"total":572.4},{"section":"26 Gauge 48 x 120","gauge":"26","size":"48 x 120","vendor":"MJS","pcs":18,"bundle":"","bundleNum":"0911E","price":19.08,"total":343.43999999999994},{"section":"26 Gauge 48 x 120","gauge":"26","size":"48 x 120","vendor":"MJS","pcs":4,"bundle":"","bundleNum":"0926C","price":21.25,"total":85.0},{"section":"26 Gauge 48 x 120","gauge":"26","size":"48 x 120","vendor":"MJS","pcs":75,"bundle":"","bundleNum":"0918A","price":21.41,"total":1605.75},{"section":"26 Gauge 60\" Coil","gauge":"26","size":"60","vendor":"MJS","pcs":8850,"bundle":"","bundleNum":"0874","price":0.6942,"total":6143.67},{"section":"26 Gauge 60\" Coil","gauge":"26","size":"60","vendor":"MJS","pcs":8400,"bundle":"","bundleNum":"0923","price":0.6942,"total":5831.280000000001},{"section":"26 Gauge 60\" Coil","gauge":"26","size":"60","vendor":"MJS","pcs":9150,"bundle":"","bundleNum":"0930","price":0.6942,"total":6351.93},{"section":"26 Gauge 60\" Coil","gauge":"26","size":"60","vendor":"MJS","pcs":9270,"bundle":"","bundleNum":"0931","price":0.6942,"total":6435.234},{"section":"26 Gauge 60\" Coil","gauge":"26","size":"60","vendor":"MJS","pcs":9050,"bundle":"","bundleNum":"0984","price":0.6942,"total":6282.51},{"section":"26 Gauge 60\" Coil","gauge":"26","size":"60","vendor":"MJS","pcs":8790,"bundle":"","bundleNum":"0988","price":0.6942,"total":6102.018},{"section":"26 Gauge 60\" Coil","gauge":"26","size":"60","vendor":"MJS","pcs":9160,"bundle":"","bundleNum":"0033","price":0.6942,"total":6358.872},{"section":"26 Gauge 60\" Coil","gauge":"26","size":"60","vendor":"MJS","pcs":9130,"bundle":"","bundleNum":"0041","price":0.6942,"total":6338.046},{"section":"26 Gauge 60\" Coil","gauge":"26","size":"60","vendor":"MJS","pcs":9130,"bundle":"","bundleNum":"0042","price":0.6942,"total":6338.046},{"section":"26 Gauge 60\" Coil","gauge":"26","size":"60","vendor":"MJS","pcs":9200,"bundle":"","bundleNum":"0046","price":0.6942,"total":6386.64},{"section":"26 Gauge 60\" Coil","gauge":"26","size":"60","vendor":"MJS","pcs":8240,"bundle":"","bundleNum":"0047","price":0.6942,"total":5720.2080000000005},{"section":"26 Gauge 60\" Coil","gauge":"26","size":"60","vendor":"MJS","pcs":9340,"bundle":"","bundleNum":"0063","price":0.6942,"total":6483.828},{"section":"26 Gauge 60\" Coil","gauge":"26","size":"60","vendor":"MJS","pcs":8440,"bundle":"","bundleNum":"0064","price":0.6942,"total":5859.048000000001},{"section":"26 Gauge 60\" Coil","gauge":"26","size":"60","vendor":"MJS","pcs":9880,"bundle":"","bundleNum":"0065","price":0.6942,"total":6858.696000000001},{"section":"26 Gauge 60\" Coil","gauge":"26","size":"60","vendor":"MJS","pcs":22980,"bundle":"","bundleNum":"0110","price":0.0,"total":0.0},{"section":"26 Gauge 60\" Coil","gauge":"26","size":"60","vendor":"MJS","pcs":22810,"bundle":"","bundleNum":"0111","price":0.0,"total":0.0},{"section":"26 Gauge 60\" Coil","gauge":"26","size":"60","vendor":"OS","pcs":9130,"bundle":"G90","bundleNum":"4442","price":0.7828,"total":7146.964000000001},{"section":"26 Gauge 60\" Coil","gauge":"26","size":"60","vendor":"OS","pcs":9110,"bundle":"G90","bundleNum":"4445","price":0.7828,"total":7131.308000000001},{"section":"26 Gauge 60\" Coil","gauge":"26","size":"60","vendor":"MJS","pcs":8920,"bundle":"G90","bundleNum":"0968","price":0.7828,"total":6982.576},{"section":"26 Gauge 60\" Coil","gauge":"26","size":"60","vendor":"MJS","pcs":9130,"bundle":"G90","bundleNum":"0972","price":0.7828,"total":7146.964000000001},{"section":"26 Gauge 60\" Coil","gauge":"26","size":"60","vendor":"MJS","pcs":9300,"bundle":"G90","bundleNum":"0008","price":0.7828,"total":7280.040000000001},{"section":"26 Gauge 60\" Coil","gauge":"26","size":"60","vendor":"MJS","pcs":9400,"bundle":"G90","bundleNum":"0021","price":0.7828,"total":7358.320000000001},{"section":"26 Gauge 60\" Coil","gauge":"26","size":"60","vendor":"MJS","pcs":9360,"bundle":"G90","bundleNum":"0022","price":0.7828,"total":7327.008000000001},{"section":"26 Gauge 60\" Coil","gauge":"26","size":"60","vendor":"MJS","pcs":9330,"bundle":"G90","bundleNum":"0023","price":0.7828,"total":7303.524},{"section":"26 Gauge 60\" Coil","gauge":"26","size":"60","vendor":"MJS","pcs":9320,"bundle":"G90","bundleNum":"0024","price":0.7828,"total":7295.696000000001},{"section":"26 Gauge 60\" Coil","gauge":"26","size":"60","vendor":"MJS","pcs":9320,"bundle":"G90","bundleNum":"0025","price":0.7828,"total":7295.696000000001},{"section":"26 Gauge 60\" Coil","gauge":"26","size":"60","vendor":"MJS","pcs":9610,"bundle":"G90","bundleNum":"0031","price":0.7828,"total":7522.7080000000005},{"section":"26 Gauge 60\" Coil","gauge":"26","size":"60","vendor":"MJS","pcs":9330,"bundle":"G90","bundleNum":"0048","price":0.7828,"total":7303.524},{"section":"26 Gauge 60\" Coil","gauge":"26","size":"60","vendor":"MJS","pcs":9400,"bundle":"G90","bundleNum":"0049","price":0.7828,"total":7358.320000000001},{"section":"26 Gauge 60\" Coil","gauge":"26","size":"60","vendor":"MJS","pcs":9330,"bundle":"G90","bundleNum":"0050","price":0.7828,"total":7303.524},{"section":"26 Gauge 60\" Coil","gauge":"26","size":"60","vendor":"MJS","pcs":7850,"bundle":"G90","bundleNum":"0106","price":0.0,"total":0.0},{"section":"26 Gauge 60\" Coil","gauge":"26","size":"60","vendor":"MJS","pcs":9350,"bundle":"G90","bundleNum":"0107","price":0.0,"total":0.0},{"section":"26 Gauge 60\" Coil","gauge":"26","size":"60","vendor":"MJS","pcs":9410,"bundle":"G90","bundleNum":"0108","price":0.0,"total":0.0},{"section":"26 Gauge 60\" Coil","gauge":"26","size":"60","vendor":"MJS","pcs":9410,"bundle":"G90","bundleNum":"0109","price":0.0,"total":0.0},{"section":"26 Gauge 60\" Coil","gauge":"26","size":"60","vendor":"MJS","pcs":8800,"bundle":"G90","bundleNum":"0115","price":0.0,"total":0.0},{"section":"26 Gauge 60\" Coil","gauge":"26","size":"60","vendor":"MJS","pcs":9400,"bundle":"G90","bundleNum":"0116","price":0.0,"total":0.0},{"section":"26 Gauge 60\" Coil","gauge":"26","size":"60","vendor":"MJS","pcs":9420,"bundle":"G90","bundleNum":"0117","price":0.0,"total":0.0},{"section":"26 Gauge 60\" Coil","gauge":"26","size":"60","vendor":"MJS","pcs":9600,"bundle":"G90","bundleNum":"0118","price":0.0,"total":0.0},{"section":"26 Gauge 60\" Coil","gauge":"26","size":"60","vendor":"MJS","pcs":9610,"bundle":"G90","bundleNum":"0119","price":0.0,"total":0.0},{"section":"26 Gauge 60 x 120","gauge":"26","size":"60 x 96","vendor":"MJS","pcs":148,"bundle":"","bundleNum":"0032A","price":22.31,"total":3301.8799999999997},{"section":"26 Gauge 60 x 120","gauge":"26","size":"60 x 120","vendor":"MJS","pcs":93,"bundle":"","bundleNum":"0877B","price":25.61,"total":2381.73},{"section":"26 Gauge 60 x 120","gauge":"26","size":"60 x 120","vendor":"MJS","pcs":100,"bundle":"","bundleNum":"0982A","price":27.59,"total":2759.0},{"section":"26 Gauge 60 x 120","gauge":"26","size":"60 x 120","vendor":"MJS","pcs":39,"bundle":"","bundleNum":"0982B","price":27.59,"total":1076.01},{"section":"26 Gauge 60 x 120","gauge":"26","size":"60 x 120","vendor":"MJS","pcs":60,"bundle":"G90","bundleNum":"0825A","price":28.24,"total":1694.3999999999999},{"section":"26 Gauge 60 x 120","gauge":"26","size":"60 x 120","vendor":"MJS","pcs":66,"bundle":"G90","bundleNum":"0969C","price":28.24,"total":1863.84},{"section":"28 Gauge 36\" Coil","gauge":"28","size":"36","vendor":"MJS","pcs":11350,"bundle":"","bundleNum":"0990","price":0.7195,"total":8166.325000000001},{"section":"28 Gauge 36\" Coil","gauge":"28","size":"36","vendor":"MJS","pcs":17340,"bundle":"","bundleNum":"0991","price":0.7195,"total":12476.130000000001},{"section":"28 Gauge 36\" Coil","gauge":"28","size":"36","vendor":"HMB","pcs":13640,"bundle":"","bundleNum":"4497","price":0.7195,"total":9813.98},{"section":"28 Gauge 36\" Coil","gauge":"28","size":"36","vendor":"HMB","pcs":7790,"bundle":"0.0125, 30ga.","bundleNum":"4498","price":0.7195,"total":5604.905000000001},{"section":"28 Gauge 36\" Coil","gauge":"28","size":"36","vendor":"MJS","pcs":16450,"bundle":"","bundleNum":"0013","price":0.7195,"total":11835.775},{"section":"28 Gauge 36\" Coil","gauge":"28","size":"36","vendor":"MJS","pcs":17600,"bundle":"","bundleNum":"0018","price":0.7195,"total":12663.2},{"section":"28 Gauge 36 x 96","gauge":"28","size":"36 x 96","vendor":"HMB","pcs":47,"bundle":"","bundleNum":"4496B","price":9.08,"total":426.76},{"section":"28 Gauge 36 x 96","gauge":"28","size":"36 x 96","vendor":"GS","pcs":200,"bundle":"","bundleNum":"4547B","price":11.85,"total":2370.0},{"section":"28 Gauge 36 x 96","gauge":"28","size":"36 x 96","vendor":"GS","pcs":200,"bundle":"","bundleNum":"4547C","price":11.85,"total":2370.0},{"section":"28 Gauge 36 x 96","gauge":"28","size":"36 x 96","vendor":"GS","pcs":200,"bundle":"","bundleNum":"4547D","price":11.85,"total":2370.0},{"section":"28 Gauge 36 x 96","gauge":"28","size":"36 x 96","vendor":"GS","pcs":200,"bundle":"","bundleNum":"4547E","price":11.85,"total":2370.0},{"section":"28 Gauge 36 x 96","gauge":"28","size":"36 x 96","vendor":"GS","pcs":200,"bundle":"","bundleNum":"4548A","price":11.85,"total":2370.0},{"section":"28 Gauge 36 x 96","gauge":"28","size":"36 x 96","vendor":"GS","pcs":200,"bundle":"","bundleNum":"4548B","price":11.85,"total":2370.0},{"section":"28 Gauge 36 x 96","gauge":"28","size":"36 x 96","vendor":"GS","pcs":200,"bundle":"","bundleNum":"4548C","price":11.85,"total":2370.0},{"section":"28 Gauge 36 x 96","gauge":"28","size":"36 x 96","vendor":"GS","pcs":196,"bundle":"","bundleNum":"4548D","price":11.85,"total":2322.6},{"section":"28 Gauge 36 x 96","gauge":"28","size":"36 x 96","vendor":"GS","pcs":80,"bundle":"w/s","bundleNum":"4548E","price":11.85,"total":948.0},{"section":"28 Gauge 48\" Coil","gauge":"28","size":"41.6","vendor":"HMB","pcs":14130,"bundle":"","bundleNum":"4344","price":0.4695,"total":6634.035},{"section":"28 Gauge 48\" Coil","gauge":"28","size":"48","vendor":"ADV","pcs":19313,"bundle":"G60, Foreign","bundleNum":"4397","price":0.6895,"total":13316.3135},{"section":"28 Gauge 48\" Coil","gauge":"28","size":"48","vendor":"ADV","pcs":19456,"bundle":"G60, Foreign","bundleNum":"4527","price":0.685,"total":13327.36},{"section":"28 Gauge 48 x 96","gauge":"28","size":"48 x 96","vendor":"ADV","pcs":75,"bundle":"w/s","bundleNum":"4398A","price":13.8,"total":1035.0},{"section":"28 Gauge 48 x 96","gauge":"28","size":"48 x 96","vendor":"ADV","pcs":200,"bundle":"","bundleNum":"4396D","price":13.89,"total":2778.0},{"section":"28 Gauge 48 x 96","gauge":"28","size":"48 x 96","vendor":"ADV","pcs":100,"bundle":"","bundleNum":"4528A","price":11.3,"total":1130.0},{"section":"28 Gauge 48 x 96","gauge":"28","size":"48 x 96","vendor":"ADV","pcs":200,"bundle":"","bundleNum":"4528C","price":11.3,"total":2260.0},{"section":"28 Gauge 48 x 96","gauge":"28","size":"48 x 96","vendor":"ADV","pcs":186,"bundle":"","bundleNum":"4528D","price":11.3,"total":2101.8},{"section":"28 Gauge 48 x 96","gauge":"28","size":"48 x 96","vendor":"ADV","pcs":50,"bundle":"9","bundleNum":"4528E","price":11.3,"total":565.0},{"section":"28 Gauge 60\" Coil","gauge":"28","size":"60","vendor":"MJS","pcs":8950,"bundle":"","bundleNum":"4545","price":0.813,"total":7276.349999999999},{"section":"28 Gauge 60\" Coil","gauge":"28","size":"60","vendor":"MJS","pcs":10600,"bundle":"","bundleNum":"4571","price":0.851,"total":9020.6},{"section":"28 Gauge 60\" Coil","gauge":"28","size":"60","vendor":"MJS","pcs":12560,"bundle":"","bundleNum":"4572","price":0.851,"total":10688.56},{"section":"28 Gauge 60 x 96","gauge":"28","size":"60 x 96","vendor":"HMB","pcs":40,"bundle":"","bundleNum":"4035A","price":12.26,"total":490.4},{"section":"28 Gauge Panning","gauge":"28","size":"17 x 32","vendor":"DR","pcs":400,"bundle":"(Pre-boxed)","bundleNum":"4265A","price":1.33,"total":532.0},{"section":"28 Gauge Panning","gauge":"28","size":"17 x 32","vendor":"DR","pcs":150,"bundle":"","bundleNum":"4265B","price":1.33,"total":199.5},{"section":"Slit Coils","gauge":"18","size":"2.5","vendor":"SM","pcs":650,"bundle":"2, S/S","bundleNum":"3560","price":1.8,"total":1170.0},{"section":"Slit Coils","gauge":"18","size":"2.5","vendor":"BS","pcs":1500,"bundle":"2","bundleNum":"4518","price":0.6995,"total":1049.25},{"section":"Slit Coils","gauge":"20","size":"1","vendor":"BS","pcs":1208,"bundle":"11","bundleNum":"4409","price":0.65,"total":785.2},{"section":"Slit Coils","gauge":"20","size":"3","vendor":"HMB","pcs":1415,"bundle":"1","bundleNum":"3930E","price":0.44,"total":622.6},{"section":"Slit Coils","gauge":"20","size":"3.625","vendor":"BRS","pcs":1010,"bundle":"1","bundleNum":"4098E","price":0.44,"total":444.4},{"section":"Slit Coils","gauge":"20","size":"6","vendor":"HMB","pcs":2865,"bundle":"1","bundleNum":"3930B","price":0.44,"total":1260.6},{"section":"Slit Coils","gauge":"28","size":"17","vendor":"DR","pcs":4010,"bundle":"1","bundleNum":"4264","price":0.575,"total":2305.75},{"section":"Slit Coils","gauge":"28","size":"17","vendor":"DR","pcs":4018,"bundle":"1","bundleNum":"4267","price":0.575,"total":2310.35},{"section":"Slit Coils","gauge":"24","size":"5","vendor":"BS","pcs":680,"bundle":"1","bundleNum":"4517","price":0.6995,"total":475.66},{"section":"Slit Coils","gauge":"24","size":"5.394","vendor":"MJS","pcs":3760,"bundle":"2, G90","bundleNum":"0103","price":0.0,"total":0.0},{"section":"Slit Coils","gauge":"24","size":"5.394","vendor":"MJS","pcs":3740,"bundle":"2, G90","bundleNum":"0104","price":0.0,"total":0.0},{"section":"Slit Coils","gauge":"24","size":"5.394","vendor":"MJS","pcs":3700,"bundle":"2, G90","bundleNum":"0105","price":0.0,"total":0.0},{"section":"Slit Coils","gauge":"24","size":"5.394","vendor":"MJS","pcs":3840,"bundle":"2, GVNL","bundleNum":"4466","price":0.7455,"total":2862.7200000000003},{"section":"Slit Coils","gauge":"24","size":"5.394","vendor":"APC","pcs":3593,"bundle":"3, Perf","bundleNum":"4294","price":1.22,"total":4383.46},{"section":"Slit Coils","gauge":"24","size":"5.394","vendor":"APC","pcs":3788,"bundle":"3, Perf","bundleNum":"4297","price":1.22,"total":4621.36},{"section":"Slit Coils","gauge":"26","size":"5.394","vendor":"MJS","pcs":1980,"bundle":"1","bundleNum":"0668","price":0.7385,"total":1462.23},{"section":"Slit Coils","gauge":"26","size":"5.394","vendor":"MJS","pcs":3890,"bundle":"2","bundleNum":"0880","price":0.647,"total":2516.83},{"section":"Slit Coils","gauge":"26","size":"5.394","vendor":"MJS","pcs":3930,"bundle":"2","bundleNum":"0883","price":0.647,"total":2542.71},{"section":"Slit Coils","gauge":"26","size":"5.394","vendor":"MJS","pcs":1974,"bundle":"2, G90","bundleNum":"4473","price":0.7575,"total":1495.3049999999998},{"section":"Slit Coils","gauge":"26","size":"5.394","vendor":"MJS","pcs":4210,"bundle":"2, G90","bundleNum":"4476","price":0.7575,"total":3189.075},{"section":"Slit Coils","gauge":"26","size":"5.394","vendor":"MJS","pcs":2715,"bundle":"3, G90","bundleNum":"4477","price":0.7575,"total":2056.6124999999997},{"section":"Slit Coils","gauge":"26","size":"5.394","vendor":"MJS","pcs":4040,"bundle":"2, G90","bundleNum":"0998","price":0.7935,"total":3205.74},{"section":"Slit Coils","gauge":"26","size":"5.394","vendor":"MJS","pcs":3630,"bundle":"2, G90","bundleNum":"4538","price":0.875,"total":3176.25},{"section":"Slit Coils","gauge":"26","size":"5.394","vendor":"MJS","pcs":3650,"bundle":"2, G90","bundleNum":"4539","price":0.875,"total":3193.75},{"section":"Slit Coils","gauge":"26","size":"5.394","vendor":"MJS","pcs":3970,"bundle":"2, G90","bundleNum":"4540","price":0.875,"total":3473.75},{"section":"Slit Coils","gauge":"26","size":"5.394","vendor":"MJS","pcs":4010,"bundle":"2, G90","bundleNum":"4541","price":0.875,"total":3508.75},{"section":"Slit Coils","gauge":"26","size":"5.394","vendor":"MJS","pcs":4010,"bundle":"2, G90","bundleNum":"4542","price":0.875,"total":3508.75},{"section":"Slit Coils","gauge":"26","size":"5.394","vendor":"MJS","pcs":3990,"bundle":"2, G90","bundleNum":"4543","price":0.875,"total":3491.25},{"section":"Slit Coils","gauge":"26","size":"5.394","vendor":"MJS","pcs":3990,"bundle":"2, G90","bundleNum":"4544","price":0.875,"total":3491.25}],"slipDrive":[{"gauge":"26","size":"2.115","vendor":"2020","coils":9,"bundle":"4227D","weight":4660.0,"price":0.4495,"total":2094.67},{"gauge":"26","size":"2.115","vendor":"DR","coils":5,"bundle":"4402","weight":3502.0,"price":0.65,"total":2276.3},{"gauge":"26","size":"2.115","vendor":"DR","coils":5,"bundle":"4403","weight":3528.0,"price":0.65,"total":2293.2000000000003},{"gauge":"26","size":"2.115","vendor":"DR","coils":2,"bundle":"4468","weight":2010.0,"price":0.65,"total":1306.5},{"gauge":"26","size":"2.115","vendor":"DR","coils":2,"bundle":"4469","weight":1960.0,"price":0.65,"total":1274.0},{"gauge":"26","size":"3.656","vendor":"2020","coils":4,"bundle":"4227C","weight":3575.0,"price":0.4195,"total":1499.7124999999999},{"gauge":"28","size":"2.115","vendor":"DR","coils":2,"bundle":"4268","weight":978.0,"price":0.575,"total":562.3499999999999},{"gauge":"28","size":"2.115","vendor":"DR","coils":2,"bundle":"4269","weight":982.0,"price":0.575,"total":564.65},{"gauge":"28","size":"2.115","vendor":"DR","coils":2,"bundle":"4270","weight":984.0,"price":0.575,"total":565.8},{"gauge":"28","size":"2.115","vendor":"DR","coils":1,"bundle":"4321","weight":550.0,"price":0.5775,"total":317.625},{"gauge":"28","size":"2.115","vendor":"DR","coils":6,"bundle":"4327","weight":4710.0,"price":0.5775,"total":2720.025},{"gauge":"28","size":"2.115","vendor":"DR","coils":8,"bundle":"4446","weight":4530.0,"price":0.5575,"total":2525.475},{"gauge":"28","size":"2.115","vendor":"DR","coils":8,"bundle":"4447","weight":4525.0,"price":0.5575,"total":2522.6875},{"gauge":"28","size":"2.115","vendor":"DR","coils":8,"bundle":"4448","weight":3540.0,"price":0.5575,"total":1973.55},{"gauge":"28","size":"2.115","vendor":"DR","coils":7,"bundle":"4449","weight":3100.0,"price":0.5575,"total":1728.25},{"gauge":"28","size":"2.115","vendor":"DR","coils":1,"bundle":"4450","weight":430.0,"price":0.5575,"total":239.725},{"gauge":"28","size":"2.115","vendor":"DR","coils":4,"bundle":"4549","weight":2440.0,"price":0.65,"total":1586.0},{"gauge":"28","size":"2.115","vendor":"DR","coils":5,"bundle":"4550","weight":3092.0,"price":0.65,"total":2009.8000000000002},{"gauge":"28","size":"2.115","vendor":"DR","coils":5,"bundle":"4551","weight":3084.0,"price":0.65,"total":2004.6000000000001},{"gauge":"28","size":"2.115","vendor":"DR","coils":5,"bundle":"4552","weight":3100.0,"price":0.65,"total":2015.0},{"gauge":"28","size":"3.656","vendor":"DR","coils":1,"bundle":"4329","weight":890.0,"price":0.5775,"total":513.975},{"gauge":"28","size":"3.656","vendor":"DR","coils":4,"bundle":"4553","weight":4208.0,"price":0.65,"total":2735.2000000000003},{"gauge":"28","size":"3.656","vendor":"DR","coils":4,"bundle":"4554","weight":4214.0,"price":0.65,"total":2739.1},{"gauge":"28","size":"3.656","vendor":"DR","coils":4,"bundle":"4555","weight":4246.0,"price":0.65,"total":2759.9},{"gauge":"28","size":"3.656","vendor":"DR","coils":3,"bundle":"4556","weight":3182.0,"price":0.65,"total":2068.3},{"gauge":"28","size":"3.656","vendor":"DR","coils":4,"bundle":"4557","weight":4254.0,"price":0.65,"total":2765.1},{"gauge":"28","size":"3.656","vendor":"DR","coils":3,"bundle":"4558","weight":3142.0,"price":0.65,"total":2042.3000000000002},{"gauge":"28","size":"3.656","vendor":"DR","coils":4,"bundle":"4559","weight":4236.0,"price":0.65,"total":2753.4},{"gauge":"28","size":"3.656","vendor":"DR","coils":1,"bundle":"4560","weight":1056.0,"price":0.65,"total":686.4}],"alumStain":[{"type":"ALUM","gauge":"0.125","size":"48 x 96","vendor":"PHX","pcs":2,"desc":"3003 H-14","bundle":"on top","received":"Pre-Ashlee","pricePerLb":0,"priceEa":150.0,"total":300.0},{"type":"ALUM","gauge":"0.02","size":"48 x 120","vendor":"HS","pcs":11,"desc":"(8 damaged) 3003 H-14","bundle":"2062","received":"2021-09-21 00:00:00","pricePerLb":0,"priceEa":37.25,"total":409.75},{"type":"ALUM","gauge":"0.032","size":"48 x 120","vendor":"PHX","pcs":27,"desc":"3003 H-14","bundle":"4529","received":"2026-06-02 00:00:00","pricePerLb":5.15,"priceEa":93.73,"total":2530.71},{"type":"ALUM","gauge":"0.04","size":"48 x 120","vendor":"HS","pcs":3,"desc":"3003 H-14","bundle":"4144","received":"2025-09-30 00:00:00","pricePerLb":2.95,"priceEa":67.26,"total":201.78000000000003},{"type":"ALUM","gauge":"0.063","size":"48 x 120","vendor":"PHX","pcs":24,"desc":"3003 H-14","bundle":"3198","received":"2023-10-31 00:00:00","pricePerLb":2.35,"priceEa":84.37,"total":2024.88},{"type":"ALUM","gauge":"0.063","size":"48 x 120","vendor":"PHX","pcs":15,"desc":"3003 H-14","bundle":"3206","received":"2023-11-02 00:00:00","pricePerLb":2.35,"priceEa":84.37,"total":1265.5500000000002},{"type":"Alum Diamond","gauge":"1/8\"","size":"48 x 96","vendor":"HS","pcs":6,"desc":"3003 H22","bundle":"4075","received":"2025-08-08 00:00:00","pricePerLb":3.65,"priceEa":216.445,"total":1298.67},{"type":"Alum Diamond","gauge":"1/16\"","size":"48 x 96","vendor":"HS","pcs":12,"desc":"3003 H22","bundle":"4519","received":"2026-05-21 00:00:00","pricePerLb":4.5,"priceEa":134.7,"total":1616.3999999999999},{"type":"PERF","gauge":"22","size":"60 x 120","vendor":"MJS","pcs":20,"desc":"Perf, 3/32 on 3/16","bundle":"4276A","received":"2026-01-08 00:00:00","pricePerLb":0,"priceEa":54.06,"total":1081.2},{"type":"STAINLESS","gauge":"16","size":"48 x 120","vendor":"HS","pcs":15,"desc":"304 2B","bundle":"4141","received":"2025-09-30 00:00:00","pricePerLb":1.7,"priceEa":170.0,"total":2550.0},{"type":"STAINLESS","gauge":"16","size":"60 x 120","vendor":"HS","pcs":12,"desc":"304 2B","bundle":"3324","received":"2024-01-16 00:00:00","pricePerLb":1.65,"priceEa":206.25,"total":2475.0},{"type":"STAINLESS","gauge":"16","size":"60 x 120","vendor":"HS","pcs":19,"desc":"304 2B","bundle":"3724","received":"2024-11-06 00:00:00","pricePerLb":1.63,"priceEa":203.75,"total":3871.25},{"type":"STAINLESS","gauge":"18","size":"48 x 120","vendor":"HS","pcs":21,"desc":"304 2B","bundle":"4142","received":"2025-09-30 00:00:00","pricePerLb":1.7,"priceEa":137.02,"total":2877.42},{"type":"STAINLESS","gauge":"20","size":"48 x 120","vendor":"HS","pcs":12,"desc":"304 2B","bundle":"4410","received":"2026-03-19 00:00:00","pricePerLb":1.85,"priceEa":110.26,"total":1323.1200000000001},{"type":"STAINLESS","gauge":"22","size":"48 x 120","vendor":"SS","pcs":27,"desc":"304 2B","bundle":"2987","received":"2023-07-11 00:00:00","pricePerLb":1.65,"priceEa":81.18,"total":2191.86},{"type":"STAINLESS","gauge":"22","size":"60 x 120","vendor":"HS","pcs":27,"desc":"304 2B","bundle":"3242","received":"2023-11-10 00:00:00","pricePerLb":1.65,"priceEa":101.64,"total":2744.28},{"type":"STAINLESS","gauge":"24","size":"48 x 96","vendor":"HS","pcs":30,"desc":"304 2B","bundle":"4262","received":"2025-12-11 00:00:00","pricePerLb":1.85,"priceEa":59.2,"total":1776.0},{"type":"STAINLESS","gauge":"24","size":"48 x 120","vendor":"HS","pcs":58,"desc":"304 2B","bundle":"3983","received":"2025-05-14 00:00:00","pricePerLb":1.95,"priceEa":76.986,"total":4465.188},{"type":"STAINLESS","gauge":"26","size":"48 x 120","vendor":"HS","pcs":13,"desc":"304 2B","bundle":"4077","received":"2025-08-11 00:00:00","pricePerLb":1.98,"priceEa":59.202,"total":769.626},{"type":"STAINLESS","gauge":"26","size":"48 x 120","vendor":"HS","pcs":25,"desc":"304 2B","bundle":"4352","received":"2026-02-24 00:00:00","pricePerLb":1.95,"priceEa":58.305,"total":1457.625},{"type":"STAINLESS","gauge":"22","size":"60 x 120","vendor":"ASS","pcs":30,"desc":"","bundle":"3552","received":"2024-08-15 00:00:00","pricePerLb":0.5703,"priceEa":40.1,"total":1203.0},{"type":"STAINLESS","gauge":"24","size":"48 x 96","vendor":"MJS","pcs":49,"desc":"","bundle":"4491","received":"2026-04-16 00:00:00","pricePerLb":0.6351,"priceEa":23.5,"total":1151.5},{"type":"STAINLESS","gauge":"24","size":"48 x 120","vendor":"MJS","pcs":64,"desc":"","bundle":"4490","received":"2026-04-16 00:00:00","pricePerLb":0.6351,"priceEa":29.35,"total":1878.4},{"type":"STAINLESS","gauge":"24","size":"60 x 120","vendor":"MJS","pcs":50,"desc":"","bundle":"4489","received":"2026-04-16 00:00:00","pricePerLb":0.6351,"priceEa":36.7,"total":1835.0000000000002}],"elgen":[{"desc":"10' H Flange- Punched","vendor":"Elgen","pcs":120,"bundle":"1 bundles, 0 pieces","packaging":"750'/bundle/75pcs","loc":"","price":10.46,"total":1255.2},{"desc":"H Flange- Punched","vendor":"Elgen","pcs":325,"bundle":"4 bundles, 25 pieces","packaging":"1500'/bundle/75pcs","loc":"1piece=20'","price":17.8,"total":5785.0},{"desc":"H Corner","vendor":"Elgen","pcs":30,"bundle":"","packaging":"500/box","loc":"","price":140.829,"total":4224.87},{"desc":"H Nuts/Bolts 1/4\"","vendor":"Elgen","pcs":32,"bundle":"","packaging":"100/bag","loc":"","price":12.39,"total":396.48},{"desc":"10' J Flange- Punched","vendor":"Elgen","pcs":84,"bundle":"1 bundle, 9 pieces","packaging":"750'/bundle/75pcs","loc":"","price":11.06,"total":929.0400000000001},{"desc":"J Flange- Punched","vendor":"Elgen","pcs":190,"bundle":"2 bundles, 40 pieces","packaging":"1500'/bundle/75pcs","loc":"1piece=20'","price":24.61786,"total":4677.3934},{"desc":"J Corner","vendor":"Elgen","pcs":33,"bundle":"","packaging":"250/box","loc":"","price":135.0905,"total":4457.9865},{"desc":"J Nuts/Bolts 3/8\"","vendor":"Elgen","pcs":46,"bundle":"","packaging":"100/bag","loc":"","price":10.624,"total":488.704},{"desc":"Elgen Flange","vendor":"Elgen","pcs":33,"bundle":"1 bundle, 8 pieces","packaging":"500'/bundle/25pcs","loc":"1piece=20'","price":18.2832,"total":603.3456},{"desc":"Flange Corner- Bolt Type","vendor":"Elgen","pcs":4,"bundle":"","packaging":"300/box","loc":"","price":186.23,"total":744.92},{"desc":"6\" Cleats","vendor":"Elgen","pcs":7,"bundle":"","packaging":"500/box","loc":"","price":74.244,"total":519.708},{"desc":"Butyl Gasket","vendor":"Elgen","pcs":12,"bundle":"","packaging":"500'/box","loc":"","price":57.0544,"total":684.6528000000001},{"desc":"Neoprene Gasket","vendor":"Elgen","pcs":5,"bundle":"","packaging":"5400'/box","loc":"","price":119.86,"total":599.3},{"desc":"E55 Universal Cleat","vendor":"Elgen","pcs":7,"bundle":"","packaging":"125'/box","loc":"","price":63.2155,"total":442.50849999999997},{"desc":"Elgen Cleat","vendor":"Elgen","pcs":1,"bundle":"","packaging":"500/box","loc":"","price":152.83,"total":152.83},{"desc":"Stackable TDC","vendor":"Elgen","pcs":2,"bundle":"","packaging":"250/box","loc":"","price":68.9,"total":137.8},{"desc":"Stackable TDF","vendor":"Elgen","pcs":26,"bundle":"","packaging":"250/box","loc":"","price":68.9,"total":1791.4},{"desc":"Res.1 3/4\"   FlexConn","vendor":"Elgen","pcs":34,"bundle":"","packaging":"100'/box","loc":"","price":89.32,"total":3036.8799999999997},{"desc":"Comm. 3\" FlexConn","vendor":"Elgen","pcs":4,"bundle":"","packaging":"100'/box","loc":"","price":144.2112,"total":576.8448},{"desc":"TDC/TDF 4\" FlexConn","vendor":"Elgen","pcs":4,"bundle":"","packaging":"100'/box","loc":"","price":180.2416,"total":720.9664},{"desc":"2\" Double Wall Vane","vendor":"Elgen","pcs":12,"bundle":"","packaging":"100'/bundle","loc":"","price":98.647,"total":1183.7640000000001},{"desc":"2\" Super Rail","vendor":"Elgen","pcs":12,"bundle":"","packaging":"100'/box","loc":"","price":103.201,"total":1238.4119999999998},{"desc":"4\" Double Wall Vane","vendor":"Elgen","pcs":16,"bundle":"","packaging":"50'/bundle","loc":"","price":114.2295,"total":1827.672},{"desc":"4\" Super Rail","vendor":"Elgen","pcs":12,"bundle":"","packaging":"100'/box","loc":"","price":183.724,"total":2204.688},{"desc":"1/2\" Weld Pin","vendor":"Elgen","pcs":1,"bundle":"","packaging":"6000/bucket","loc":"","price":114.862,"total":114.862},{"desc":"3/4\" Weld Pin","vendor":"Elgen","pcs":1,"bundle":"","packaging":"5000/bucket","loc":"","price":161.91,"total":161.91},{"desc":"1\" Weld Pin","vendor":"Elgen","pcs":1,"bundle":"","packaging":"4000/box","loc":"","price":135.1595,"total":135.1595},{"desc":"TEK Screws","vendor":"Elgen","pcs":1,"bundle":"","packaging":"5000/box","loc":"","price":93.0,"total":93.0},{"desc":"Duct Guard 24\"","vendor":"Elgen","pcs":30,"bundle":"","packaging":"200'/roll","loc":"","price":13.6552,"total":409.656},{"desc":"Duct Guard 36\"","vendor":"Elgen","pcs":43,"bundle":"","packaging":"200'/roll","loc":"","price":22.152,"total":952.5360000000001},{"desc":"Cleat Tool","vendor":"Elgen","pcs":7,"bundle":"","packaging":"","loc":"","price":19.15,"total":134.04999999999998}],"mjsConsignment":[{"gauge":"24","width":"60","coating":"G90","heatNum":"BRS21052612","mjsTag":"643225","lf":1907,"weight":9730.0,"cplDate":"2021-07-20","price":115.5,"tag":"0581"},{"gauge":"24","width":"60","coating":"G90","heatNum":"BRS21066781","mjsTag":"649640","lf":1861,"weight":9510.0,"cplDate":"2021-07-20","price":115.5,"tag":"0584"},{"gauge":"24","width":"60","coating":"G90","heatNum":"BRS21066781","mjsTag":"649641","lf":1612,"weight":8270.0,"cplDate":"2021-07-20","price":115.5,"tag":"0585"},{"gauge":"26","width":"48","coating":"Galv","heatNum":"USS26F21496","mjsTag":"1362951","lf":7252,"weight":21900.0,"cplDate":"2026-06-09","price":0.771,"tag":"0098"},{"gauge":"26","width":"48","coating":"Galv","heatNum":"USS26F21496","mjsTag":"1362953","lf":7405,"weight":22370.0,"cplDate":"2026-06-09","price":0.771,"tag":"0099"},{"gauge":"20","width":"60","coating":"G90","heatNum":"BRT42601931","mjsTag":"1368178","lf":1219,"weight":9220.0,"cplDate":"2026-06-09","price":0.7565,"tag":"0100"},{"gauge":"20","width":"60","coating":"G90","heatNum":"BRT42601931","mjsTag":"1368180","lf":1218,"weight":9220.0,"cplDate":"2026-06-09","price":0.7565,"tag":"0101"},{"gauge":"20","width":"60","coating":"G90","heatNum":"BRT42601931","mjsTag":"1368186","lf":1218,"weight":9220.0,"cplDate":"2026-06-09","price":0.7565,"tag":"0102"},{"gauge":"24","width":"5.394","coating":"G90","heatNum":"660376","mjsTag":"1374767","lf":8676,"weight":3760.0,"cplDate":"2026-06-09","price":0.8315,"tag":"0103"},{"gauge":"24","width":"5.394","coating":"G90","heatNum":"660376","mjsTag":"1374769","lf":8676,"weight":3740.0,"cplDate":"2026-06-09","price":0.8315,"tag":"0104"},{"gauge":"24","width":"5.394","coating":"G90","heatNum":"660376","mjsTag":"1374776","lf":8676,"weight":3700.0,"cplDate":"2026-06-09","price":0.8315,"tag":"0105"},{"gauge":"26","width":"60","coating":"G90","heatNum":"BRT32506488","mjsTag":"1371868","lf":1994,"weight":7850.0,"cplDate":"2026-06-09","price":0.845,"tag":"0106"},{"gauge":"26","width":"60","coating":"G90","heatNum":"BRT32602836","mjsTag":"1372565","lf":2449,"weight":9350.0,"cplDate":"2026-06-09","price":0.845,"tag":"0107"},{"gauge":"26","width":"60","coating":"G90","heatNum":"BRT32602826","mjsTag":"1372570","lf":2400,"weight":9410.0,"cplDate":"2026-06-09","price":0.845,"tag":"0108"},{"gauge":"26","width":"60","coating":"G90","heatNum":"BRT32602826","mjsTag":"1372573","lf":2400,"weight":9410.0,"cplDate":"2026-06-09","price":0.845,"tag":"0109"},{"gauge":"26","width":"60","coating":"Galv","heatNum":"BRT32602793","mjsTag":"1376693","lf":6055,"weight":22980.0,"cplDate":"2026-06-10","price":0.775,"tag":"0110"},{"gauge":"26","width":"60","coating":"Galv","heatNum":"BRT32602793","mjsTag":"1376748","lf":6004,"weight":22810.0,"cplDate":"2026-06-10","price":0.775,"tag":"0111"},{"gauge":"26","width":"36","coating":"Galv","heatNum":"FOR26350848","mjsTag":"1370319","lf":7577,"weight":17270.0,"cplDate":"2026-06-10","price":0.7755,"tag":"0112"},{"gauge":"26","width":"36","coating":"Galv","heatNum":"FOR26350850","mjsTag":"1373594","lf":7698,"weight":17550.0,"cplDate":"2026-06-10","price":0.7755,"tag":"0113"},{"gauge":"26","width":"36","coating":"Galv","heatNum":"CSP26A086212","mjsTag":"1362850","lf":4378,"weight":10020.0,"cplDate":"2026-06-10","price":0.7755,"tag":"0114"},{"gauge":"26","width":"60","coating":"G90","heatNum":"CLS250555627","mjsTag":"1321115","lf":2234,"weight":8800.0,"cplDate":"2026-06-10","price":0.845,"tag":"0115"},{"gauge":"26","width":"60","coating":"G90","heatNum":"BRT32507953","mjsTag":"1325602","lf":2453,"weight":9400.0,"cplDate":"2026-06-10","price":0.845,"tag":"0116"},{"gauge":"26","width":"60","coating":"G90","heatNum":"BRT32507953","mjsTag":"1325655","lf":2455,"weight":9420.0,"cplDate":"2026-06-10","price":0.845,"tag":"0117"},{"gauge":"26","width":"60","coating":"G90","heatNum":"BRT32600150","mjsTag":"1340588","lf":2449,"weight":9600.0,"cplDate":"2026-06-10","price":0.845,"tag":"0118"},{"gauge":"26","width":"60","coating":"G90","heatNum":"BRT32602826","mjsTag":"1372433","lf":2453,"weight":9610.0,"cplDate":"2026-06-10","price":0.845,"tag":"0119"}]};
+// ── SUPABASE ──
+async function sbGet(table,params=''){try{const r=await fetch(`${SB_URL}/rest/v1/${table}${params?'?'+params:''}`,{headers:SB_HDR});if(!r.ok)return null;return await r.json();}catch(e){return null;}}
+async function sbUpsert(table,body){try{const r=await fetch(`${SB_URL}/rest/v1/${table}`,{method:'POST',headers:{...SB_HDR,'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(body)});return r.ok;}catch(e){return false;}}
+async function sbRpc(fn,params={}){try{const r=await fetch(`${SB_URL}/rest/v1/rpc/${fn}`,{method:'POST',headers:SB_HDR,body:JSON.stringify(params)});return r.ok;}catch(e){return false;}}
 
 // ── STATE ──
-let state = {
-  invSheets: [], slipDrive: [], alumStain: [], elgen: [], mjsConsignment: [],
-  modifications: {}, currentTab: 'inv-sheets',
-  sortState: {}, search: {}, filters: {}
-};
-
-const TAB_KEYS = {
-  'inv-sheets': 'invSheets', 'slip-drive': 'slipDrive',
-  'alum-ss': 'alumStain', 'elgen': 'elgen', 'mjs': 'mjsConsignment'
-};
-
-// ── TABLE NAMES in Supabase ──
-const SB_TABLES = {
-  invSheets: 'inventory_sheets',
-  slipDrive: 'inventory_slip_drive',
-  alumStain: 'inventory_alum_stain',
-  elgen: 'inventory_elgen',
-  mjsConsignment: 'inventory_mjs_consignment'
-};
+let state={invSheets:[],slipDrive:[],alumStain:[],elgen:[],mjsConsignment:[],currentTab:'inv-sheets',sortState:{},search:{},filters:{}};
 
 // ── INIT ──
-async function init() {
+async function init(){
   setSyncStatus('loading');
-  const wasEmpty = await loadFromSupabase();
-  if (wasEmpty) {
-    // Tables were empty — auto-save seed data to Supabase on first load
-    setLabel('First load — saving seed data to Supabase…');
-    await saveToSupabase(true); // silent = true
-  }
+  await loadFromSupabase();
   renderAll();
 }
 
-function deepClone(obj) { return JSON.parse(JSON.stringify(obj)); }
+async function loadFromSupabase(){
+  let hasData=false;
+  for(const [key,table] of Object.entries(SB_TABLES)){
+    const rows=await sbGet(table,'order=row_index.asc');
+    if(rows&&rows.length>0){state[key]=rows.map(r=>r.data);hasData=true;}
+    else state[key]=[];
+  }
+  if(hasData){setSyncStatus('ok');setLabel('Loaded from Supabase');}
+  else{setSyncStatus('empty');setLabel('No inventory — import Excel to load');}
+}
 
-// ── SUPABASE LOAD ──
-async function loadFromSupabase() {
-  let loaded = false;
-  for (const [key, table] of Object.entries(SB_TABLES)) {
-    const rows = await sbGet(table, 'order=row_index.asc');
-    if (rows && rows.length > 0) {
-      state[key] = rows.map(r => r.data);
-      loaded = true;
-    } else {
-      state[key] = deepClone(SEED_DATA[key]);
+async function saveToSupabase(){
+  setSyncStatus('saving');
+  // Truncate all inventory tables via Postgres function then upsert fresh data
+  const truncOk=await sbRpc('truncate_inventory');
+  if(!truncOk){setSyncStatus('err');showToast('Truncate failed — check Supabase','error');return;}
+  let allOk=true;
+  for(const [key,table] of Object.entries(SB_TABLES)){
+    const rows=state[key].map((data,idx)=>({row_index:idx,data,updated_at:new Date().toISOString()}));
+    for(let i=0;i<rows.length;i+=100){
+      const ok=await sbUpsert(table,rows.slice(i,i+100));
+      if(!ok)allOk=false;
     }
   }
-  if (loaded) {
+  if(allOk){
     setSyncStatus('ok');
-    setLabel('Loaded from Supabase');
-    return false; // not empty
-  } else {
-    setSyncStatus('warn');
-    setLabel('Using seed data — syncing to Supabase…');
-    return true; // was empty, needs save
-  }
-}
-
-// ── SUPABASE SAVE ──
-async function saveToSupabase(silent=false) {
-  setSyncStatus('saving');
-  let allOk = true;
-  for (const [key, table] of Object.entries(SB_TABLES)) {
-    // Use UPSERT only — row_index is primary key so existing rows update, new rows insert
-    // No DELETE needed, avoids quota/permission issues
-    const rows = state[key].map((data, idx) => ({ row_index: idx, data, updated_at: new Date().toISOString() }));
-    try {
-      for (let i = 0; i < rows.length; i += 100) {
-        const ok = await sbUpsert(table, rows.slice(i, i + 100));
-        if (!ok) allOk = false;
-      }
-    } catch(e) { allOk = false; }
-  }
-  if (allOk) {
-    setSyncStatus('ok');
-    const ts = new Date().toLocaleString('en-US',{month:'numeric',day:'numeric',year:'2-digit',hour:'numeric',minute:'2-digit'});
-    setLabel('Saved ' + ts);
-    if(!silent) showToast('Saved to Supabase', 'success');
-  } else {
-    setSyncStatus('err');
-    showToast('Some saves failed — check connection', 'error');
-  }
-}
-
-function setSyncStatus(s) {
-  const el = document.getElementById('sync-status');
-  if (!el) return;
-  el.className = 'sync-status';
-  if (s === 'ok') { el.className += ' sync-ok'; el.textContent = '✓ Synced'; el.style.display = ''; }
-  else if (s === 'saving') { el.className += ' sync-saving'; el.textContent = '↑ Saving…'; el.style.display = ''; }
-  else if (s === 'err') { el.className += ' sync-err'; el.textContent = '✗ Sync error'; el.style.display = ''; }
-  else if (s === 'warn') { el.className += ' sync-saving'; el.textContent = '⚠ Seed data'; el.style.display = ''; }
-  else if (s === 'loading') { el.className += ' sync-saving'; el.textContent = '↓ Loading…'; el.style.display = ''; }
-  else el.style.display = 'none';
-}
-
-function setLabel(txt) {
-  const el = document.getElementById('last-updated-label');
-  if (el) el.textContent = txt;
+    const ts=new Date().toLocaleString('en-US',{month:'numeric',day:'numeric',year:'2-digit',hour:'numeric',minute:'2-digit'});
+    setLabel('Imported '+ts);
+    showToast('Inventory saved to Supabase','success');
+  }else{setSyncStatus('err');showToast('Some saves failed','error');}
 }
 
 // ── TABS ──
-function switchTab(tabId) {
-  state.currentTab = tabId;
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('tab-' + tabId).classList.add('active');
-  document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
-  document.getElementById('tab-content-' + tabId).style.display = '';
+function switchTab(tabId){
+  state.currentTab=tabId;
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+tabId).classList.add('active');
+  document.querySelectorAll('[id^=tab-content-]').forEach(c=>c.style.display='none');
+  document.getElementById('tab-content-'+tabId).style.display='';
   renderTab(tabId);
 }
-
-function renderAll() {
-  renderTab('inv-sheets');
-  updateBadges();
+function renderAll(){updateBadges();renderTab(state.currentTab);}
+function updateBadges(){
+  document.getElementById('badge-inv-sheets').textContent=state.invSheets.length;
+  document.getElementById('badge-slip-drive').textContent=state.slipDrive.length;
+  document.getElementById('badge-alum-ss').textContent=state.alumStain.length;
+  document.getElementById('badge-elgen').textContent=state.elgen.length;
+  document.getElementById('badge-mjs').textContent=state.mjsConsignment.length;
 }
-
-function updateBadges() {
-  document.getElementById('badge-inv-sheets').textContent = state.invSheets.length;
-  document.getElementById('badge-slip-drive').textContent = state.slipDrive.length;
-  document.getElementById('badge-alum-ss').textContent = state.alumStain.length;
-  document.getElementById('badge-elgen').textContent = state.elgen.length;
-  document.getElementById('badge-mjs').textContent = state.mjsConsignment.length;
-}
-
-function renderTab(tabId) {
-  switch(tabId) {
-    case 'inv-sheets': renderInvSheets(); break;
-    case 'slip-drive': renderSlipDrive(); break;
-    case 'alum-ss': renderAlumSS(); break;
-    case 'elgen': renderElgen(); break;
-    case 'mjs': renderMJS(); break;
+function renderTab(tabId){
+  switch(tabId){
+    case 'inv-sheets':renderInvSheets();break;
+    case 'slip-drive':renderSlipDrive();break;
+    case 'alum-ss':renderAlumSS();break;
+    case 'elgen':renderElgen();break;
+    case 'mjs':renderMJS();break;
   }
 }
 
-// ── SEARCH/FILTER/SORT HELPERS ──
-function getSearch(t) { return (state.search[t] || '').toLowerCase(); }
-function setSearch(t, v) { state.search[t] = v; renderTab(t); }
-function getFilter(t, f) { return state.filters[t]?.[f] || ''; }
-function setFilter(t, f, v) { if (!state.filters[t]) state.filters[t] = {}; state.filters[t][f] = v; renderTab(t); }
-function sortData(arr, col, dir) {
-  return [...arr].sort((a, b) => {
-    let av = a[col] ?? '', bv = b[col] ?? '';
-    if (typeof av === 'number' && typeof bv === 'number') return dir === 'asc' ? av - bv : bv - av;
-    return dir === 'asc' ? String(av).localeCompare(String(bv)) : String(bv).localeCompare(String(av));
-  });
+// ── HELPERS ──
+function getSearch(t){return(state.search[t]||'').toLowerCase();}
+function setSearch(t,v){state.search[t]=v;renderTab(t);}
+function getFilter(t,f){return state.filters[t]?.[f]||'';}
+function setFilter(t,f,v){if(!state.filters[t])state.filters[t]={};state.filters[t][f]=v;renderTab(t);}
+function sortData(arr,col,dir){return[...arr].sort((a,b)=>{let av=a[col]??'',bv=b[col]??'';if(typeof av==='number'&&typeof bv==='number')return dir==='asc'?av-bv:bv-av;return dir==='asc'?String(av).localeCompare(String(bv)):String(bv).localeCompare(String(av));});}
+function toggleSort(t,col){if(!state.sortState[t])state.sortState[t]={};const c=state.sortState[t];c.dir=c.col===col?(c.dir==='asc'?'desc':'asc'):'asc';c.col=col;renderTab(t);}
+function sortClass(t,col){const s=state.sortState[t];if(!s||s.col!==col)return'';return s.dir==='asc'?'sorted-asc':'sorted-desc';}
+function fmt$(n){if(n==null||n==='')return'—';return'$'+parseFloat(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function fmtNum(n){if(n==null||n==='')return'—';return parseFloat(n).toLocaleString('en-US');}
+function sumField(arr,f){return arr.reduce((s,r)=>s+(parseFloat(r[f])||0),0);}
+
+function emptyState(cols){
+  return`<tr><td colspan="${cols}"><div class="empty-state">
+    <div class="icon">📦</div>
+    <p>No inventory data</p>
+    <div class="hint">Use the Import Excel button to load inventory</div>
+  </div></td></tr>`;
 }
-function toggleSort(t, col) {
-  if (!state.sortState[t]) state.sortState[t] = {};
-  const cur = state.sortState[t];
-  cur.dir = cur.col === col ? (cur.dir === 'asc' ? 'desc' : 'asc') : 'asc';
-  cur.col = col;
-  renderTab(t);
-}
-function sortClass(t, col) {
-  const s = state.sortState[t];
-  if (!s || s.col !== col) return '';
-  return s.dir === 'asc' ? 'sorted-asc' : 'sorted-desc';
-}
-function fmt$(n) { if (n == null || n === '') return '—'; return '$' + parseFloat(n).toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2}); }
-function fmtNum(n) { if (n == null || n === '') return '—'; return parseFloat(n).toLocaleString('en-US'); }
-function sumField(arr, f) { return arr.reduce((s,r) => s+(parseFloat(r[f])||0), 0); }
 
 // ── INV SHEETS ──
-function renderInvSheets() {
-  const tid = 'inv-sheets';
-  const search = getSearch(tid), gaugeF = getFilter(tid,'gauge'), vendorF = getFilter(tid,'vendor'), typeF = getFilter(tid,'type');
-  let rows = state.invSheets.filter(r => {
-    if (gaugeF && r.gauge !== gaugeF) return false;
-    if (vendorF && r.vendor !== vendorF) return false;
-    if (typeF === 'sheet' && !(r.size||'').includes('x')) return false;
-    if (typeF === 'coil' && (r.size||'').includes('x')) return false;
-    if (search) { const h=[r.section,r.gauge,r.size,r.vendor,r.bundle,r.bundleNum].join(' ').toLowerCase(); if(!h.includes(search))return false; }
+function renderInvSheets(){
+  const tid='inv-sheets',search=getSearch(tid),gaugeF=getFilter(tid,'gauge'),vendorF=getFilter(tid,'vendor'),typeF=getFilter(tid,'type');
+  let rows=state.invSheets.filter(r=>{
+    if(gaugeF&&r.gauge!==gaugeF)return false;
+    if(vendorF&&r.vendor!==vendorF)return false;
+    if(typeF==='sheet'&&!(r.size||'').includes('x'))return false;
+    if(typeF==='coil'&&(r.size||'').includes('x'))return false;
+    if(search){const h=[r.section,r.gauge,r.size,r.vendor,r.bundle,r.bundleNum].join(' ').toLowerCase();if(!h.includes(search))return false;}
     return true;
   });
-  const sorted = state.sortState[tid]?.col ? sortData(rows,state.sortState[tid].col,state.sortState[tid].dir) : rows;
-  const gauges = [...new Set(state.invSheets.map(r=>r.gauge).filter(Boolean))].sort((a,b)=>parseFloat(a)-parseFloat(b));
-  const vendors = [...new Set(state.invSheets.map(r=>r.vendor).filter(Boolean))].sort();
-  const totalVal = sumField(rows,'total');
-  const sheetRows = rows.filter(r=>(r.size||'').includes('x'));
-  const coilRows = rows.filter(r=>!(r.size||'').includes('x'));
-  const useGrouped = !state.sortState[tid]?.col && !search && !gaugeF && !vendorF && !typeF;
-  let tbody = '';
-  if (useGrouped) {
-    let lastSec = null;
-    sorted.forEach(r => {
-      const oi = state.invSheets.indexOf(r);
-      if (r.section !== lastSec) {
-        const sRows = state.invSheets.filter(x=>x.section===r.section);
-        tbody += `<tr class="section-header"><td colspan="9">${r.section} <span style="font-weight:400;color:var(--text-secondary);font-size:11px;margin-left:8px">${sRows.length} items · ${fmt$(sumField(sRows,'total'))}</span></td></tr>`;
-        lastSec = r.section;
+  const sorted=state.sortState[tid]?.col?sortData(rows,state.sortState[tid].col,state.sortState[tid].dir):rows;
+  const gauges=[...new Set(state.invSheets.map(r=>r.gauge).filter(Boolean))].sort((a,b)=>parseFloat(a)-parseFloat(b));
+  const vendors=[...new Set(state.invSheets.map(r=>r.vendor).filter(Boolean))].sort();
+  const totalVal=sumField(rows,'total');
+  const sheetRows=rows.filter(r=>(r.size||'').includes('x'));
+  const coilRows=rows.filter(r=>!(r.size||'').includes('x'));
+  const useGrouped=!state.sortState[tid]?.col&&!search&&!gaugeF&&!vendorF&&!typeF;
+  let tbody='';
+  if(useGrouped){
+    let lastSec=null;
+    sorted.forEach(r=>{
+      const oi=state.invSheets.indexOf(r);
+      if(r.section!==lastSec){
+        const sRows=state.invSheets.filter(x=>x.section===r.section);
+        tbody+=`<tr class="section-header"><td colspan="9">${r.section} <span style="font-weight:400;color:var(--text-secondary);font-size:11px;margin-left:8px">${sRows.length} items · ${fmt$(sumField(sRows,'total'))}</span></td></tr>`;
+        lastSec=r.section;
       }
-      tbody += invSheetRow(r, oi);
+      tbody+=invSheetRow(r,oi);
     });
-  } else sorted.forEach(r => { tbody += invSheetRow(r, state.invSheets.indexOf(r)); });
-  document.getElementById('tab-content-inv-sheets').innerHTML = `
+  }else sorted.forEach(r=>{tbody+=invSheetRow(r,state.invSheets.indexOf(r));});
+  document.getElementById('tab-content-inv-sheets').innerHTML=`
     <div class="summary-row">
       <div class="summary-card accent"><div class="card-label">Total Value</div><div class="card-value">${fmt$(sumField(state.invSheets,'total'))}</div><div class="card-sub">${state.invSheets.length} line items</div></div>
       <div class="summary-card"><div class="card-label">Filtered Value</div><div class="card-value">${fmt$(totalVal)}</div><div class="card-sub">${rows.length} rows shown</div></div>
@@ -538,46 +324,41 @@ function renderInvSheets() {
         <th onclick="toggleSort('inv-sheets','total')" class="${sortClass(tid,'total')}">Total</th>
         <th></th>
       </tr></thead>
-      <tbody>${tbody||'<tr><td colspan="9"><div class="empty-state"><p>No results.</p></div></td></tr>'}</tbody>
+      <tbody>${tbody||emptyState(9)}</tbody>
     </table></div>
     <div class="table-footer"><span>Showing <strong>${rows.length}</strong> of <strong>${state.invSheets.length}</strong> items</span><span>Filtered Total: <strong>${fmt$(totalVal)}</strong></span></div></div>`;
 }
-function invSheetRow(r, idx) {
-  const mod = state.modifications['invSheets']?.[idx];
-  return `<tr class="${mod?'row-modified':''}">
+function invSheetRow(r,idx){
+  return`<tr>
     <td><span class="gauge-chip">${r.gauge||'—'}</span></td><td>${r.size||'—'}</td>
     <td><span class="vendor-badge">${r.vendor||'—'}</span></td>
-    <td class="td-num editable" ondblclick="startEdit(this,'invSheets',${idx},'pcs')">${r.pcs??'—'}</td>
+    <td class="td-num">${r.pcs??'—'}</td>
     <td>${r.bundle||'—'}</td><td style="font-family:monospace;font-size:12px">${r.bundleNum||'—'}</td>
     <td class="td-money">${fmt$(r.price)}</td><td class="td-total">${fmt$(r.total)}</td>
-    <td style="width:30px;padding:4px 8px">${mod?'<span title="Modified" style="color:var(--amber);font-size:16px">●</span>':''}</td></tr>`;
+    <td></td></tr>`;
 }
 
 // ── SLIP DRIVE ──
-function renderSlipDrive() {
-  const tid = 'slip-drive', search = getSearch(tid), gaugeF = getFilter(tid,'gauge');
-  let rows = state.slipDrive.filter(r => {
-    if (gaugeF && r.gauge !== gaugeF) return false;
-    if (search) { const h=[r.gauge,r.size,r.vendor,r.bundle].join(' ').toLowerCase(); if(!h.includes(search))return false; }
+function renderSlipDrive(){
+  const tid='slip-drive',search=getSearch(tid),gaugeF=getFilter(tid,'gauge');
+  let rows=state.slipDrive.filter(r=>{
+    if(gaugeF&&r.gauge!==gaugeF)return false;
+    if(search){const h=[r.gauge,r.size,r.vendor,r.bundle].join(' ').toLowerCase();if(!h.includes(search))return false;}
     return true;
   });
-  const sorted = state.sortState[tid]?.col ? sortData(rows,state.sortState[tid].col,state.sortState[tid].dir) : rows;
-  const gauges = [...new Set(state.slipDrive.map(r=>r.gauge).filter(Boolean))].sort((a,b)=>parseFloat(a)-parseFloat(b));
-  const tbody = sorted.map(r => {
-    const oi = state.slipDrive.indexOf(r);
-    return `<tr class="${state.modifications['slipDrive']?.[oi]?'row-modified':''}">
-      <td><span class="gauge-chip">${r.gauge||'—'}</span></td><td>${r.size||'—'}</td>
-      <td><span class="vendor-badge">${r.vendor||'—'}</span></td>
-      <td class="td-num editable" ondblclick="startEdit(this,'slipDrive',${oi},'coils')">${r.coils??'—'}</td>
-      <td style="font-family:monospace;font-size:12px">${r.bundle||'—'}</td>
-      <td class="td-num">${r.weight?fmtNum(r.weight)+' lb':'—'}</td>
-      <td class="td-money">${fmt$(r.price)}/lb</td><td class="td-total">${fmt$(r.total)}</td></tr>`;
-  }).join('');
-  document.getElementById('tab-content-slip-drive').innerHTML = `
+  const sorted=state.sortState[tid]?.col?sortData(rows,state.sortState[tid].col,state.sortState[tid].dir):rows;
+  const gauges=[...new Set(state.slipDrive.map(r=>r.gauge).filter(Boolean))].sort((a,b)=>parseFloat(a)-parseFloat(b));
+  const tbody=sorted.map(r=>`<tr>
+    <td><span class="gauge-chip">${r.gauge||'—'}</span></td><td>${r.size||'—'}</td>
+    <td><span class="vendor-badge">${r.vendor||'—'}</span></td>
+    <td class="td-num">${r.coils??'—'}</td>
+    <td style="font-family:monospace;font-size:12px">${r.bundle||'—'}</td>
+    <td class="td-num">${r.weight?fmtNum(r.weight)+' lb':'—'}</td>
+    <td class="td-money">${fmt$(r.price)}/lb</td><td class="td-total">${fmt$(r.total)}</td></tr>`).join('');
+  document.getElementById('tab-content-slip-drive').innerHTML=`
     <div class="summary-row">
       <div class="summary-card accent"><div class="card-label">Total Value</div><div class="card-value">${fmt$(sumField(state.slipDrive,'total'))}</div><div class="card-sub">${state.slipDrive.length} line items</div></div>
       <div class="summary-card"><div class="card-label">Total Weight</div><div class="card-value">${fmtNum(Math.round(sumField(state.slipDrive,'weight')))} <span style="font-size:13px;font-weight:500">lbs</span></div><div class="card-sub">across all coils</div></div>
-      <div class="summary-card"><div class="card-label">Coil Count</div><div class="card-value">${state.slipDrive.reduce((s,r)=>s+(parseInt(r.coils)||0),0)}</div><div class="card-sub">${state.slipDrive.length} sizes</div></div>
     </div>
     <div class="toolbar">
       <div class="search-wrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input class="search-input" type="text" placeholder="Search gauge, size, vendor…" value="${state.search[tid]||''}" oninput="setSearch('slip-drive',this.value)"></div>
@@ -586,33 +367,32 @@ function renderSlipDrive() {
     </div>
     <div class="table-wrap"><div class="table-container"><table>
       <thead><tr><th onclick="toggleSort('slip-drive','gauge')" class="${sortClass(tid,'gauge')}">Gauge</th><th>Width</th><th>Vendor</th><th onclick="toggleSort('slip-drive','coils')" class="${sortClass(tid,'coils')}">Coils</th><th>Bundle</th><th onclick="toggleSort('slip-drive','weight')" class="${sortClass(tid,'weight')}">Weight</th><th onclick="toggleSort('slip-drive','price')" class="${sortClass(tid,'price')}">Price</th><th onclick="toggleSort('slip-drive','total')" class="${sortClass(tid,'total')}">Total</th></tr></thead>
-      <tbody>${tbody||'<tr><td colspan="8"><div class="empty-state"><p>No results.</p></div></td></tr>'}</tbody>
+      <tbody>${tbody||emptyState(8)}</tbody>
     </table></div>
     <div class="table-footer"><span>Showing <strong>${rows.length}</strong> of <strong>${state.slipDrive.length}</strong> items</span><span>Value: <strong>${fmt$(sumField(rows,'total'))}</strong></span></div></div>`;
 }
 
 // ── ALUM/SS ──
-function renderAlumSS() {
-  const tid = 'alum-ss', search = getSearch(tid), typeF = getFilter(tid,'type');
-  let rows = state.alumStain.filter(r => {
-    if (typeF && r.type !== typeF) return false;
-    if (search) { const h=[r.type,r.gauge,r.size,r.vendor,r.desc,r.bundle].join(' ').toLowerCase(); if(!h.includes(search))return false; }
+function renderAlumSS(){
+  const tid='alum-ss',search=getSearch(tid),typeF=getFilter(tid,'type');
+  let rows=state.alumStain.filter(r=>{
+    if(typeF&&r.type!==typeF)return false;
+    if(search){const h=[r.type,r.gauge,r.size,r.vendor,r.desc,r.bundle].join(' ').toLowerCase();if(!h.includes(search))return false;}
     return true;
   });
-  const sorted = state.sortState[tid]?.col ? sortData(rows,state.sortState[tid].col,state.sortState[tid].dir) : rows;
-  const types = [...new Set(state.alumStain.map(r=>r.type).filter(Boolean))].sort();
-  const tbody = sorted.map(r => {
-    const oi = state.alumStain.indexOf(r);
-    const tc = r.type==='ALUM'?'background:#D4891A;color:#fff':r.type==='STAIN'?'background:#607090;color:#fff':'background:var(--forest);color:var(--sage)';
-    return `<tr class="${state.modifications['alumStain']?.[oi]?'row-modified':''}">
+  const sorted=state.sortState[tid]?.col?sortData(rows,state.sortState[tid].col,state.sortState[tid].dir):rows;
+  const types=[...new Set(state.alumStain.map(r=>r.type).filter(Boolean))].sort();
+  const tbody=sorted.map(r=>{
+    const tc=r.type==='ALUM'?'background:#D4891A;color:#fff':r.type==='STAIN'?'background:#607090;color:#fff':'background:var(--forest);color:var(--sage)';
+    return`<tr>
       <td><span class="vendor-badge" style="${tc}">${r.type||'—'}</span></td><td>${r.gauge||'—'}</td><td>${r.size||'—'}</td>
       <td><span class="vendor-badge">${r.vendor||'—'}</span></td>
-      <td class="td-num editable" ondblclick="startEdit(this,'alumStain',${oi},'pcs')">${r.pcs??'—'}</td>
+      <td class="td-num">${r.pcs??'—'}</td>
       <td>${r.desc||'—'}</td><td style="font-size:11px;color:var(--text-muted)">${r.bundle||'—'}</td>
       <td class="td-money">${r.pricePerLb?fmt$(r.pricePerLb)+'/lb':r.priceEa?fmt$(r.priceEa)+'/ea':'—'}</td>
       <td class="td-total">${fmt$(r.total)}</td></tr>`;
   }).join('');
-  document.getElementById('tab-content-alum-ss').innerHTML = `
+  document.getElementById('tab-content-alum-ss').innerHTML=`
     <div class="summary-row">
       <div class="summary-card accent"><div class="card-label">Total Value</div><div class="card-value">${fmt$(sumField(state.alumStain,'total'))}</div><div class="card-sub">${state.alumStain.length} items</div></div>
       ${types.map(t=>`<div class="summary-card"><div class="card-label">${t}</div><div class="card-value">${fmt$(sumField(state.alumStain.filter(r=>r.type===t),'total'))}</div><div class="card-sub">${state.alumStain.filter(r=>r.type===t).length} items</div></div>`).join('')}
@@ -624,31 +404,28 @@ function renderAlumSS() {
     </div>
     <div class="table-wrap"><div class="table-container"><table>
       <thead><tr><th>Type</th><th>Gauge</th><th>Size</th><th>Vendor</th><th onclick="toggleSort('alum-ss','pcs')" class="${sortClass(tid,'pcs')}">Pcs</th><th>Description</th><th>Bundle</th><th onclick="toggleSort('alum-ss','priceEa')" class="${sortClass(tid,'priceEa')}">Price</th><th onclick="toggleSort('alum-ss','total')" class="${sortClass(tid,'total')}">Total</th></tr></thead>
-      <tbody>${tbody||'<tr><td colspan="9"><div class="empty-state"><p>No results.</p></div></td></tr>'}</tbody>
+      <tbody>${tbody||emptyState(9)}</tbody>
     </table></div>
-    <div class="table-footer"><span>Showing <strong>${rows.length}</strong> of <strong>${state.alumStain.length}</strong> items</span><span>Filtered: <strong>${fmt$(sumField(rows,'total'))}</strong></span></div></div>`;
+    <div class="table-footer"><span>Showing <strong>${rows.length}</strong> of <strong>${state.alumStain.length}</strong> items</span><span>Value: <strong>${fmt$(sumField(rows,'total'))}</strong></span></div></div>`;
 }
 
 // ── ELGEN ──
-function renderElgen() {
-  const tid = 'elgen', search = getSearch(tid);
-  let rows = state.elgen.filter(r => {
-    if (search) { const h=[r.desc,r.vendor,r.bundle,r.packaging,r.loc].join(' ').toLowerCase(); if(!h.includes(search))return false; }
+function renderElgen(){
+  const tid='elgen',search=getSearch(tid);
+  let rows=state.elgen.filter(r=>{
+    if(search){const h=[r.desc,r.vendor,r.bundle,r.packaging,r.loc].join(' ').toLowerCase();if(!h.includes(search))return false;}
     return true;
   });
-  const sorted = state.sortState[tid]?.col ? sortData(rows,state.sortState[tid].col,state.sortState[tid].dir) : rows;
-  const tbody = sorted.map(r => {
-    const oi = state.elgen.indexOf(r);
-    return `<tr class="${state.modifications['elgen']?.[oi]?'row-modified':''}">
-      <td style="max-width:220px;white-space:normal;font-weight:500">${r.desc||'—'}</td>
-      <td><span class="vendor-badge">${r.vendor||'—'}</span></td>
-      <td class="td-num editable" ondblclick="startEdit(this,'elgen',${oi},'pcs')">${r.pcs??'—'}</td>
-      <td style="font-size:12px;color:var(--text-secondary)">${r.bundle||'—'}</td>
-      <td style="font-size:12px;color:var(--text-muted)">${r.packaging||'—'}</td>
-      <td style="font-size:12px">${r.loc||'—'}</td>
-      <td class="td-money">${fmt$(r.price)}</td><td class="td-total">${fmt$(r.total)}</td></tr>`;
-  }).join('');
-  document.getElementById('tab-content-elgen').innerHTML = `
+  const sorted=state.sortState[tid]?.col?sortData(rows,state.sortState[tid].col,state.sortState[tid].dir):rows;
+  const tbody=sorted.map(r=>`<tr>
+    <td style="max-width:220px;white-space:normal;font-weight:500">${r.desc||'—'}</td>
+    <td><span class="vendor-badge">${r.vendor||'—'}</span></td>
+    <td class="td-num">${r.pcs??'—'}</td>
+    <td style="font-size:12px;color:var(--text-secondary)">${r.bundle||'—'}</td>
+    <td style="font-size:12px;color:var(--text-muted)">${r.packaging||'—'}</td>
+    <td style="font-size:12px">${r.loc||'—'}</td>
+    <td class="td-money">${fmt$(r.price)}</td><td class="td-total">${fmt$(r.total)}</td></tr>`).join('');
+  document.getElementById('tab-content-elgen').innerHTML=`
     <div class="summary-row">
       <div class="summary-card accent"><div class="card-label">Total Value</div><div class="card-value">${fmt$(sumField(state.elgen,'total'))}</div><div class="card-sub">${state.elgen.length} SKUs</div></div>
       <div class="summary-card"><div class="card-label">Total Pieces</div><div class="card-value">${fmtNum(state.elgen.reduce((s,r)=>s+(parseInt(r.pcs)||0),0))}</div><div class="card-sub">accessories</div></div>
@@ -659,162 +436,140 @@ function renderElgen() {
     </div>
     <div class="table-wrap"><div class="table-container"><table>
       <thead><tr><th onclick="toggleSort('elgen','desc')" class="${sortClass(tid,'desc')}">Description</th><th>Vendor</th><th onclick="toggleSort('elgen','pcs')" class="${sortClass(tid,'pcs')}">Pcs</th><th>Bundle</th><th>Pkg</th><th>Location</th><th onclick="toggleSort('elgen','price')" class="${sortClass(tid,'price')}">Price</th><th onclick="toggleSort('elgen','total')" class="${sortClass(tid,'total')}">Total</th></tr></thead>
-      <tbody>${tbody||'<tr><td colspan="8"><div class="empty-state"><p>No results.</p></div></td></tr>'}</tbody>
+      <tbody>${tbody||emptyState(8)}</tbody>
     </table></div>
     <div class="table-footer"><span>Showing <strong>${rows.length}</strong> of <strong>${state.elgen.length}</strong> items</span><span>Value: <strong>${fmt$(sumField(rows,'total'))}</strong></span></div></div>`;
 }
 
 // ── MJS ──
-function renderMJS() {
-  const tid = 'mjs', search = getSearch(tid), gaugeF = getFilter(tid,'gauge');
-  let rows = state.mjsConsignment.filter(r => {
-    if (gaugeF && r.gauge !== gaugeF) return false;
-    if (search) { const h=[r.gauge,r.width,r.coating,r.heatNum,r.mjsTag,r.tag].join(' ').toLowerCase(); if(!h.includes(search))return false; }
+function renderMJS(){
+  const tid='mjs',search=getSearch(tid),gaugeF=getFilter(tid,'gauge');
+  let rows=state.mjsConsignment.filter(r=>{
+    if(gaugeF&&r.gauge!==gaugeF)return false;
+    if(search){const h=[r.gauge,r.width,r.coating,r.heatNum,r.mjsTag,r.tag].join(' ').toLowerCase();if(!h.includes(search))return false;}
     return true;
   });
-  const sorted = state.sortState[tid]?.col ? sortData(rows,state.sortState[tid].col,state.sortState[tid].dir) : rows;
-  const gauges = [...new Set(state.mjsConsignment.map(r=>r.gauge).filter(Boolean))].sort((a,b)=>parseFloat(a)-parseFloat(b));
-  const tbody = sorted.map(r => `<tr>
+  const sorted=state.sortState[tid]?.col?sortData(rows,state.sortState[tid].col,state.sortState[tid].dir):rows;
+  const gauges=[...new Set(state.mjsConsignment.map(r=>r.gauge).filter(Boolean))].sort((a,b)=>parseFloat(a)-parseFloat(b));
+  const tbody=sorted.map(r=>`<tr>
     <td><span class="gauge-chip">${r.gauge||'—'}</span></td><td>${r.width?r.width+'"':'—'}</td>
     <td><span style="font-size:11px;font-weight:600;color:var(--forest-mid)">${r.coating||'—'}</span></td>
     <td style="font-family:monospace;font-size:11px">${r.heatNum||'—'}</td>
     <td style="font-family:monospace;font-size:11px">${r.mjsTag||'—'}</td>
     <td class="td-num">${fmtNum(r.lf)} lf</td><td class="td-num">${fmtNum(r.weight)} lb</td>
-    <td style="font-size:11px;color:var(--text-muted)">${r.cplDate?new Date(r.cplDate).toLocaleDateString('en-US',{month:'numeric',day:'numeric',year:'2-digit'}):'—'}</td>
+    <td style="font-size:11px;color:var(--text-muted)">${r.cplDate||'—'}</td>
     <td class="td-money">${r.price?'$'+parseFloat(r.price).toFixed(3)+'/cwt':'—'}</td>
     <td style="font-family:monospace;font-weight:700;color:var(--forest)">${r.tag||'—'}</td></tr>`).join('');
-  document.getElementById('tab-content-mjs').innerHTML = `
+  document.getElementById('tab-content-mjs').innerHTML=`
     <div class="summary-row">
       <div class="summary-card accent"><div class="card-label">Active Coils</div><div class="card-value">${state.mjsConsignment.length}</div><div class="card-sub">no use date = active</div></div>
       <div class="summary-card"><div class="card-label">Total Weight</div><div class="card-value">${fmtNum(Math.round(sumField(state.mjsConsignment,'weight')))} <span style="font-size:13px;font-weight:500">lbs</span></div><div class="card-sub">${fmtNum(Math.round(sumField(state.mjsConsignment,'lf')))} total LF</div></div>
-      <div class="summary-card"><div class="card-label">Gauges On Hand</div><div class="card-value">${gauges.length}</div><div class="card-sub">${gauges.join(', ')} ga</div></div>
     </div>
     <div class="toolbar">
-      <div class="search-wrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input class="search-input" type="text" placeholder="Search gauge, heat #, MJS tag, Sherwood tag…" value="${state.search[tid]||''}" oninput="setSearch('mjs',this.value)"></div>
+      <div class="search-wrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input class="search-input" type="text" placeholder="Search gauge, heat #, MJS tag…" value="${state.search[tid]||''}" oninput="setSearch('mjs',this.value)"></div>
       <select class="filter-select" onchange="setFilter('mjs','gauge',this.value)"><option value="">All Gauges</option>${gauges.map(g=>`<option value="${g}" ${gaugeF===g?'selected':''}>${g} Gauge</option>`).join('')}</select>
       <div class="toolbar-right"><button class="btn-sm" onclick="exportTab('mjs')">Export CSV</button></div>
     </div>
     <div class="table-wrap"><div class="table-container"><table>
       <thead><tr><th>Gauge</th><th>Width</th><th>Coating</th><th>Heat #</th><th>MJS Tag</th><th onclick="toggleSort('mjs','lf')" class="${sortClass(tid,'lf')}">Lin. Feet</th><th onclick="toggleSort('mjs','weight')" class="${sortClass(tid,'weight')}">Weight</th><th>CPL Date</th><th>Price</th><th>Tag #</th></tr></thead>
-      <tbody>${tbody||'<tr><td colspan="10"><div class="empty-state"><p>No active consignment coils.</p></div></td></tr>'}</tbody>
+      <tbody>${tbody||emptyState(10)}</tbody>
     </table></div>
-    <div class="table-footer"><span>Showing <strong>${rows.length}</strong> of <strong>${state.mjsConsignment.length}</strong> active coils</span><span>${fmtNum(Math.round(sumField(rows,'weight')))} lbs · ${fmtNum(Math.round(sumField(rows,'lf')))} lf filtered</span></div></div>`;
+    <div class="table-footer"><span>Showing <strong>${rows.length}</strong> of <strong>${state.mjsConsignment.length}</strong> active coils</span><span>${fmtNum(Math.round(sumField(rows,'weight')))} lbs filtered</span></div></div>`;
 }
 
-// ── INLINE EDIT ──
-function startEdit(td, stateKey, rowIdx, field) {
-  const current = state[stateKey][rowIdx][field];
-  const input = document.createElement('input');
-  input.type = 'number'; input.className = 'editing-input'; input.value = current ?? ''; input.min = 0;
-  td.innerHTML = ''; td.appendChild(input); input.focus(); input.select();
-  function commit() {
-    const val = parseFloat(input.value);
-    if (!isNaN(val) && val !== current) {
-      if (!state.modifications[stateKey]) state.modifications[stateKey] = {};
-      state.modifications[stateKey][rowIdx] = { ...(state.modifications[stateKey][rowIdx]||{}), [field]: val };
-      state[stateKey][rowIdx][field] = val;
-      const r = state[stateKey][rowIdx];
-      if (field === 'pcs' && r.price) state[stateKey][rowIdx].total = Math.round(val * r.price * 100) / 100;
-      const cnt = Object.values(state.modifications).reduce((s,o) => s+Object.keys(o).length, 0);
-      showSaveBar(cnt);
-    }
-    renderTab(state.currentTab);
-  }
-  input.addEventListener('blur', commit);
-  input.addEventListener('keydown', e => { if(e.key==='Enter') input.blur(); if(e.key==='Escape') renderTab(state.currentTab); });
-}
-
-// ── SAVE BAR ──
-function showSaveBar(count) {
-  document.getElementById('save-bar').classList.add('visible');
-  document.getElementById('save-bar-msg').textContent = `${count} change${count===1?'':'s'} pending`;
-}
-
-async function saveChanges() {
-  await saveToSupabase();
-  state.modifications = {};
-  document.getElementById('save-bar').classList.remove('visible');
-  renderTab(state.currentTab);
-}
-
-function discardChanges() {
-  state.modifications = {};
-  document.getElementById('save-bar').classList.remove('visible');
-  init(); // reload from Supabase
-}
-
-// ── EXPORT CSV ──
-function exportTab(tabId) {
-  const rows = state[TAB_KEYS[tabId]];
-  if (!rows?.length) return;
-  const keys = Object.keys(rows[0]);
-  const csv = [keys.join(','), ...rows.map(r => keys.map(k => { const v=r[k]??''; return typeof v==='string'&&(v.includes(',')||v.includes('"'))?`"${v.replace(/"/g,'""')}"`:v; }).join(','))].join('\n');
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
-  a.download = `sherwood-${tabId}-${new Date().toISOString().slice(0,10)}.csv`;
-  a.click();
-}
-
-// ── IMPORT EXCEL ──
-document.getElementById('file-input').addEventListener('change', function(e) {
-  const file = e.target.files[0]; if(!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => { try { importFromWorkbook(XLSX.read(ev.target.result,{type:'array',cellDates:true}),file.name); } catch(err){ showToast('Failed: '+err.message,'error'); } };
+// ── EXCEL IMPORT ──
+document.getElementById('file-input').addEventListener('change',async function(e){
+  const file=e.target.files[0];if(!file)return;
+  setSyncStatus('loading');setLabel('Parsing '+file.name+'…');
+  const reader=new FileReader();
+  reader.onload=async ev=>{
+    try{
+      const wb=XLSX.read(ev.target.result,{type:'array',cellDates:true});
+      importFromWorkbook(wb,file.name);
+    }catch(err){showToast('Failed: '+err.message,'error');setSyncStatus('err');}
+  };
   reader.readAsArrayBuffer(file);
-  this.value = '';
+  this.value='';
 });
 
-async function importFromWorkbook(wb, fname) {
-  const find = (...names) => { for(const n of names){ const m=wb.SheetNames.find(s=>s.toLowerCase().includes(n.toLowerCase())); if(m)return wb.Sheets[m]; } return null; };
-  let imported = 0;
-  const checks = [[find('inv','sheets'),'invSheets',parseInvSheets],[find('slip','drive'),'slipDrive',parseSlipDrive],[find('alum','stain'),'alumStain',parseAlumStain],[find('elgen'),'elgen',parseElgen],[find('mjs','consign'),'mjsConsignment',parseMJS]];
-  for (const [ws,key,parser] of checks) { if(ws){ const r=parser(ws); if(r.length){ state[key]=r; imported++; } } }
-  if (!imported) { showToast('No matching sheets found','error'); return; }
-  state.modifications = {};
+async function importFromWorkbook(wb,fname){
+  const find=(...names)=>{for(const n of names){const m=wb.SheetNames.find(s=>s.toLowerCase().includes(n.toLowerCase()));if(m)return wb.Sheets[m];}return null;};
+  // Always prefer the dot-version sheets (current working version)
+  const findDot=(...names)=>{
+    for(const n of names){
+      const m=wb.SheetNames.find(s=>s.toLowerCase().includes(n.toLowerCase())&&s.endsWith('.'));
+      if(m)return wb.Sheets[m];
+    }
+    return find(...names);
+  };
+  let imported=0;
+  const checks=[
+    [findDot('inv','sheets'),'invSheets',parseInvSheets],
+    [findDot('slip','drive'),'slipDrive',parseSlipDrive],
+    [findDot('alum','stain'),'alumStain',parseAlumStain],
+    [findDot('elgen'),'elgen',parseElgen],
+    [findDot('mjs','consign'),'mjsConsignment',parseMJS]
+  ];
+  for(const [ws,key,parser] of checks){
+    if(ws){const r=parser(ws);if(r.length){state[key]=r;imported++;}}
+  }
+  if(!imported){showToast('No matching sheets found','error');setSyncStatus('err');return;}
   updateBadges();
   renderTab(state.currentTab);
-  setLabel(`Imported: ${fname.split('/').pop()} — syncing…`);
-  showToast(`Imported ${imported} sheets — saving to Supabase…`, 'success');
-  await saveToSupabase(true); // auto-save silently after every import
+  await saveToSupabase();
 }
 
-function sheetToRows(ws) { return XLSX.utils.sheet_to_json(ws,{header:1,defval:null,raw:false}); }
-function findHeader(rows) { for(let i=0;i<Math.min(10,rows.length);i++){ const r=rows[i].map(c=>String(c||'').toLowerCase()); if(r.some(c=>c.includes('gauge')||c.includes('size'))) return i; } return -1; }
-function colIdx(headers,...names) { for(const n of names){ const i=headers.findIndex(h=>h.includes(n)); if(i>=0)return i; } return -1; }
+// ── PARSERS ──
+function sheetToRows(ws){return XLSX.utils.sheet_to_json(ws,{header:1,defval:null,raw:false});}
+function findHeader(rows){for(let i=0;i<Math.min(10,rows.length);i++){const r=rows[i].map(c=>String(c||'').toLowerCase());if(r.some(c=>c.includes('gauge')||c.includes('size')))return i;}return -1;}
+function colIdx(headers,...names){for(const n of names){const i=headers.findIndex(h=>h.includes(n));if(i>=0)return i;}return -1;}
 
-function parseInvSheets(ws) {
-  const rows=sheetToRows(ws),hi=findHeader(rows); if(hi<0)return [];
+function parseInvSheets(ws){
+  const rows=sheetToRows(ws),hi=findHeader(rows);if(hi<0)return[];
   const h=rows[hi].map(c=>String(c||'').trim().toLowerCase());
   const g=colIdx(h,'gauge'),sz=colIdx(h,'size'),vd=colIdx(h,'vendor'),pc=colIdx(h,'pcs','pieces','qty'),bn=colIdx(h,'bundle type','bundle'),bnum=colIdx(h,'bundle #','bundle#','bundlenum','bundle n'),pr=colIdx(h,'price'),to=colIdx(h,'total','ext');
-  const res=[]; let sec='';
+  const res=[];let sec='';
   for(let i=hi+1;i<rows.length;i++){
-    const row=rows[i]; if(!row||row.every(c=>!c)) continue;
+    const row=rows[i];if(!row||row.every(c=>!c))continue;
     const gv=g>=0?String(row[g]||'').trim():'',pv=pc>=0?row[pc]:null;
     const fc=String(row[0]||'').trim();
     if(fc&&!gv&&!pv&&fc.toLowerCase().includes('gauge')){sec=fc;continue;}
-    if(!gv&&!pv) continue;
+    if(!gv&&!pv)continue;
     res.push({section:sec,gauge:gv,size:sz>=0?String(row[sz]||'').trim():'',vendor:vd>=0?String(row[vd]||'').trim():'',pcs:parseInt(pv)||0,bundle:bn>=0?String(row[bn]||'').trim():'',bundleNum:bnum>=0?String(row[bnum]||'').trim():'',price:pr>=0?parseFloat(String(row[pr]||'').replace(/[$,]/g,''))||0:0,total:to>=0?parseFloat(String(row[to]||'').replace(/[$,]/g,''))||0:0});
   }
   return res;
 }
 function parseSlipDrive(ws){const rows=sheetToRows(ws),hi=findHeader(rows);if(hi<0)return[];const h=rows[hi].map(c=>String(c||'').trim().toLowerCase());const g=colIdx(h,'gauge'),sz=colIdx(h,'size','width'),vd=colIdx(h,'vendor'),co=colIdx(h,'coil','qty'),bn=colIdx(h,'bundle'),wt=colIdx(h,'weight','lbs'),pr=colIdx(h,'price'),to=colIdx(h,'total','ext');const res=[];for(let i=hi+1;i<rows.length;i++){const row=rows[i];if(!row||row.every(c=>!c))continue;const gv=g>=0?String(row[g]||'').trim():'';if(!gv)continue;res.push({gauge:gv,size:sz>=0?String(row[sz]||'').trim():'',vendor:vd>=0?String(row[vd]||'').trim():'',coils:co>=0?parseInt(row[co])||0:0,bundle:bn>=0?String(row[bn]||'').trim():'',weight:wt>=0?parseFloat(String(row[wt]||'').replace(/,/g,''))||0:0,price:pr>=0?parseFloat(String(row[pr]||'').replace(/[$,]/g,''))||0:0,total:to>=0?parseFloat(String(row[to]||'').replace(/[$,]/g,''))||0:0});}return res;}
-function parseAlumStain(ws){const rows=sheetToRows(ws);let hi=-1;for(let i=0;i<Math.min(10,rows.length);i++){const r=rows[i].map(c=>String(c||'').toLowerCase());if(r.some(c=>c.includes('gauge')||c.includes('type'))){hi=i;break;}}if(hi<0)return[];const h=rows[hi].map(c=>String(c||'').trim().toLowerCase());const tp=colIdx(h,'type'),g=colIdx(h,'gauge'),sz=colIdx(h,'size'),vd=colIdx(h,'vendor'),pc=colIdx(h,'pcs','qty'),dc=colIdx(h,'desc'),bn=colIdx(h,'bundle'),rc=colIdx(h,'recv'),plb=colIdx(h,'/lb','per lb'),pea=colIdx(h,'/ea','per ea','price ea'),to=colIdx(h,'total');const res=[];let type='ALUM';for(let i=hi+1;i<rows.length;i++){const row=rows[i];if(!row||row.every(c=>!c))continue;const tv=tp>=0?String(row[tp]||'').trim().toUpperCase():'';if(tv&&(tv.includes('ALUM')||tv.includes('STAIN')||tv.includes('PERF')||tv.includes('DIAM')))type=tv;const gv=g>=0?String(row[g]||'').trim():'';if(!gv)continue;res.push({type:tv||type,gauge:gv,size:sz>=0?String(row[sz]||'').trim():'',vendor:vd>=0?String(row[vd]||'').trim():'',pcs:pc>=0?parseInt(row[pc])||0:0,desc:dc>=0?String(row[dc]||'').trim():'',bundle:bn>=0?String(row[bn]||'').trim():'',received:rc>=0?String(row[rc]||'').trim():'',pricePerLb:plb>=0?parseFloat(String(row[plb]||'').replace(/[$,]/g,''))||0:0,priceEa:pea>=0?parseFloat(String(row[pea]||'').replace(/[$,]/g,''))||0:0,total:to>=0?parseFloat(String(row[to]||'').replace(/[$,]/g,''))||0:0});}return res;}
+function parseAlumStain(ws){const rows=sheetToRows(ws);let hi=-1;for(let i=0;i<Math.min(10,rows.length);i++){const r=rows[i].map(c=>String(c||'').toLowerCase());if(r.some(c=>c.includes('gauge')||c.includes('type'))){hi=i;break;}}if(hi<0)return[];const h=rows[hi].map(c=>String(c||'').trim().toLowerCase());const tp=colIdx(h,'type'),g=colIdx(h,'gauge'),sz=colIdx(h,'size'),vd=colIdx(h,'vendor'),pc=colIdx(h,'pcs','qty'),dc=colIdx(h,'desc'),bn=colIdx(h,'bundle'),plb=colIdx(h,'/lb','per lb'),pea=colIdx(h,'/ea','per ea','price ea'),to=colIdx(h,'total');const res=[];let type='ALUM';for(let i=hi+1;i<rows.length;i++){const row=rows[i];if(!row||row.every(c=>!c))continue;const tv=tp>=0?String(row[tp]||'').trim().toUpperCase():'';if(tv&&(tv.includes('ALUM')||tv.includes('STAIN')||tv.includes('PERF')||tv.includes('DIAM')))type=tv;const gv=g>=0?String(row[g]||'').trim():'';if(!gv)continue;res.push({type:tv||type,gauge:gv,size:sz>=0?String(row[sz]||'').trim():'',vendor:vd>=0?String(row[vd]||'').trim():'',pcs:pc>=0?parseInt(row[pc])||0:0,desc:dc>=0?String(row[dc]||'').trim():'',bundle:bn>=0?String(row[bn]||'').trim():'',pricePerLb:plb>=0?parseFloat(String(row[plb]||'').replace(/[$,]/g,''))||0:0,priceEa:pea>=0?parseFloat(String(row[pea]||'').replace(/[$,]/g,''))||0:0,total:to>=0?parseFloat(String(row[to]||'').replace(/[$,]/g,''))||0:0});}return res;}
 function parseElgen(ws){const rows=sheetToRows(ws);let hi=-1;for(let i=0;i<Math.min(10,rows.length);i++){const r=rows[i].map(c=>String(c||'').toLowerCase());if(r.some(c=>c.includes('desc')||c.includes('item'))){hi=i;break;}}if(hi<0)return[];const h=rows[hi].map(c=>String(c||'').trim().toLowerCase());const dc=colIdx(h,'desc','item','product'),vd=colIdx(h,'vendor'),pc=colIdx(h,'pcs','qty'),bn=colIdx(h,'bundle'),pk=colIdx(h,'pack'),lc=colIdx(h,'loc'),pr=colIdx(h,'price','cost'),to=colIdx(h,'total','ext');const res=[];for(let i=hi+1;i<rows.length;i++){const row=rows[i];if(!row||row.every(c=>!c))continue;const dv=dc>=0?String(row[dc]||'').trim():'';if(!dv)continue;res.push({desc:dv,vendor:vd>=0?String(row[vd]||'').trim():'Elgen',pcs:pc>=0?parseInt(row[pc])||0:0,bundle:bn>=0?String(row[bn]||'').trim():'',packaging:pk>=0?String(row[pk]||'').trim():'',loc:lc>=0?String(row[lc]||'').trim():'',price:pr>=0?parseFloat(String(row[pr]||'').replace(/[$,]/g,''))||0:0,total:to>=0?parseFloat(String(row[to]||'').replace(/[$,]/g,''))||0:0});}return res;}
 function parseMJS(ws){const rows=sheetToRows(ws);let hi=-1;for(let i=0;i<Math.min(15,rows.length);i++){const r=rows[i].map(c=>String(c||'').toLowerCase());if(r.some(c=>c.includes('heat')||c.includes('gauge')||c.includes('mjs'))){hi=i;break;}}if(hi<0)return[];const h=rows[hi].map(c=>String(c||'').trim().toLowerCase());const g=colIdx(h,'gauge'),w=colIdx(h,'width'),co=colIdx(h,'coating','coat'),hn=colIdx(h,'heat'),mt=h.findIndex(c=>c.includes('mjs')&&c.includes('tag')),lf=colIdx(h,'lf','lin'),wt=colIdx(h,'weight','lbs'),cd=colIdx(h,'cpl','date'),pr=colIdx(h,'price'),tg=h.findIndex(c=>c.includes('tag')&&!c.includes('mjs'));const res=[];for(let i=hi+1;i<rows.length;i++){const row=rows[i];if(!row||row.every(c=>!c))continue;const wtv=wt>=0?parseFloat(String(row[wt]||'').replace(/,/g,''))||0:0;const lfv=lf>=0?parseFloat(String(row[lf]||'').replace(/,/g,''))||0:0;if(!wtv&&!lfv)continue;res.push({gauge:g>=0?String(row[g]||'').trim():'',width:w>=0?String(row[w]||'').trim():'',coating:co>=0?String(row[co]||'').trim():'',heatNum:hn>=0?String(row[hn]||'').trim():'',mjsTag:mt>=0?String(row[mt]||'').trim():'',lf:lfv,weight:wtv,cplDate:cd>=0?String(row[cd]||'').trim():'',price:pr>=0?parseFloat(String(row[pr]||'').replace(/[$,]/g,''))||0:0,tag:tg>=0?String(row[tg]||'').trim():''});}return res;}
 
-// ── TOAST ──
-function showToast(msg, type='') {
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.className = 'toast'+(type?' '+type:'');
-  t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3000);
+// ── EXPORT ──
+function exportTab(tabId){
+  const rows=state[TAB_KEYS[tabId]];if(!rows?.length)return;
+  const keys=Object.keys(rows[0]);
+  const csv=[keys.join(','),...rows.map(r=>keys.map(k=>{const v=r[k]??'';return typeof v==='string'&&(v.includes(',')||v.includes('"'))?`"${v.replace(/"/g,'""')}"`:v;}).join(','))].join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=`sherwood-${tabId}-${new Date().toISOString().slice(0,10)}.csv`;a.click();
 }
+
+// ── SYNC STATUS ──
+function setSyncStatus(s){
+  const el=document.getElementById('sync-status');if(!el)return;
+  el.className='sync-status';el.style.display='';
+  if(s==='ok'){el.className+=' sync-ok';el.textContent='✓ Synced';}
+  else if(s==='saving'){el.className+=' sync-saving';el.textContent='↑ Saving…';}
+  else if(s==='loading'){el.className+=' sync-saving';el.textContent='↓ Loading…';}
+  else if(s==='empty'){el.style.display='none';}
+  else if(s==='err'){el.className+=' sync-err';el.textContent='✗ Error';}
+}
+function setLabel(txt){const el=document.getElementById('last-updated');if(el)el.textContent=txt;}
+
+// ── TOAST ──
+function showToast(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.className='toast'+(type?' '+type:'');t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);}
 
 // ── BOOT ──
 document.getElementById('login-pw').focus();
-if (isLoggedIn()) {
-  document.getElementById('login-overlay').remove();
-  showApp();
-}
+if(isLoggedIn()){document.getElementById('login-overlay').remove();showApp();}
 </script>
 </body>
 </html>
