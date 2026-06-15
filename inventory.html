@@ -16,7 +16,6 @@
   }
   *{box-sizing:border-box;margin:0;padding:0;}
   body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--cream);color:var(--text-primary);min-height:100vh;}
-
   #login-overlay{position:fixed;inset:0;z-index:99999;background:var(--forest);display:flex;align-items:center;justify-content:center;}
   .login-card{background:var(--white);border-radius:12px;padding:40px;width:340px;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.4);}
   .login-card .brand{font-size:22px;font-weight:800;color:var(--forest);margin-bottom:4px;}
@@ -26,7 +25,6 @@
   .login-card button{width:100%;padding:12px;font-size:14px;font-weight:700;background:var(--forest-mid);color:var(--white);border:none;border-radius:8px;cursor:pointer;}
   .login-card button:hover{background:var(--forest-light);}
   .login-error{color:var(--rust);font-size:12px;margin-top:10px;display:none;}
-
   .app-header{background:var(--forest);color:var(--white);padding:0 24px;display:flex;align-items:center;gap:16px;height:56px;box-shadow:0 2px 8px var(--shadow);position:sticky;top:0;z-index:100;}
   .logo{font-size:11px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--sage);}
   .page-title{font-size:15px;font-weight:600;opacity:.9;}
@@ -36,38 +34,33 @@
   .sync-ok{background:rgba(168,213,168,.2);color:var(--sage);}
   .sync-saving{background:rgba(212,137,26,.2);color:#f5c842;}
   .sync-err{background:rgba(201,79,42,.2);color:#ff8a7a;}
-  .btn-import{display:flex;align-items:center;gap:7px;background:var(--forest-mid);color:var(--white);border:1px solid var(--forest-light);padding:7px 14px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;}
+  .btn-import{display:flex;align-items:center;gap:7px;background:var(--forest-mid);color:var(--white);border:1px solid var(--forest-light);padding:7px 14px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;}
   .btn-import:hover{background:var(--forest-light);}
-
+  .btn-sm{padding:6px 12px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border-dark);background:var(--white);color:var(--text-secondary);}
+  .btn-sm:hover{background:var(--row-hover);}
   .tab-bar{background:var(--forest);border-bottom:2px solid var(--forest-mid);display:flex;padding:0 24px;gap:2px;overflow-x:auto;}
   .tab-btn{background:none;border:none;color:rgba(168,213,168,.65);padding:10px 18px;font-size:13px;font-weight:600;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;white-space:nowrap;}
   .tab-btn:hover{color:var(--sage);}
   .tab-btn.active{color:var(--sage);border-bottom-color:var(--sage);}
   .tab-badge{display:inline-block;background:rgba(168,213,168,.18);color:var(--sage-dim);font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;margin-left:5px;}
   .tab-btn.active .tab-badge{background:rgba(168,213,168,.3);color:var(--sage);}
-
   .main{padding:20px 24px 40px;max-width:1600px;margin:0 auto;}
-
   .summary-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:20px;}
   .summary-card{background:var(--white);border:1px solid var(--border);border-radius:8px;padding:14px 16px;box-shadow:0 1px 3px var(--shadow);}
-  .summary-card .card-label{font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:5px;}
-  .summary-card .card-value{font-size:22px;font-weight:700;color:var(--forest);line-height:1;}
-  .summary-card .card-sub{font-size:11px;color:var(--text-secondary);margin-top:4px;}
+  .summary-card .cl{font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:5px;}
+  .summary-card .cv{font-size:22px;font-weight:700;color:var(--forest);line-height:1;}
+  .summary-card .cs{font-size:11px;color:var(--text-secondary);margin-top:4px;}
   .summary-card.accent{background:var(--forest);border-color:var(--forest-mid);}
-  .summary-card.accent .card-label{color:var(--sage-dim);}
-  .summary-card.accent .card-value{color:var(--sage);}
-  .summary-card.accent .card-sub{color:rgba(168,213,168,.7);}
-
+  .summary-card.accent .cl{color:var(--sage-dim);}
+  .summary-card.accent .cv{color:var(--sage);}
+  .summary-card.accent .cs{color:rgba(168,213,168,.7);}
   .toolbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
   .search-wrap{position:relative;flex:1;min-width:200px;max-width:380px;}
   .search-wrap svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-muted);pointer-events:none;}
   .search-input{width:100%;padding:8px 10px 8px 34px;border:1px solid var(--border-dark);border-radius:6px;font-size:13px;background:var(--white);outline:none;}
   .search-input:focus{border-color:var(--forest-mid);}
   .filter-select{padding:8px 10px;border:1px solid var(--border-dark);border-radius:6px;font-size:13px;background:var(--white);outline:none;cursor:pointer;}
-  .btn-sm{padding:7px 12px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border-dark);background:var(--white);color:var(--text-secondary);}
-  .btn-sm:hover{background:var(--row-hover);}
   .toolbar-right{margin-left:auto;}
-
   .table-wrap{background:var(--white);border:1px solid var(--border);border-radius:8px;overflow:hidden;box-shadow:0 1px 4px var(--shadow);}
   .table-container{overflow-x:auto;max-height:calc(100vh - 320px);overflow-y:auto;}
   table{width:100%;border-collapse:collapse;font-size:13px;}
@@ -92,7 +85,9 @@
   .empty-state{padding:60px 20px;text-align:center;color:var(--text-muted);}
   .empty-state .icon{font-size:48px;margin-bottom:12px;}
   .empty-state p{font-size:14px;margin-bottom:8px;}
-  .empty-state .hint{font-size:12px;color:var(--text-muted);}
+  .empty-state .hint{font-size:12px;}
+  .pcs-input{width:70px;padding:3px 6px;border:1px solid var(--border-dark);border-radius:4px;font-size:12.5px;font-family:inherit;text-align:right;outline:none;background:var(--white);}
+  .pcs-input:focus{border-color:var(--forest-mid);}
   .toast{position:fixed;bottom:24px;right:24px;background:var(--forest);color:var(--white);padding:12px 18px;border-radius:8px;font-size:13px;font-weight:600;box-shadow:0 4px 16px var(--shadow);z-index:999;transform:translateY(80px);opacity:0;transition:all .25s ease;}
   .toast.show{transform:translateY(0);opacity:1;}
   .toast.error{background:var(--rust);}
@@ -150,7 +145,13 @@ const SB_URL='https://ecndvwmbycyppqkbvuzs.supabase.co';
 const SB_KEY='sb_publishable_DPSLNDOI___sDI-lt3YbpQ_TGJbHaV-';
 const SB_HDR={'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY};
 const SESSION_KEY='kzn_session';
-const SB_TABLES={invSheets:'inventory_sheets',slipDrive:'inventory_slip_drive',alumStain:'inventory_alum_stain',elgen:'inventory_elgen',mjsConsignment:'inventory_mjs_consignment'};
+const SB_TABLES={
+  invSheets:'inventory_sheets',
+  slipDrive:'inventory_slip_drive',
+  alumStain:'inventory_alum_stain',
+  elgen:'inventory_elgen',
+  mjsConsignment:'inventory_mjs_consignment'
+};
 const TAB_KEYS={'inv-sheets':'invSheets','slip-drive':'slipDrive','alum-ss':'alumStain','elgen':'elgen','mjs':'mjsConsignment'};
 
 // ── AUTH ──
@@ -174,9 +175,22 @@ function logout(){localStorage.removeItem(SESSION_KEY);location.reload();}
 function showApp(){['app-header','tab-bar','app-main'].forEach(id=>document.getElementById(id).style.display='');init();}
 
 // ── SUPABASE ──
-async function sbGet(table,params=''){try{const r=await fetch(`${SB_URL}/rest/v1/${table}${params?'?'+params:''}`,{headers:SB_HDR});if(!r.ok)return null;return await r.json();}catch(e){return null;}}
-async function sbUpsert(table,body){try{const r=await fetch(`${SB_URL}/rest/v1/${table}`,{method:'POST',headers:{...SB_HDR,'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(body)});return r.ok;}catch(e){return false;}}
-async function sbRpc(fn,params={}){try{const r=await fetch(`${SB_URL}/rest/v1/rpc/${fn}`,{method:'POST',headers:SB_HDR,body:JSON.stringify(params)});return r.ok;}catch(e){return false;}}
+async function sbGet(table,params=''){
+  try{const r=await fetch(`${SB_URL}/rest/v1/${table}${params?'?'+params:''}`,{headers:SB_HDR});if(!r.ok)return null;return await r.json();}
+  catch(e){return null;}
+}
+async function sbUpsert(table,body){
+  try{const r=await fetch(`${SB_URL}/rest/v1/${table}`,{method:'POST',headers:{...SB_HDR,'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(body)});return r.ok;}
+  catch(e){return false;}
+}
+async function sbDelete(table,bundleNum){
+  try{const r=await fetch(`${SB_URL}/rest/v1/${table}?bundle_num=eq.${encodeURIComponent(bundleNum)}`,{method:'DELETE',headers:{...SB_HDR,'Prefer':'return=minimal'}});return r.ok;}
+  catch(e){return false;}
+}
+async function sbPatch(table,bundleNum,body){
+  try{const r=await fetch(`${SB_URL}/rest/v1/${table}?bundle_num=eq.${encodeURIComponent(bundleNum)}`,{method:'PATCH',headers:{...SB_HDR,'Prefer':'return=minimal'},body:JSON.stringify(body)});return r.ok;}
+  catch(e){return false;}
+}
 
 // ── STATE ──
 let state={invSheets:[],slipDrive:[],alumStain:[],elgen:[],mjsConsignment:[],currentTab:'inv-sheets',sortState:{},search:{},filters:{}};
@@ -191,45 +205,95 @@ async function init(){
 async function loadFromSupabase(){
   let hasData=false;
   for(const [key,table] of Object.entries(SB_TABLES)){
-    const rows=await sbGet(table,'order=row_index.asc');
-    if(rows&&rows.length>0){state[key]=rows.map(r=>r.data);hasData=true;}
-    else state[key]=[];
+    const rows=await sbGet(table,'select=bundle_num,data&order=data->>section.asc,data->>gauge.asc');
+    if(rows&&rows.length>0){
+      // Only show rows with pcs > 0
+      state[key]=rows.map(r=>r.data).filter(d=>parseInt(d.pcs||d.coils||d.weight||1)>0);
+      hasData=true;
+    } else state[key]=[];
   }
   if(hasData){setSyncStatus('ok');setLabel('Loaded from Supabase');}
   else{setSyncStatus('empty');setLabel('No inventory — import Excel to load');}
 }
 
-async function saveToSupabase(){
+// ── RECONCILIATION IMPORT ──
+async function reconcileImport(parsedData, fname){
   setSyncStatus('saving');
-  // Truncate via RPC with full error detail
-  let truncOk=false;
-  try{
-    const tr=await fetch(`${SB_URL}/rest/v1/rpc/truncate_inventory`,{
-      method:'POST',headers:{...SB_HDR,'Content-Type':'application/json'},body:'{}'
-    });
-    const txt=await tr.text();
-    console.log('[TRUNC] status:',tr.status,'body:',txt);
-    truncOk=tr.ok;
-    if(!truncOk){setSyncStatus('err');showToast('Truncate failed ('+tr.status+') — see console','error');return;}
-  }catch(e){
-    console.error('[TRUNC] error:',e);
-    setSyncStatus('err');showToast('Truncate error — see console','error');return;
-  }
-  let allOk=true;
+  const ts=new Date().toISOString();
+  let added=0,updated=0,archived=0;
+
   for(const [key,table] of Object.entries(SB_TABLES)){
-    const rows=state[key].map((data,idx)=>({row_index:idx,data,updated_at:new Date().toISOString()}));
-    console.log(`[UPSERT] ${table}: ${rows.length} rows`);
-    for(let i=0;i<rows.length;i+=100){
-      const ok=await sbUpsert(table,rows.slice(i,i+100));
-      if(!ok){console.error(`[UPSERT] FAILED batch ${i}-${i+100} on ${table}`);allOk=false;}
+    const newRows=parsedData[key]||[];
+
+    // Build lookup of new data by bundleNum
+    const newByBundle={};
+    for(const row of newRows){
+      const bn=String(row.bundleNum||row.heatNum||row.mjsTag||'').trim();
+      if(bn) newByBundle[bn]=row;
     }
+
+    // Get existing rows from Supabase
+    const existing=await sbGet(table,'select=bundle_num,data');
+    const existingByBundle={};
+    if(existing) for(const r of existing) existingByBundle[r.bundle_num]=r.data;
+
+    // Upsert all new/updated rows from Excel
+    const upsertBatch=[];
+    for(const row of newRows){
+      const bn=String(row.bundleNum||row.heatNum||row.mjsTag||'').trim();
+      if(!bn) continue;
+      const qty=parseInt(row.pcs||row.coils||0)+(parseFloat(row.weight||row.lf||0));
+      if(qty===0) continue; // skip zero rows from Excel
+      upsertBatch.push({bundle_num:bn,data:row,updated_at:ts});
+      if(existingByBundle[bn]) updated++; else added++;
+    }
+    // Upsert in batches
+    for(let i=0;i<upsertBatch.length;i+=100){
+      await sbUpsert(table,upsertBatch.slice(i,i+100));
+    }
+
+    // Archive bundles in Supabase not in new Excel
+    const auditBatch=[];
+    for(const [bn,data] of Object.entries(existingByBundle)){
+      if(!newByBundle[bn]){
+        auditBatch.push({tab:key,bundle_num:bn,data:{...data,pcs:0},reason:'import_removed',archived_at:ts});
+        await sbDelete(table,bn);
+        archived++;
+      }
+    }
+    if(auditBatch.length>0) await sbUpsert('inventory_audit',auditBatch);
   }
-  if(allOk){
-    setSyncStatus('ok');
-    const ts=new Date().toLocaleString('en-US',{month:'numeric',day:'numeric',year:'2-digit',hour:'numeric',minute:'2-digit'});
-    setLabel('Imported '+ts);
-    showToast('Inventory saved to Supabase','success');
-  }else{setSyncStatus('err');showToast('Some saves failed','error');}
+
+  // Reload state from Supabase
+  await loadFromSupabase();
+  updateBadges();
+  renderTab(state.currentTab);
+  const msg=`Reconciled: +${added} new · ${updated} updated · ${archived} archived`;
+  setLabel(msg);
+  showToast(msg,'success');
+}
+
+// ── MANUAL PCS UPDATE ──
+async function updatePcs(key,bundleNum,newPcs){
+  const table=SB_TABLES[key];
+  const row=state[key].find(r=>r.bundleNum===bundleNum||r.heatNum===bundleNum||r.mjsTag===bundleNum);
+  if(!row)return;
+  const qty=parseInt(newPcs)||0;
+  if(qty===0){
+    // Archive and remove
+    const ts=new Date().toISOString();
+    await sbUpsert('inventory_audit',[{tab:key,bundle_num:bundleNum,data:{...row,pcs:0},reason:'manual_zero',archived_at:ts}]);
+    await sbDelete(table,bundleNum);
+    state[key]=state[key].filter(r=>(r.bundleNum||r.heatNum||r.mjsTag)!==bundleNum);
+    showToast(`Bundle ${bundleNum} archived (0 pcs)`,'success');
+  } else {
+    row.pcs=qty;
+    if(row.price) row.total=Math.round(qty*row.price*100)/100;
+    await sbPatch(table,bundleNum,{data:row,updated_at:new Date().toISOString()});
+    showToast(`Bundle ${bundleNum} updated to ${qty} pcs`,'success');
+  }
+  updateBadges();
+  renderTab(state.currentTab);
 }
 
 // ── TABS ──
@@ -270,14 +334,7 @@ function sortClass(t,col){const s=state.sortState[t];if(!s||s.col!==col)return''
 function fmt$(n){if(n==null||n==='')return'—';return'$'+parseFloat(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function fmtNum(n){if(n==null||n==='')return'—';return parseFloat(n).toLocaleString('en-US');}
 function sumField(arr,f){return arr.reduce((s,r)=>s+(parseFloat(r[f])||0),0);}
-
-function emptyState(cols){
-  return`<tr><td colspan="${cols}"><div class="empty-state">
-    <div class="icon">📦</div>
-    <p>No inventory data</p>
-    <div class="hint">Use the Import Excel button to load inventory</div>
-  </div></td></tr>`;
-}
+function emptyState(cols){return`<tr><td colspan="${cols}"><div class="empty-state"><div class="icon">📦</div><p>No inventory data</p><div class="hint">Use Import Excel to load inventory</div></div></td></tr>`;}
 
 // ── INV SHEETS ──
 function renderInvSheets(){
@@ -301,24 +358,52 @@ function renderInvSheets(){
   if(useGrouped){
     let lastSec=null;
     sorted.forEach(r=>{
-      const oi=state.invSheets.indexOf(r);
       if(r.section!==lastSec){
         const sRows=state.invSheets.filter(x=>x.section===r.section);
         tbody+=`<tr class="section-header"><td colspan="9">${r.section} <span style="font-weight:400;color:var(--text-secondary);font-size:11px;margin-left:8px">${sRows.length} items · ${fmt$(sumField(sRows,'total'))}</span></td></tr>`;
         lastSec=r.section;
       }
-      tbody+=invSheetRow(r,oi);
+      const bn=r.bundleNum||'';
+      tbody+=`<tr>
+        <td><span class="gauge-chip">${r.gauge||'—'}</span></td>
+        <td>${r.size||'—'}</td>
+        <td><span class="vendor-badge">${r.vendor||'—'}</span></td>
+        <td class="td-num"><input class="pcs-input" type="number" min="0" value="${r.pcs??''}"
+          onchange="updatePcs('invSheets','${bn}',this.value)"
+          onblur="if(this.value==='')this.value='${r.pcs??0}'"></td>
+        <td>${r.bundle||'—'}</td>
+        <td style="font-family:monospace;font-size:12px">${bn}</td>
+        <td class="td-money">${fmt$(r.price)}</td>
+        <td class="td-total">${fmt$(r.total)}</td>
+        <td></td></tr>`;
     });
-  }else sorted.forEach(r=>{tbody+=invSheetRow(r,state.invSheets.indexOf(r));});
+  }else{
+    sorted.forEach(r=>{
+      const bn=r.bundleNum||'';
+      tbody+=`<tr>
+        <td><span class="gauge-chip">${r.gauge||'—'}</span></td>
+        <td>${r.size||'—'}</td>
+        <td><span class="vendor-badge">${r.vendor||'—'}</span></td>
+        <td class="td-num"><input class="pcs-input" type="number" min="0" value="${r.pcs??''}"
+          onchange="updatePcs('invSheets','${bn}',this.value)"
+          onblur="if(this.value==='')this.value='${r.pcs??0}'"></td>
+        <td>${r.bundle||'—'}</td>
+        <td style="font-family:monospace;font-size:12px">${bn}</td>
+        <td class="td-money">${fmt$(r.price)}</td>
+        <td class="td-total">${fmt$(r.total)}</td>
+        <td></td></tr>`;
+    });
+  }
   document.getElementById('tab-content-inv-sheets').innerHTML=`
     <div class="summary-row">
-      <div class="summary-card accent"><div class="card-label">Total Value</div><div class="card-value">${fmt$(sumField(state.invSheets,'total'))}</div><div class="card-sub">${state.invSheets.length} line items</div></div>
-      <div class="summary-card"><div class="card-label">Filtered Value</div><div class="card-value">${fmt$(totalVal)}</div><div class="card-sub">${rows.length} rows shown</div></div>
-      <div class="summary-card"><div class="card-label">Sheets</div><div class="card-value">${fmtNum(sumField(sheetRows,'pcs'))}</div><div class="card-sub">${sheetRows.length} line items</div></div>
-      <div class="summary-card"><div class="card-label">Coil Bundles</div><div class="card-value">${coilRows.length}</div><div class="card-sub">coil stock lines</div></div>
+      <div class="summary-card accent"><div class="cl">Total Value</div><div class="cv">${fmt$(sumField(state.invSheets,'total'))}</div><div class="cs">${state.invSheets.length} line items</div></div>
+      <div class="summary-card"><div class="cl">Filtered Value</div><div class="cv">${fmt$(totalVal)}</div><div class="cs">${rows.length} rows shown</div></div>
+      <div class="summary-card"><div class="cl">Sheets</div><div class="cv">${fmtNum(sumField(sheetRows,'pcs'))}</div><div class="cs">${sheetRows.length} line items</div></div>
+      <div class="summary-card"><div class="cl">Coil Bundles</div><div class="cv">${coilRows.length}</div><div class="cs">coil stock lines</div></div>
     </div>
     <div class="toolbar">
-      <div class="search-wrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input class="search-input" type="text" placeholder="Search gauge, size, vendor, bundle…" value="${state.search[tid]||''}" oninput="setSearch('inv-sheets',this.value)"></div>
+      <div class="search-wrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input class="search-input" type="text" placeholder="Search gauge, size, vendor, bundle…" value="${state.search[tid]||''}" oninput="setSearch('inv-sheets',this.value)"></div>
       <select class="filter-select" onchange="setFilter('inv-sheets','gauge',this.value)"><option value="">All Gauges</option>${gauges.map(g=>`<option value="${g}" ${gaugeF===g?'selected':''}>${g} Gauge</option>`).join('')}</select>
       <select class="filter-select" onchange="setFilter('inv-sheets','vendor',this.value)"><option value="">All Vendors</option>${vendors.map(v=>`<option value="${v}" ${vendorF===v?'selected':''}>${v}</option>`).join('')}</select>
       <select class="filter-select" onchange="setFilter('inv-sheets','type',this.value)"><option value="">Sheets + Coil</option><option value="sheet" ${typeF==='sheet'?'selected':''}>Sheets Only</option><option value="coil" ${typeF==='coil'?'selected':''}>Coil Only</option></select>
@@ -330,7 +415,7 @@ function renderInvSheets(){
         <th onclick="toggleSort('inv-sheets','size')" class="${sortClass(tid,'size')}">Size</th>
         <th onclick="toggleSort('inv-sheets','vendor')" class="${sortClass(tid,'vendor')}">Vendor</th>
         <th onclick="toggleSort('inv-sheets','pcs')" class="${sortClass(tid,'pcs')}">Pcs</th>
-        <th onclick="toggleSort('inv-sheets','bundle')" class="${sortClass(tid,'bundle')}">Bundle</th>
+        <th onclick="toggleSort('inv-sheets','bundle')" class="${sortClass(tid,'bundle')}">Bundle Type</th>
         <th onclick="toggleSort('inv-sheets','bundleNum')" class="${sortClass(tid,'bundleNum')}">Bundle #</th>
         <th onclick="toggleSort('inv-sheets','price')" class="${sortClass(tid,'price')}">Price/Ea</th>
         <th onclick="toggleSort('inv-sheets','total')" class="${sortClass(tid,'total')}">Total</th>
@@ -340,22 +425,13 @@ function renderInvSheets(){
     </table></div>
     <div class="table-footer"><span>Showing <strong>${rows.length}</strong> of <strong>${state.invSheets.length}</strong> items</span><span>Filtered Total: <strong>${fmt$(totalVal)}</strong></span></div></div>`;
 }
-function invSheetRow(r,idx){
-  return`<tr>
-    <td><span class="gauge-chip">${r.gauge||'—'}</span></td><td>${r.size||'—'}</td>
-    <td><span class="vendor-badge">${r.vendor||'—'}</span></td>
-    <td class="td-num">${r.pcs??'—'}</td>
-    <td>${r.bundle||'—'}</td><td style="font-family:monospace;font-size:12px">${r.bundleNum||'—'}</td>
-    <td class="td-money">${fmt$(r.price)}</td><td class="td-total">${fmt$(r.total)}</td>
-    <td></td></tr>`;
-}
 
 // ── SLIP DRIVE ──
 function renderSlipDrive(){
   const tid='slip-drive',search=getSearch(tid),gaugeF=getFilter(tid,'gauge');
   let rows=state.slipDrive.filter(r=>{
     if(gaugeF&&r.gauge!==gaugeF)return false;
-    if(search){const h=[r.gauge,r.size,r.vendor,r.bundle].join(' ').toLowerCase();if(!h.includes(search))return false;}
+    if(search){const h=[r.gauge,r.size,r.vendor,r.bundle,r.bundleNum].join(' ').toLowerCase();if(!h.includes(search))return false;}
     return true;
   });
   const sorted=state.sortState[tid]?.col?sortData(rows,state.sortState[tid].col,state.sortState[tid].dir):rows;
@@ -363,25 +439,28 @@ function renderSlipDrive(){
   const tbody=sorted.map(r=>`<tr>
     <td><span class="gauge-chip">${r.gauge||'—'}</span></td><td>${r.size||'—'}</td>
     <td><span class="vendor-badge">${r.vendor||'—'}</span></td>
-    <td class="td-num">${r.coils??'—'}</td>
-    <td style="font-family:monospace;font-size:12px">${r.bundle||'—'}</td>
+    <td class="td-num"><input class="pcs-input" type="number" min="0" value="${r.coils??''}"
+      onchange="updatePcs('slipDrive','${r.bundleNum||''}',this.value)"
+      onblur="if(this.value==='')this.value='${r.coils??0}'"></td>
+    <td style="font-family:monospace;font-size:12px">${r.bundleNum||'—'}</td>
     <td class="td-num">${r.weight?fmtNum(r.weight)+' lb':'—'}</td>
     <td class="td-money">${fmt$(r.price)}/lb</td><td class="td-total">${fmt$(r.total)}</td></tr>`).join('');
   document.getElementById('tab-content-slip-drive').innerHTML=`
     <div class="summary-row">
-      <div class="summary-card accent"><div class="card-label">Total Value</div><div class="card-value">${fmt$(sumField(state.slipDrive,'total'))}</div><div class="card-sub">${state.slipDrive.length} line items</div></div>
-      <div class="summary-card"><div class="card-label">Total Weight</div><div class="card-value">${fmtNum(Math.round(sumField(state.slipDrive,'weight')))} <span style="font-size:13px;font-weight:500">lbs</span></div><div class="card-sub">across all coils</div></div>
+      <div class="summary-card accent"><div class="cl">Total Value</div><div class="cv">${fmt$(sumField(state.slipDrive,'total'))}</div><div class="cs">${state.slipDrive.length} line items</div></div>
+      <div class="summary-card"><div class="cl">Total Weight</div><div class="cv">${fmtNum(Math.round(sumField(state.slipDrive,'weight')))} <span style="font-size:13px;font-weight:500">lbs</span></div><div class="cs">across all coils</div></div>
     </div>
     <div class="toolbar">
-      <div class="search-wrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input class="search-input" type="text" placeholder="Search gauge, size, vendor…" value="${state.search[tid]||''}" oninput="setSearch('slip-drive',this.value)"></div>
+      <div class="search-wrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input class="search-input" type="text" placeholder="Search gauge, size, vendor…" value="${state.search[tid]||''}" oninput="setSearch('slip-drive',this.value)"></div>
       <select class="filter-select" onchange="setFilter('slip-drive','gauge',this.value)"><option value="">All Gauges</option>${gauges.map(g=>`<option value="${g}" ${gaugeF===g?'selected':''}>${g} Gauge</option>`).join('')}</select>
       <div class="toolbar-right"><button class="btn-sm" onclick="exportTab('slip-drive')">Export CSV</button></div>
     </div>
     <div class="table-wrap"><div class="table-container"><table>
-      <thead><tr><th onclick="toggleSort('slip-drive','gauge')" class="${sortClass(tid,'gauge')}">Gauge</th><th>Width</th><th>Vendor</th><th onclick="toggleSort('slip-drive','coils')" class="${sortClass(tid,'coils')}">Coils</th><th>Bundle</th><th onclick="toggleSort('slip-drive','weight')" class="${sortClass(tid,'weight')}">Weight</th><th onclick="toggleSort('slip-drive','price')" class="${sortClass(tid,'price')}">Price</th><th onclick="toggleSort('slip-drive','total')" class="${sortClass(tid,'total')}">Total</th></tr></thead>
+      <thead><tr><th onclick="toggleSort('slip-drive','gauge')" class="${sortClass(tid,'gauge')}">Gauge</th><th>Width</th><th>Vendor</th><th>Coils</th><th>Bundle #</th><th onclick="toggleSort('slip-drive','weight')" class="${sortClass(tid,'weight')}">Weight</th><th>Price</th><th>Total</th></tr></thead>
       <tbody>${tbody||emptyState(8)}</tbody>
     </table></div>
-    <div class="table-footer"><span>Showing <strong>${rows.length}</strong> of <strong>${state.slipDrive.length}</strong> items</span><span>Value: <strong>${fmt$(sumField(rows,'total'))}</strong></span></div></div>`;
+    <div class="table-footer"><span>Showing <strong>${rows.length}</strong> of <strong>${state.slipDrive.length}</strong></span><span>Value: <strong>${fmt$(sumField(rows,'total'))}</strong></span></div></div>`;
 }
 
 // ── ALUM/SS ──
@@ -399,58 +478,64 @@ function renderAlumSS(){
     return`<tr>
       <td><span class="vendor-badge" style="${tc}">${r.type||'—'}</span></td><td>${r.gauge||'—'}</td><td>${r.size||'—'}</td>
       <td><span class="vendor-badge">${r.vendor||'—'}</span></td>
-      <td class="td-num">${r.pcs??'—'}</td>
-      <td>${r.desc||'—'}</td><td style="font-size:11px;color:var(--text-muted)">${r.bundle||'—'}</td>
+      <td class="td-num"><input class="pcs-input" type="number" min="0" value="${r.pcs??''}"
+        onchange="updatePcs('alumStain','${r.bundleNum||''}',this.value)"
+        onblur="if(this.value==='')this.value='${r.pcs??0}'"></td>
+      <td>${r.desc||'—'}</td><td style="font-size:11px;color:var(--text-muted)">${r.bundleNum||'—'}</td>
       <td class="td-money">${r.pricePerLb?fmt$(r.pricePerLb)+'/lb':r.priceEa?fmt$(r.priceEa)+'/ea':'—'}</td>
       <td class="td-total">${fmt$(r.total)}</td></tr>`;
   }).join('');
   document.getElementById('tab-content-alum-ss').innerHTML=`
     <div class="summary-row">
-      <div class="summary-card accent"><div class="card-label">Total Value</div><div class="card-value">${fmt$(sumField(state.alumStain,'total'))}</div><div class="card-sub">${state.alumStain.length} items</div></div>
-      ${types.map(t=>`<div class="summary-card"><div class="card-label">${t}</div><div class="card-value">${fmt$(sumField(state.alumStain.filter(r=>r.type===t),'total'))}</div><div class="card-sub">${state.alumStain.filter(r=>r.type===t).length} items</div></div>`).join('')}
+      <div class="summary-card accent"><div class="cl">Total Value</div><div class="cv">${fmt$(sumField(state.alumStain,'total'))}</div><div class="cs">${state.alumStain.length} items</div></div>
+      ${types.map(t=>`<div class="summary-card"><div class="cl">${t}</div><div class="cv">${fmt$(sumField(state.alumStain.filter(r=>r.type===t),'total'))}</div><div class="cs">${state.alumStain.filter(r=>r.type===t).length} items</div></div>`).join('')}
     </div>
     <div class="toolbar">
-      <div class="search-wrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input class="search-input" type="text" placeholder="Search type, gauge, size…" value="${state.search[tid]||''}" oninput="setSearch('alum-ss',this.value)"></div>
+      <div class="search-wrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input class="search-input" type="text" placeholder="Search type, gauge, size…" value="${state.search[tid]||''}" oninput="setSearch('alum-ss',this.value)"></div>
       <select class="filter-select" onchange="setFilter('alum-ss','type',this.value)"><option value="">All Types</option>${types.map(t=>`<option value="${t}" ${typeF===t?'selected':''}>${t}</option>`).join('')}</select>
       <div class="toolbar-right"><button class="btn-sm" onclick="exportTab('alum-ss')">Export CSV</button></div>
     </div>
     <div class="table-wrap"><div class="table-container"><table>
-      <thead><tr><th>Type</th><th>Gauge</th><th>Size</th><th>Vendor</th><th onclick="toggleSort('alum-ss','pcs')" class="${sortClass(tid,'pcs')}">Pcs</th><th>Description</th><th>Bundle</th><th onclick="toggleSort('alum-ss','priceEa')" class="${sortClass(tid,'priceEa')}">Price</th><th onclick="toggleSort('alum-ss','total')" class="${sortClass(tid,'total')}">Total</th></tr></thead>
+      <thead><tr><th>Type</th><th>Gauge</th><th>Size</th><th>Vendor</th><th>Pcs</th><th>Description</th><th>Bundle #</th><th>Price</th><th>Total</th></tr></thead>
       <tbody>${tbody||emptyState(9)}</tbody>
     </table></div>
-    <div class="table-footer"><span>Showing <strong>${rows.length}</strong> of <strong>${state.alumStain.length}</strong> items</span><span>Value: <strong>${fmt$(sumField(rows,'total'))}</strong></span></div></div>`;
+    <div class="table-footer"><span>Showing <strong>${rows.length}</strong> of <strong>${state.alumStain.length}</strong></span><span>Value: <strong>${fmt$(sumField(rows,'total'))}</strong></span></div></div>`;
 }
 
 // ── ELGEN ──
 function renderElgen(){
   const tid='elgen',search=getSearch(tid);
   let rows=state.elgen.filter(r=>{
-    if(search){const h=[r.desc,r.vendor,r.bundle,r.packaging,r.loc].join(' ').toLowerCase();if(!h.includes(search))return false;}
+    if(search){const h=[r.desc,r.vendor,r.bundle,r.packaging,r.loc,r.bundleNum].join(' ').toLowerCase();if(!h.includes(search))return false;}
     return true;
   });
   const sorted=state.sortState[tid]?.col?sortData(rows,state.sortState[tid].col,state.sortState[tid].dir):rows;
   const tbody=sorted.map(r=>`<tr>
     <td style="max-width:220px;white-space:normal;font-weight:500">${r.desc||'—'}</td>
     <td><span class="vendor-badge">${r.vendor||'—'}</span></td>
-    <td class="td-num">${r.pcs??'—'}</td>
-    <td style="font-size:12px;color:var(--text-secondary)">${r.bundle||'—'}</td>
+    <td class="td-num"><input class="pcs-input" type="number" min="0" value="${r.pcs??''}"
+      onchange="updatePcs('elgen','${r.bundleNum||''}',this.value)"
+      onblur="if(this.value==='')this.value='${r.pcs??0}'"></td>
+    <td style="font-size:12px;color:var(--text-secondary)">${r.bundleNum||'—'}</td>
     <td style="font-size:12px;color:var(--text-muted)">${r.packaging||'—'}</td>
     <td style="font-size:12px">${r.loc||'—'}</td>
     <td class="td-money">${fmt$(r.price)}</td><td class="td-total">${fmt$(r.total)}</td></tr>`).join('');
   document.getElementById('tab-content-elgen').innerHTML=`
     <div class="summary-row">
-      <div class="summary-card accent"><div class="card-label">Total Value</div><div class="card-value">${fmt$(sumField(state.elgen,'total'))}</div><div class="card-sub">${state.elgen.length} SKUs</div></div>
-      <div class="summary-card"><div class="card-label">Total Pieces</div><div class="card-value">${fmtNum(state.elgen.reduce((s,r)=>s+(parseInt(r.pcs)||0),0))}</div><div class="card-sub">accessories</div></div>
+      <div class="summary-card accent"><div class="cl">Total Value</div><div class="cv">${fmt$(sumField(state.elgen,'total'))}</div><div class="cs">${state.elgen.length} SKUs</div></div>
+      <div class="summary-card"><div class="cl">Total Pieces</div><div class="cv">${fmtNum(state.elgen.reduce((s,r)=>s+(parseInt(r.pcs)||0),0))}</div><div class="cs">accessories</div></div>
     </div>
     <div class="toolbar">
-      <div class="search-wrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input class="search-input" type="text" placeholder="Search description, bundle, location…" value="${state.search[tid]||''}" oninput="setSearch('elgen',this.value)"></div>
+      <div class="search-wrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input class="search-input" type="text" placeholder="Search description, bundle…" value="${state.search[tid]||''}" oninput="setSearch('elgen',this.value)"></div>
       <div class="toolbar-right"><button class="btn-sm" onclick="exportTab('elgen')">Export CSV</button></div>
     </div>
     <div class="table-wrap"><div class="table-container"><table>
-      <thead><tr><th onclick="toggleSort('elgen','desc')" class="${sortClass(tid,'desc')}">Description</th><th>Vendor</th><th onclick="toggleSort('elgen','pcs')" class="${sortClass(tid,'pcs')}">Pcs</th><th>Bundle</th><th>Pkg</th><th>Location</th><th onclick="toggleSort('elgen','price')" class="${sortClass(tid,'price')}">Price</th><th onclick="toggleSort('elgen','total')" class="${sortClass(tid,'total')}">Total</th></tr></thead>
+      <thead><tr><th>Description</th><th>Vendor</th><th>Pcs</th><th>Bundle #</th><th>Pkg</th><th>Location</th><th>Price</th><th>Total</th></tr></thead>
       <tbody>${tbody||emptyState(8)}</tbody>
     </table></div>
-    <div class="table-footer"><span>Showing <strong>${rows.length}</strong> of <strong>${state.elgen.length}</strong> items</span><span>Value: <strong>${fmt$(sumField(rows,'total'))}</strong></span></div></div>`;
+    <div class="table-footer"><span>Showing <strong>${rows.length}</strong> of <strong>${state.elgen.length}</strong></span><span>Value: <strong>${fmt$(sumField(rows,'total'))}</strong></span></div></div>`;
 }
 
 // ── MJS ──
@@ -474,11 +559,12 @@ function renderMJS(){
     <td style="font-family:monospace;font-weight:700;color:var(--forest)">${r.tag||'—'}</td></tr>`).join('');
   document.getElementById('tab-content-mjs').innerHTML=`
     <div class="summary-row">
-      <div class="summary-card accent"><div class="card-label">Active Coils</div><div class="card-value">${state.mjsConsignment.length}</div><div class="card-sub">no use date = active</div></div>
-      <div class="summary-card"><div class="card-label">Total Weight</div><div class="card-value">${fmtNum(Math.round(sumField(state.mjsConsignment,'weight')))} <span style="font-size:13px;font-weight:500">lbs</span></div><div class="card-sub">${fmtNum(Math.round(sumField(state.mjsConsignment,'lf')))} total LF</div></div>
+      <div class="summary-card accent"><div class="cl">Active Coils</div><div class="cv">${state.mjsConsignment.length}</div><div class="cs">no use date = active</div></div>
+      <div class="summary-card"><div class="cl">Total Weight</div><div class="cv">${fmtNum(Math.round(sumField(state.mjsConsignment,'weight')))} <span style="font-size:13px;font-weight:500">lbs</span></div><div class="cs">${fmtNum(Math.round(sumField(state.mjsConsignment,'lf')))} total LF</div></div>
     </div>
     <div class="toolbar">
-      <div class="search-wrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input class="search-input" type="text" placeholder="Search gauge, heat #, MJS tag…" value="${state.search[tid]||''}" oninput="setSearch('mjs',this.value)"></div>
+      <div class="search-wrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input class="search-input" type="text" placeholder="Search gauge, heat #, MJS tag…" value="${state.search[tid]||''}" oninput="setSearch('mjs',this.value)"></div>
       <select class="filter-select" onchange="setFilter('mjs','gauge',this.value)"><option value="">All Gauges</option>${gauges.map(g=>`<option value="${g}" ${gaugeF===g?'selected':''}>${g} Gauge</option>`).join('')}</select>
       <div class="toolbar-right"><button class="btn-sm" onclick="exportTab('mjs')">Export CSV</button></div>
     </div>
@@ -486,18 +572,18 @@ function renderMJS(){
       <thead><tr><th>Gauge</th><th>Width</th><th>Coating</th><th>Heat #</th><th>MJS Tag</th><th onclick="toggleSort('mjs','lf')" class="${sortClass(tid,'lf')}">Lin. Feet</th><th onclick="toggleSort('mjs','weight')" class="${sortClass(tid,'weight')}">Weight</th><th>CPL Date</th><th>Price</th><th>Tag #</th></tr></thead>
       <tbody>${tbody||emptyState(10)}</tbody>
     </table></div>
-    <div class="table-footer"><span>Showing <strong>${rows.length}</strong> of <strong>${state.mjsConsignment.length}</strong> active coils</span><span>${fmtNum(Math.round(sumField(rows,'weight')))} lbs filtered</span></div></div>`;
+    <div class="table-footer"><span>Showing <strong>${rows.length}</strong> of <strong>${state.mjsConsignment.length}</strong></span><span>${fmtNum(Math.round(sumField(rows,'weight')))} lbs filtered</span></div></div>`;
 }
 
 // ── EXCEL IMPORT ──
 document.getElementById('file-input').addEventListener('change',async function(e){
   const file=e.target.files[0];if(!file)return;
-  setSyncStatus('loading');setLabel('Parsing '+file.name+'…');
+  setSyncStatus('saving');setLabel('Parsing '+file.name+'…');
   const reader=new FileReader();
   reader.onload=async ev=>{
     try{
       const wb=XLSX.read(ev.target.result,{type:'array',cellDates:true});
-      importFromWorkbook(wb,file.name);
+      await importFromWorkbook(wb,file.name);
     }catch(err){showToast('Failed: '+err.message,'error');setSyncStatus('err');}
   };
   reader.readAsArrayBuffer(file);
@@ -505,92 +591,136 @@ document.getElementById('file-input').addEventListener('change',async function(e
 });
 
 async function importFromWorkbook(wb,fname){
-  // Find sheet by trying exact names first, then partial match
-  // Always pick the sheet with the most rows when multiple match (avoids old/empty tabs)
   const findSheet=(...names)=>{
-    const sheets=wb.SheetNames;
-    // Try to find a sheet matching ALL names
-    const allMatch=sheets.filter(s=>names.every(n=>s.toLowerCase().includes(n.toLowerCase())));
-    if(allMatch.length===1) return wb.Sheets[allMatch[0]];
-    if(allMatch.length>1){
-      // Multiple matches — pick the one with most data
-      let best=null,bestCount=0;
-      for(const s of allMatch){
-        const ws=wb.Sheets[s];
-        const ref=ws['!ref'];
-        if(!ref)continue;
-        const count=parseInt(ref.split(':')[1]?.replace(/[A-Z]/g,''))||0;
-        if(count>bestCount){bestCount=count;best=s;}
-      }
-      return best?wb.Sheets[best]:wb.Sheets[allMatch[0]];
+    const all=wb.SheetNames.filter(s=>names.every(n=>s.toLowerCase().includes(n.toLowerCase())));
+    if(all.length===1)return wb.Sheets[all[0]];
+    if(all.length>1){
+      let best=null,bestR=0;
+      for(const s of all){const ws=wb.Sheets[s];const ref=ws['!ref'];if(!ref)continue;const r=parseInt(ref.split(':')[1].replace(/[A-Z]/g,''))||0;if(r>bestR){bestR=r;best=s;}}
+      return best?wb.Sheets[best]:wb.Sheets[all[0]];
     }
-    // Fall back to any single name match — pick largest
     for(const n of names){
-      const matches=sheets.filter(s=>s.toLowerCase().includes(n.toLowerCase()));
+      const matches=wb.SheetNames.filter(s=>s.toLowerCase().includes(n.toLowerCase()));
       if(matches.length===1)return wb.Sheets[matches[0]];
       if(matches.length>1){
-        let best=null,bestCount=0;
-        for(const s of matches){
-          const ws=wb.Sheets[s];
-          const ref=ws['!ref'];
-          const count=parseInt(ref?.split(':')[1]?.replace(/[A-Z]/g,''))||0;
-          if(count>bestCount){bestCount=count;best=s;}
-        }
+        let best=null,bestR=0;
+        for(const s of matches){const ws=wb.Sheets[s];const ref=ws['!ref'];if(!ref)continue;const r=parseInt(ref.split(':')[1].replace(/[A-Z]/g,''))||0;if(r>bestR){bestR=r;best=s;}}
         if(best)return wb.Sheets[best];
       }
     }
     return null;
   };
-  let imported=0;
-  const checks=[
-    [findSheet('inv','sheets'),'invSheets',parseInvSheets],
-    [findSheet('slip','drive'),'slipDrive',parseSlipDrive],
-    [findSheet('alum','stain'),'alumStain',parseAlumStain],
-    [findSheet('elgen'),'elgen',parseElgen],
-    [findSheet('mjs','consignment'),'mjsConsignment',parseMJS]
-  ];
-  for(const [ws,key,parser] of checks){
-    if(ws){const r=parser(ws);if(r.length){state[key]=r;imported++;}}
-  }
-  if(!imported){showToast('No matching sheets found','error');setSyncStatus('err');return;}
-  updateBadges();
-  renderTab(state.currentTab);
 
-  await saveToSupabase();
+  const parsed={
+    invSheets:   parseInvSheets(findSheet('inv','sheets')),
+    slipDrive:   parseSlipDrive(findSheet('slip','drive')),
+    alumStain:   parseAlumStain(findSheet('alum','stain')),
+    elgen:       parseElgen(findSheet('elgen')),
+    mjsConsignment: parseMJS(findSheet('mjs','consignment'))
+  };
+
+  const totalParsed=Object.values(parsed).reduce((s,a)=>s+a.length,0);
+  if(totalParsed===0){showToast('No data found in file','error');setSyncStatus('err');return;}
+
+  await reconcileImport(parsed,fname);
 }
 
 // ── PARSERS ──
-function sheetToRows(ws){return XLSX.utils.sheet_to_json(ws,{header:1,defval:null,raw:false});}
+function sheetToRows(ws){return ws?XLSX.utils.sheet_to_json(ws,{header:1,defval:null,raw:false}):[];}
 function findHeader(rows){for(let i=0;i<Math.min(10,rows.length);i++){const r=rows[i].map(c=>String(c||'').toLowerCase());if(r.some(c=>c.includes('gauge')||c.includes('size')))return i;}return -1;}
 function colIdx(headers,...names){for(const n of names){const i=headers.findIndex(h=>h.includes(n));if(i>=0)return i;}return -1;}
 
 function parseInvSheets(ws){
   const rows=sheetToRows(ws),hi=findHeader(rows);if(hi<0)return[];
   const h=rows[hi].map(c=>String(c||'').trim().toLowerCase());
-  // Column layout: A=Gauge, B=Size, C=Vendor, D=Pcs, E=BundleType(no header), F=Bundle#, G=Price, H=Total
-  // Use header detection for most cols but fix bundle cols by position
-  const g=colIdx(h,'gauge'),sz=colIdx(h,'size'),vd=colIdx(h,'vendor'),pc=colIdx(h,'pcs','pieces','qty');
+  const g=colIdx(h,'gauge'),sz=colIdx(h,'size'),vd=colIdx(h,'vendor','vndr'),pc=colIdx(h,'pcs','pieces','qty','pcs.');
   const pr=colIdx(h,'price'),to=colIdx(h,'total','ext');
-  // Bundle TYPE is col E (index 4) — no header, always positional
-  // Bundle # is col F (index 5) — header is 'BUNDLE #'
-  const bn=4;   // bundle type — G90, w/s, etc. — used for filtering
-  const bnum=colIdx(h,'bundle #','bundle#','bundlenum','bundle n'); // bundle number
+  const bn=4;   // col E = bundle type (no header)
+  const bnum=colIdx(h,'bundle #','bundle#','bundlenum','bundle n');
   const res=[];let sec='';
   for(let i=hi+1;i<rows.length;i++){
     const row=rows[i];if(!row||row.every(c=>!c))continue;
-    const gv=g>=0?String(row[g]||'').trim():'',pv=pc>=0?row[pc]:null;
     const fc=String(row[0]||'').trim();
-    if(fc.toLowerCase()==='total') continue; // skip total/summary rows
+    const fc2=String(row[1]||'').trim().toLowerCase();
+    if(fc.toLowerCase()==='total')continue;
+    if(fc2.includes('total'))continue;
+    const gv=g>=0?String(row[g]||'').trim():'',pv=pc>=0?row[pc]:null;
     if(fc&&!gv&&!pv&&fc.toLowerCase().includes('gauge')){sec=fc;continue;}
     if(!gv&&!pv)continue;
-    res.push({section:sec,gauge:gv,size:sz>=0?String(row[sz]||'').trim():'',vendor:vd>=0?String(row[vd]||'').trim():'',pcs:parseInt(pv)||0,bundle:String(row[bn]||'').trim(),bundleNum:bnum>=0?String(row[bnum]||'').trim():'',price:pr>=0?parseFloat(String(row[pr]||'').replace(/[$,]/g,''))||0:0,total:to>=0?parseFloat(String(row[to]||'').replace(/[$,]/g,''))||0:0});
+    const bundleNum=bnum>=0?String(row[bnum]||'').trim():'';
+    if(!bundleNum)continue; // skip rows without a bundle number
+    res.push({section:sec,gauge:gv,size:sz>=0?String(row[sz]||'').trim():'',vendor:vd>=0?String(row[vd]||'').trim():'',pcs:parseInt(pv)||0,bundle:String(row[bn]||'').trim(),bundleNum,price:pr>=0?parseFloat(String(row[pr]||'').replace(/[$,]/g,''))||0:0,total:to>=0?parseFloat(String(row[to]||'').replace(/[$,]/g,''))||0:0});
   }
   return res;
 }
-function parseSlipDrive(ws){const rows=sheetToRows(ws),hi=findHeader(rows);if(hi<0)return[];const h=rows[hi].map(c=>String(c||'').trim().toLowerCase());const g=colIdx(h,'gauge'),sz=colIdx(h,'size','width'),vd=colIdx(h,'vendor'),co=colIdx(h,'coil','qty'),bn=colIdx(h,'bundle'),wt=colIdx(h,'weight','lbs'),pr=colIdx(h,'price'),to=colIdx(h,'total','ext');const res=[];for(let i=hi+1;i<rows.length;i++){const row=rows[i];if(!row||row.every(c=>!c))continue;const gv=g>=0?String(row[g]||'').trim():'';if(!gv)continue;res.push({gauge:gv,size:sz>=0?String(row[sz]||'').trim():'',vendor:vd>=0?String(row[vd]||'').trim():'',coils:co>=0?parseInt(row[co])||0:0,bundle:bn>=0?String(row[bn]||'').trim():'',weight:wt>=0?parseFloat(String(row[wt]||'').replace(/,/g,''))||0:0,price:pr>=0?parseFloat(String(row[pr]||'').replace(/[$,]/g,''))||0:0,total:to>=0?parseFloat(String(row[to]||'').replace(/[$,]/g,''))||0:0});}return res;}
-function parseAlumStain(ws){const rows=sheetToRows(ws);let hi=-1;for(let i=0;i<Math.min(10,rows.length);i++){const r=rows[i].map(c=>String(c||'').toLowerCase());if(r.some(c=>c.includes('gauge')||c.includes('type'))){hi=i;break;}}if(hi<0)return[];const h=rows[hi].map(c=>String(c||'').trim().toLowerCase());const tp=colIdx(h,'type'),g=colIdx(h,'gauge'),sz=colIdx(h,'size'),vd=colIdx(h,'vendor'),pc=colIdx(h,'pcs','qty'),dc=colIdx(h,'desc'),bn=colIdx(h,'bundle'),plb=colIdx(h,'/lb','per lb'),pea=colIdx(h,'/ea','per ea','price ea'),to=colIdx(h,'total');const res=[];let type='ALUM';for(let i=hi+1;i<rows.length;i++){const row=rows[i];if(!row||row.every(c=>!c))continue;const tv=tp>=0?String(row[tp]||'').trim().toUpperCase():'';if(tv&&(tv.includes('ALUM')||tv.includes('STAIN')||tv.includes('PERF')||tv.includes('DIAM')))type=tv;const gv=g>=0?String(row[g]||'').trim():'';if(!gv)continue;res.push({type:tv||type,gauge:gv,size:sz>=0?String(row[sz]||'').trim():'',vendor:vd>=0?String(row[vd]||'').trim():'',pcs:pc>=0?parseInt(row[pc])||0:0,desc:dc>=0?String(row[dc]||'').trim():'',bundle:bn>=0?String(row[bn]||'').trim():'',pricePerLb:plb>=0?parseFloat(String(row[plb]||'').replace(/[$,]/g,''))||0:0,priceEa:pea>=0?parseFloat(String(row[pea]||'').replace(/[$,]/g,''))||0:0,total:to>=0?parseFloat(String(row[to]||'').replace(/[$,]/g,''))||0:0});}return res;}
-function parseElgen(ws){const rows=sheetToRows(ws);let hi=-1;for(let i=0;i<Math.min(10,rows.length);i++){const r=rows[i].map(c=>String(c||'').toLowerCase());if(r.some(c=>c.includes('desc')||c.includes('item'))){hi=i;break;}}if(hi<0)return[];const h=rows[hi].map(c=>String(c||'').trim().toLowerCase());const dc=colIdx(h,'desc','item','product'),vd=colIdx(h,'vendor'),pc=colIdx(h,'pcs','qty'),bn=colIdx(h,'bundle'),pk=colIdx(h,'pack'),lc=colIdx(h,'loc'),pr=colIdx(h,'price','cost'),to=colIdx(h,'total','ext');const res=[];for(let i=hi+1;i<rows.length;i++){const row=rows[i];if(!row||row.every(c=>!c))continue;const dv=dc>=0?String(row[dc]||'').trim():'';if(!dv)continue;res.push({desc:dv,vendor:vd>=0?String(row[vd]||'').trim():'Elgen',pcs:pc>=0?parseInt(row[pc])||0:0,bundle:bn>=0?String(row[bn]||'').trim():'',packaging:pk>=0?String(row[pk]||'').trim():'',loc:lc>=0?String(row[lc]||'').trim():'',price:pr>=0?parseFloat(String(row[pr]||'').replace(/[$,]/g,''))||0:0,total:to>=0?parseFloat(String(row[to]||'').replace(/[$,]/g,''))||0:0});}return res;}
-function parseMJS(ws){const rows=sheetToRows(ws);let hi=-1;for(let i=0;i<Math.min(15,rows.length);i++){const r=rows[i].map(c=>String(c||'').toLowerCase());if(r.some(c=>c.includes('heat')||c.includes('gauge')||c.includes('mjs'))){hi=i;break;}}if(hi<0)return[];const h=rows[hi].map(c=>String(c||'').trim().toLowerCase());const g=colIdx(h,'gauge'),w=colIdx(h,'width'),co=colIdx(h,'coating','coat'),hn=colIdx(h,'heat'),mt=h.findIndex(c=>c.includes('mjs')&&c.includes('tag')),lf=colIdx(h,'lf','lin'),wt=colIdx(h,'weight','lbs'),cd=colIdx(h,'cpl','date'),pr=colIdx(h,'price'),tg=h.findIndex(c=>c.includes('tag')&&!c.includes('mjs'));const res=[];for(let i=hi+1;i<rows.length;i++){const row=rows[i];if(!row||row.every(c=>!c))continue;const wtv=wt>=0?parseFloat(String(row[wt]||'').replace(/,/g,''))||0:0;const lfv=lf>=0?parseFloat(String(row[lf]||'').replace(/,/g,''))||0:0;if(!wtv&&!lfv)continue;res.push({gauge:g>=0?String(row[g]||'').trim():'',width:w>=0?String(row[w]||'').trim():'',coating:co>=0?String(row[co]||'').trim():'',heatNum:hn>=0?String(row[hn]||'').trim():'',mjsTag:mt>=0?String(row[mt]||'').trim():'',lf:lfv,weight:wtv,cplDate:cd>=0?String(row[cd]||'').trim():'',price:pr>=0?parseFloat(String(row[pr]||'').replace(/[$,]/g,''))||0:0,tag:tg>=0?String(row[tg]||'').trim():''});}return res;}
+
+function parseSlipDrive(ws){
+  const rows=sheetToRows(ws),hi=findHeader(rows);if(hi<0)return[];
+  const h=rows[hi].map(c=>String(c||'').trim().toLowerCase());
+  const g=colIdx(h,'gauge'),sz=colIdx(h,'size','width'),vd=colIdx(h,'vendor','vndr'),co=colIdx(h,'coil','qty','pcs'),bn=colIdx(h,'bundle'),wt=colIdx(h,'weight','lbs'),pr=colIdx(h,'price'),to=colIdx(h,'total','ext');
+  const res=[];
+  for(let i=hi+1;i<rows.length;i++){
+    const row=rows[i];if(!row||row.every(c=>!c))continue;
+    const gv=g>=0?String(row[g]||'').trim():'';if(!gv)continue;
+    const bundleNum=bn>=0?String(row[bn]||'').trim():'';
+    res.push({gauge:gv,size:sz>=0?String(row[sz]||'').trim():'',vendor:vd>=0?String(row[vd]||'').trim():'',coils:co>=0?parseInt(row[co])||0:0,bundleNum,weight:wt>=0?parseFloat(String(row[wt]||'').replace(/,/g,''))||0:0,price:pr>=0?parseFloat(String(row[pr]||'').replace(/[$,]/g,''))||0:0,total:to>=0?parseFloat(String(row[to]||'').replace(/[$,]/g,''))||0:0});
+  }
+  return res;
+}
+
+function parseAlumStain(ws){
+  const rows=sheetToRows(ws);let hi=-1;
+  for(let i=0;i<Math.min(10,rows.length);i++){const r=rows[i].map(c=>String(c||'').toLowerCase());if(r.some(c=>c.includes('gauge')||c.includes('type'))){hi=i;break;}}
+  if(hi<0)return[];
+  const h=rows[hi].map(c=>String(c||'').trim().toLowerCase());
+  const tp=colIdx(h,'type'),g=colIdx(h,'gauge'),sz=colIdx(h,'size'),vd=colIdx(h,'vendor','vndr'),pc=colIdx(h,'pcs','qty'),dc=colIdx(h,'desc'),bn=colIdx(h,'bundle'),plb=colIdx(h,'/lb','per lb'),pea=colIdx(h,'/ea','per ea','price ea'),to=colIdx(h,'total');
+  const res=[];let type='ALUM';
+  for(let i=hi+1;i<rows.length;i++){
+    const row=rows[i];if(!row||row.every(c=>!c))continue;
+    const tv=tp>=0?String(row[tp]||'').trim().toUpperCase():'';
+    if(tv&&(tv.includes('ALUM')||tv.includes('STAIN')||tv.includes('PERF')||tv.includes('DIAM')))type=tv;
+    const gv=g>=0?String(row[g]||'').trim():'';if(!gv)continue;
+    const bundleNum=bn>=0?String(row[bn]||'').trim():'';
+    res.push({type:tv||type,gauge:gv,size:sz>=0?String(row[sz]||'').trim():'',vendor:vd>=0?String(row[vd]||'').trim():'',pcs:pc>=0?parseInt(row[pc])||0:0,desc:dc>=0?String(row[dc]||'').trim():'',bundleNum,pricePerLb:plb>=0?parseFloat(String(row[plb]||'').replace(/[$,]/g,''))||0:0,priceEa:pea>=0?parseFloat(String(row[pea]||'').replace(/[$,]/g,''))||0:0,total:to>=0?parseFloat(String(row[to]||'').replace(/[$,]/g,''))||0:0});
+  }
+  return res;
+}
+
+function parseElgen(ws){
+  const rows=sheetToRows(ws);let hi=-1;
+  for(let i=0;i<Math.min(10,rows.length);i++){const r=rows[i].map(c=>String(c||'').toLowerCase());if(r.some(c=>c.includes('desc')||c.includes('item'))){hi=i;break;}}
+  if(hi<0)return[];
+  const h=rows[hi].map(c=>String(c||'').trim().toLowerCase());
+  const dc=colIdx(h,'desc','item','product'),vd=colIdx(h,'vendor','vndr'),pc=colIdx(h,'pcs','qty'),bn=colIdx(h,'bundle'),pk=colIdx(h,'pack'),lc=colIdx(h,'loc'),pr=colIdx(h,'price','cost'),to=colIdx(h,'total','ext');
+  const res=[];
+  for(let i=hi+1;i<rows.length;i++){
+    const row=rows[i];if(!row||row.every(c=>!c))continue;
+    const dv=dc>=0?String(row[dc]||'').trim():'';if(!dv)continue;
+    const bundleNum=bn>=0?String(row[bn]||'').trim():'';
+    res.push({desc:dv,vendor:vd>=0?String(row[vd]||'').trim():'Elgen',pcs:pc>=0?parseInt(row[pc])||0:0,bundleNum,packaging:pk>=0?String(row[pk]||'').trim():'',loc:lc>=0?String(row[lc]||'').trim():'',price:pr>=0?parseFloat(String(row[pr]||'').replace(/[$,]/g,''))||0:0,total:to>=0?parseFloat(String(row[to]||'').replace(/[$,]/g,''))||0:0});
+  }
+  return res;
+}
+
+function parseMJS(ws){
+  const rows=sheetToRows(ws);let hi=-1;
+  for(let i=0;i<Math.min(15,rows.length);i++){const r=rows[i].map(c=>String(c||'').toLowerCase());if(r.some(c=>c.includes('heat')||c.includes('gauge')||c.includes('mjs'))){hi=i;break;}}
+  if(hi<0)return[];
+  const h=rows[hi].map(c=>String(c||'').trim().toLowerCase());
+  const g=colIdx(h,'gauge'),w=colIdx(h,'width'),co=colIdx(h,'coating','coat'),hn=colIdx(h,'heat'),mt=h.findIndex(c=>c.includes('mjs')&&c.includes('tag')),lf=colIdx(h,'lf','lin'),wt=colIdx(h,'weight','lbs'),cd=colIdx(h,'cpl','date'),pr=colIdx(h,'price'),tg=h.findIndex(c=>c.includes('tag')&&!c.includes('mjs'));
+  const res=[];
+  for(let i=hi+1;i<rows.length;i++){
+    const row=rows[i];if(!row||row.every(c=>!c))continue;
+    const wtv=wt>=0?parseFloat(String(row[wt]||'').replace(/,/g,''))||0:0;
+    const lfv=lf>=0?parseFloat(String(row[lf]||'').replace(/,/g,''))||0:0;
+    if(!wtv&&!lfv)continue;
+    const heatNum=hn>=0?String(row[hn]||'').trim():'';
+    const mjsTag=mt>=0?String(row[mt]||'').trim():'';
+    const bundleNum=heatNum||mjsTag||`mjs-${i}`;
+    res.push({gauge:g>=0?String(row[g]||'').trim():'',width:w>=0?String(row[w]||'').trim():'',coating:co>=0?String(row[co]||'').trim():'',heatNum,mjsTag,bundleNum,lf:lfv,weight:wtv,cplDate:cd>=0?String(row[cd]||'').trim():'',price:pr>=0?parseFloat(String(row[pr]||'').replace(/[$,]/g,''))||0:0,tag:tg>=0?String(row[tg]||'').trim():''});
+  }
+  return res;
+}
 
 // ── EXPORT ──
 function exportTab(tabId){
@@ -603,7 +733,7 @@ function exportTab(tabId){
 // ── SYNC STATUS ──
 function setSyncStatus(s){
   const el=document.getElementById('sync-status');if(!el)return;
-  el.className='sync-status';el.style.display='';
+  el.style.display='';el.className='sync-status';
   if(s==='ok'){el.className+=' sync-ok';el.textContent='✓ Synced';}
   else if(s==='saving'){el.className+=' sync-saving';el.textContent='↑ Saving…';}
   else if(s==='loading'){el.className+=' sync-saving';el.textContent='↓ Loading…';}
@@ -611,9 +741,7 @@ function setSyncStatus(s){
   else if(s==='err'){el.className+=' sync-err';el.textContent='✗ Error';}
 }
 function setLabel(txt){const el=document.getElementById('last-updated');if(el)el.textContent=txt;}
-
-// ── TOAST ──
-function showToast(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.className='toast'+(type?' '+type:'');t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);}
+function showToast(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.className='toast'+(type?' '+type:'');t.classList.add('show');setTimeout(()=>t.classList.remove('show'),4000);}
 
 // ── BOOT ──
 document.getElementById('login-pw').focus();
