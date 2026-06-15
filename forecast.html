@@ -529,10 +529,10 @@ function renderForecast(){
           <td style="color:var(--text-secondary)">${row.size}</td>
           <td class="r">${inp(g.id,row.r,'D',row.D)}</td>
           <td class="r calc-cell">—</td>
-          <td class="r" style="color:var(--text-muted);font-size:11px">from inv.</td>
-          <td class="r calc-cell">—</td>
-          <td class="r" style="color:var(--text-muted);font-size:11px">from MJS</td>
-          <td class="r calc-cell">${fM(row._D>0?(row._F+row.H)/row._D:0)}</td>
+          <td class="r calc-cell" style="color:var(--text-muted)">—</td>
+          <td class="r">${inp(g.id,row.r,'F',row.F)}</td>
+          <td class="r calc-cell" style="color:var(--text-muted);font-size:11px">${fN(row.H)} <span style="font-size:10px;color:var(--text-muted)">(MJS)</span></td>
+          <td class="r calc-cell">${fM(row._D>0?(row._F+(parseFloat(row.H)||0))/row._D:0)}</td>
           <td class="r">${inp(g.id,row.r,'J',row.J)}</td>
           <td class="r">${inp(g.id,row.r,'K',row.K)}</td>
           <td class="r calc-cell">—</td>
@@ -550,7 +550,7 @@ function renderForecast(){
           <td>${row.size}</td>
           <td class="r">${inp(g.id,row.r,'C',row.C)}</td>
           <td class="r ${isTheo?'theo-cell':'calc-cell'}">${fN(row._D)}</td>
-          <td class="r" style="color:var(--text-muted);font-size:11px">from inv.</td>
+          <td class="r calc-cell">${fN(parseFloat(row.E)||0)}</td>
           <td class="r ${isTheo?'theo-cell':'calc-cell'}">${fN(row._F)}</td>
           <td class="r" style="color:var(--text-muted);font-size:11px;padding:6px 4px">${wDisp}</td>
           <td class="r calc-cell">${fM(row._D>0?row._F/row._D:0)}</td>
