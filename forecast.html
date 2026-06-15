@@ -284,10 +284,8 @@ async function init(){
 
   // Now save to Supabase if first load — inventory values are baked in
   if(needsSave){
-    console.log('[FORECAST] First load — saving seed data to Supabase...');
-    await saveChanges(true);
-    console.log('[FORECAST] Auto-save complete');
-  }
+      await saveChanges(true);
+    }
 
   renderAll();
 }
@@ -297,8 +295,6 @@ async function refreshFromInventory(){
   const invRows=await sbGet('inventory_sheets','select=data');
   const mjsRows=await sbGet('inventory_mjs_consignment','select=data');
 
-  console.log('[INV] rows from Supabase:', invRows ? invRows.length : 'null');
-  console.log('[MJS] rows from Supabase:', mjsRows ? mjsRows.length : 'null');
 
   if(invRows&&invRows.length){
     const invLookup={};
@@ -311,15 +307,10 @@ async function refreshFromInventory(){
       const key=String(d.gauge)+'|'+m[1]+'|'+m[2];
       invLookup[key]=(invLookup[key]||0)+(parseInt(d.pcs)||0);
     });
-    console.log('[INV] lookup keys built:', Object.keys(invLookup).slice(0,10));
-    // Check what wkeys forecast needs
+      // Check what wkeys forecast needs
     const neededKeys=[];
     groups.forEach(g=>g.rows.forEach(row=>{ if(!row.is_coil&&row.wkey) neededKeys.push(row.wkey); }));
-    console.log('[INV] wkeys needed by forecast:', neededKeys.slice(0,10));
-    const missing = neededKeys.filter(k=>invLookup[k]==null);
-    console.log('[INV] matches found:', neededKeys.filter(k=>invLookup[k]!=null).length, 'of', neededKeys.length);
-    console.log('[INV] missing wkeys:', missing);
-    groups.forEach(g=>{
+          groups.forEach(g=>{
       g.rows.forEach(row=>{
         if(!row.is_coil&&row.wkey){
           const val=invLookup[row.wkey];
