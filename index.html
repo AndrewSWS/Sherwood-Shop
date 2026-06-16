@@ -9525,6 +9525,9 @@ function _obColor(custName){
 function _obAbbrev(name){
   if(!name) return name;
 
+  // Strip DBA clauses from the full name before splitting (e.g. "Name- a ThermoCool")
+  name = name.replace(/-\s*an?\s+[A-Z][^—–]*/i, '').trim();
+
   // Split on em-dash/en-dash or " - " to separate city
   const dashIdx = name.search(/\s*(?:[—–]|-(?=\s))\s*/);
   let base = dashIdx > -1 ? name.slice(0, dashIdx).trim() : name;
@@ -9544,15 +9547,39 @@ function _obAbbrev(name){
   // Drop trailing legal suffixes
   base = base.replace(/\b(LLC|L\.L\.C\.?|Inc\.?|Corp\.?|Co\.?|Ltd\.?|LTD|LP|LLP|P\.C\.?|P\.A\.?)\s*\.?$/i, '').trim().replace(/[,\.]+$/, '').trim();
 
-  // Words that add no value when they appear at the END of a multi-word name
-  // These get dropped so only the identifying part remains
-  const dropTrailing = /^(Company|Companies|Associates|Enterprises|Group|Holdings|Partners|Services|Solutions|Systems|Industries|Distribution|Distributing|Supply|Wire|Cloth|Wire\s+Cloth|Resources|Products|Equipment|Hardware|International|General)$/i;
+  // Drop trailing generic/trade words when base still has 2+ meaningful words left.
+  // These are words that describe WHAT the company does, not WHO they are.
+  const dropTrailing = /^(Company|Companies|Associates|Enterprises|Group|Holdings|Partners|Services|Solutions|Systems|Industries|Distribution|Distributing|Supply|Wire|Cloth|Sheet|Resources|Products|Equipment|Hardware|International|General|Mechanical|Mech|Plumbing|Plbg|Metal|Steel|HVAC|Heating|Cooling|Refrigeration|Refrig|Ventilation|Vent|Construction|Const|Electrical|Elec|Fabrication|Fabricators|Contractors|Contr\.)$/i;
+
   let w = base.split(/\s+/);
-  // Keep dropping trailing generic words as long as we have 2+ words left
-  while(w.length > 1 && dropTrailing.test(w[w.length-1])){
-    w.pop();
-    base = w.join(' ');
-    w = base.split(/\s+/);
+  // Keep stripping trailing trade words, but:
+  // - always keep at least 1 word
+  // - stop if the remaining base would be a single generic-sounding word (≤4 chars or all caps abbreviation is fine, but e.g. "United" alone is ambiguous)
+  const tooGenericAlone = /^(United|National|General|American|Standard|Quality|Premier|Elite|Pro|Advanced|Total|Global|Summit|Allied|Heritage|Liberty|Superior|Century|Tri|Mid|Atlantic|Eastern|Western|Northern|Southern)$/i;
+  let stripped = true;
+  while(stripped && w.length > 1){
+    stripped = false;
+    const wouldLeave = w.slice(0,-1).join(' ');
+    const last = w[w.length-1];
+    // Don't strip if it would leave a single word that's too generic
+    if(w.length === 2 && tooGenericAlone.test(wouldLeave)) break;
+    if(w.length > 1 && dropTrailing.test(last)){
+      w.pop(); base = w.join(' '); stripped = true; continue;
+    }
+    // Check last 2 words as a phrase
+    if(w.length > 2){
+      const last2 = w.slice(-2).join(' ');
+      if(dropTrailing.test(last2)){
+        w.splice(-2); base = w.join(' '); stripped = true; continue;
+      }
+    }
+    // Check last 3 words as phrase (e.g. "Htg & A/C")
+    if(w.length > 3){
+      const last3 = w.slice(-3).join(' ');
+      if(/^(Htg\s*&\s*A\/C|Plbg\s+Htg|Htg\s+&\s+Cooling)$/i.test(last3)){
+        w.splice(-3); base = w.join(' '); stripped = true; continue;
+      }
+    }
   }
 
   // Drop trailing Sheet Metal / Metal when DBA was present
@@ -9560,7 +9587,7 @@ function _obAbbrev(name){
     base = base.replace(/\s+Sheet\s+Metal$/i,'').replace(/\s+Metal$/i,'').trim();
   }
 
-  // Abbreviate long common words
+  // Abbreviate remaining long words (only if NOT already stripped above)
   const abbrevMap = [
     [/\bMechanical\b/gi,   'Mech'],
     [/\bPlumbing\b/gi,     'Plbg'],
