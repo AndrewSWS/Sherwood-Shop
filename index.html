@@ -332,15 +332,14 @@ select{cursor:pointer}
 .ob-tdiv{display:flex;align-items:center;gap:3px;padding:2px 2px;font-size:7px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;flex-shrink:0;color:#888}
 .ob-tdiv-line{flex:1;height:1px;background:#ccc;opacity:.6}
 /* Customer name row — fills space evenly */
-.ob-name-item{flex:1;min-height:0;display:flex;align-items:center;padding:0 8px;cursor:pointer;border-left:4px solid #ccc;border-radius:0 4px 4px 0;background:#fff;transition:background .1s,border-color .1s;overflow:hidden;min-height:28px;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.ob-name-item{flex:1;min-height:0;display:flex;align-items:center;padding:0 10px;cursor:pointer;border-left:4px solid #ccc;border-radius:0 4px 4px 0;background:#fff;transition:background .1s,border-color .1s;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.06)}
 .ob-name-item:hover{background:#f0f8f0;border-left-color:#2D6A2D}
-/* Completed — light green tint, strikethrough */
-.ob-name-item.ob-ni-done{background:#f0f9f0;border-left-color:#4CAF7D;opacity:.7}
-/* In process — light amber tint */
+/* Completed: subtle tint, green dot, name stays black — no strikethrough */
+.ob-name-item.ob-ni-done{background:#f5fbf5;border-left-color:#4CAF7D}
+/* In process — amber tint */
 .ob-name-item.ob-ni-proc{background:#fffdf5;border-left-color:#f0a500}
-/* The name itself */
-.ob-cname{font-size:clamp(10px,1.55vh,20px);font-weight:900;line-height:1.2;color:#111;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;flex:1}
-.ob-cname.ob-done{color:#2D6A2D;text-decoration:line-through;opacity:.7}
+/* The name itself — font-size set dynamically by JS after render */
+.ob-cname{font-size:2.0vh;font-weight:900;line-height:1.15;color:#111;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;flex:1}
 /* Status dot */
 .ob-sdot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-right:7px}
 .ob-sdot-done{background:#4CAF7D}
@@ -9522,10 +9521,73 @@ function _obColor(custName){
   return P[h%P.length];
 }
 
+// ── Smart customer name abbreviation ──────────────────
+function _obAbbrev(name){
+  if(!name) return name;
+
+  // Split on em-dash/en-dash or " - " to separate city
+  const dashIdx = name.search(/\s*(?:[—–]|-(?=\s))\s*/);
+  let base = dashIdx > -1 ? name.slice(0, dashIdx).trim() : name;
+  let city = dashIdx > -1 ? name.slice(dashIdx).replace(/^[\s—–\-]+/, '').trim() : '';
+
+  // Normalize attached hyphen "Word- " → space
+  base = base.replace(/(\w)-\s+/g, '$1 ');
+
+  // Strip DBA clauses: "- a ThermoCool", "a division of"
+  base = base.replace(/\s*-\s*an?\s+[A-Z].*/i, '').trim();
+  base = base.replace(/,?\s*an?\s+division\s+of\b.*/i, '').trim();
+
+  // Strip DBA city values like "a ThermoCool Company"
+  const wasDBA = /^an?\s+/i.test(city);
+  if(wasDBA) city = '';
+
+  // Drop trailing legal suffixes
+  base = base.replace(/\b(LLC|L\.L\.C\.?|Inc\.?|Corp\.?|Co\.?|Ltd\.?|LTD|LP|LLP|P\.C\.?|P\.A\.?)\s*\.?$/i, '').trim().replace(/[,\.]+$/, '').trim();
+
+  // Words that add no value when they appear at the END of a multi-word name
+  // These get dropped so only the identifying part remains
+  const dropTrailing = /^(Company|Companies|Associates|Enterprises|Group|Holdings|Partners|Services|Solutions|Systems|Industries|Distribution|Distributing|Supply|Wire|Cloth|Wire\s+Cloth|Resources|Products|Equipment|Hardware|International|General)$/i;
+  let w = base.split(/\s+/);
+  // Keep dropping trailing generic words as long as we have 2+ words left
+  while(w.length > 1 && dropTrailing.test(w[w.length-1])){
+    w.pop();
+    base = w.join(' ');
+    w = base.split(/\s+/);
+  }
+
+  // Drop trailing Sheet Metal / Metal when DBA was present
+  if(wasDBA){
+    base = base.replace(/\s+Sheet\s+Metal$/i,'').replace(/\s+Metal$/i,'').trim();
+  }
+
+  // Abbreviate long common words
+  const abbrevMap = [
+    [/\bMechanical\b/gi,   'Mech'],
+    [/\bPlumbing\b/gi,     'Plbg'],
+    [/\bConstruction\b/gi, 'Const'],
+    [/\bRefrigeration\b/gi,'Refrig'],
+    [/\bVentilation\b/gi,  'Vent'],
+    [/\bElectrical\b/gi,   'Elec'],
+    [/\bContractors\b/gi,  'Contr.'],
+    [/\bEngineering\b/gi,  'Eng'],
+    [/\bManagement\b/gi,   'Mgmt'],
+    [/\bEnvironmental\b/gi,'Envir'],
+    [/\bCommercial\b/gi,   'Comm'],
+    [/\bIndustrial\b/gi,   'Indl'],
+    [/\bAssociates\b/gi,   'Assoc'],
+    [/\bEnterprises\b/gi,  'Ent'],
+  ];
+  for(const [rx, rep] of abbrevMap) base = base.replace(rx, rep);
+
+  // Rebuild — city on second line if present
+  return city ? base + ' \u2014 ' + city : base;
+}
+
 function _obGrid(){
   const grid=document.getElementById('ob-grid');if(!grid)return;
   const days=getWeekDays(),today=localISO(new Date());
-  const TC=['#4AA8D8','#4CAF7D','#9B59B6','#E67E22'],TI=['🚚','🚛','🛻','🚜'];
+  const TC=['#4AA8D8','#4CAF7D','#9B59B6','#E67E22'],TI=['\uD83D\uDE9A','\uD83D\uDE9B','\uD83D\uDEFB','\uD83D\uDE9C'];
+
   grid.innerHTML=days.map(d=>{
     const iso=localISO(d),isToday=iso===today;
     const dayWOs=state.wos.filter(w=>w.delivery===iso);
@@ -9569,22 +9631,67 @@ function _obGrid(){
       +'<div class="ob-day-body">'+dayBody+'</div>'
       +'</div>';
   }).join('');
+
+  // Fit each name to fill its row — wrap at city dash, constrain both width and height
+  requestAnimationFrame(()=>{
+    grid.querySelectorAll('.ob-name-item').forEach(row=>{
+      const rowH=row.offsetHeight, rowW=row.offsetWidth-36;
+      if(rowH<8||rowW<40) return;
+      const el=row.querySelector('.ob-cname');
+      if(!el) return;
+      const text=el.textContent||'';
+      const hasDash=text.includes('\u2014');
+      // Insert word-break opportunity at the dash so browser can wrap city to line 2
+      el.innerHTML=hasDash
+        ? _obE(text).replace('\u2014','<wbr>\u2014\u200b')
+        : _obE(text);
+      el.style.display='block';
+      el.style.webkitLineClamp='unset';
+      if(hasDash){
+        // Allow wrapping — binary search for largest size where scrollWidth<=rowW AND scrollHeight<=rowH
+        el.style.whiteSpace='normal';
+        el.style.wordBreak='normal';
+        el.style.overflowWrap='normal';
+        const maxSz=Math.min(rowH*0.9,68);
+        let lo=10,hi=maxSz;
+        for(let n=0;n<10;n++){
+          const m=(lo+hi)/2;
+          el.style.fontSize=m+'px';
+          if(el.scrollWidth<=rowW&&el.scrollHeight<=rowH) lo=m; else hi=m;
+        }
+        el.style.fontSize=Math.floor(lo)+'px';
+      } else {
+        // No city — single line, fit to width only
+        el.style.whiteSpace='nowrap';
+        const maxSz=Math.min(rowH*0.62,68);
+        let lo=10,hi=maxSz;
+        for(let n=0;n<9;n++){
+          const m=(lo+hi)/2;
+          el.style.fontSize=m+'px';
+          if(el.scrollWidth<=rowW) lo=m; else hi=m;
+        }
+        el.style.fontSize=Math.floor(lo)+'px';
+      }
+    });
+  });
 }
 
 function _obNameRow(custName,wos,accentColor){
   const allD=wos.every(w=>woStatus(w)==='Complete');
   const anyI=wos.some(w=>woStatus(w)==='In Process');
   let cls='ob-name-item',dotCls='ob-sdot-pend';
+  // Completed: keep name black, just use green dot — don't strike through
   if(allD){cls+=' ob-ni-done';dotCls='ob-sdot-done';}
   else if(anyI){cls+=' ob-ni-proc';dotCls='ob-sdot-proc';}
   const color=accentColor||_obColor(custName);
   const woCt=wos.length>1?'<span class="ob-wo-ct">'+wos.length+' WOs</span>':'';
   const ids=JSON.stringify(wos.map(w=>w.id));
-  return '<div class="'+cls+'" style="border-left-color:'+color+'" onclick="obDetailMulti('+_obE(ids)+')">'
-    +'<span class="ob-sdot '+dotCls+'"></span>'
-    +'<span class="ob-cname'+(allD?' ob-done':'')+'">'+_obE(custName)+'</span>'
-    +woCt
-    +'</div>';
+  const displayName=_obAbbrev(custName);
+  return '<div class="'+cls+'" style="border-left-color:'+color+'" onclick="obDetailMulti('+_obE(ids)+')">'+
+    '<span class="ob-sdot '+dotCls+'"></span>'+
+    '<span class="ob-cname">'+_obE(displayName)+'</span>'+
+    woCt+
+    '</div>';
 }
 
 function _obWOBlock(wo,color){
