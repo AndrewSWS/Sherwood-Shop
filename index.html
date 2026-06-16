@@ -309,6 +309,93 @@ select{cursor:pointer}
 .board-stop-cust{font-size:16px;font-weight:800;color:#fff;line-height:1.2}
 .board-stop-wo{font-size:10px;color:#666;margin-top:1px}
 .board-stop-done{font-size:10px;color:#4CAF7D;font-weight:700;margin-top:2px}
+/* ── OFFICE BOARD ── */
+#ob-overlay{display:none;position:fixed;inset:0;z-index:9998;background:#0d0d0d;color:#fff;flex-direction:column;font-family:inherit}
+#ob-overlay.ob-active{display:flex}
+.ob-hdr{flex-shrink:0;background:#0f1f0f;border-bottom:3px solid #2D6A2D;padding:0 20px;height:60px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.ob-brand{font-size:18px;font-weight:900;letter-spacing:.03em}
+.ob-sub{font-size:10px;color:#A8D5A8;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-top:1px}
+.ob-clock{font-size:26px;font-weight:800;color:#fff;font-variant-numeric:tabular-nums}
+.ob-btns{display:flex;gap:8px}
+/* 5-column day grid */
+.ob-grid{flex:1;min-height:0;display:grid;grid-template-columns:repeat(5,1fr);gap:2px;background:#050505;overflow:hidden}
+.ob-day-col{display:flex;flex-direction:column;overflow:hidden;background:#0d0d0d}
+.ob-day-hdr{flex-shrink:0;padding:8px 10px;background:#141414;border-bottom:2px solid #1e1e1e;position:sticky;top:0}
+.ob-day-hdr.ob-today-hdr{background:#0f1f0f;border-bottom-color:#2D6A2D}
+.ob-day-name{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#666}
+.ob-day-hdr.ob-today-hdr .ob-day-name{color:#A8D5A8}
+.ob-day-date{font-size:10px;color:#333;margin-top:1px}
+.ob-day-meta{font-size:9px;color:#2a2a2a;margin-top:2px}
+.ob-day-body{flex:1;overflow-y:auto;padding:6px 6px 8px;scrollbar-width:thin;scrollbar-color:#1a1a1a #0d0d0d}
+.ob-day-body::-webkit-scrollbar{width:3px}
+.ob-day-body::-webkit-scrollbar-thumb{background:#1a1a1a;border-radius:2px}
+/* truck divider inside a day column */
+.ob-tdiv{display:flex;align-items:center;gap:4px;padding:4px 4px 3px;font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;margin-top:4px}
+.ob-tdiv:first-child{margin-top:0}
+.ob-tdiv-line{flex:1;height:1px;opacity:.4}
+/* customer card — compact for 5-col */
+.ob-card{background:#141414;border-radius:7px;border:1.5px solid #1e1e1e;overflow:hidden;margin-bottom:5px;cursor:default}
+.ob-card:hover{border-color:#2a2a2a}
+.ob-card-bar{height:3px;flex-shrink:0}
+.ob-card-name-row{padding:9px 10px 4px;display:flex;align-items:flex-start;justify-content:space-between;gap:6px}
+.ob-cname{font-size:clamp(13px,1.3vw,20px);font-weight:900;line-height:1.15;color:#fff;word-break:break-word}
+.ob-cname.ob-done{color:#4CAF7D;text-decoration:line-through;opacity:.45}
+.ob-cbadge{flex-shrink:0;font-size:8px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;border-radius:20px;padding:2px 7px;margin-top:2px;white-space:nowrap}
+.ob-cbadge.b-done{background:#1a3a1a;color:#4CAF7D;border:1px solid #2D6A2D}
+.ob-cbadge.b-proc{background:#3a2800;color:#f0a500;border:1px solid #5a4000}
+.ob-cbadge.b-pend{background:#1e1e1e;color:#333;border:1px solid #252525}
+.ob-cmeta{padding:0 10px 5px;font-size:10px;color:#2a2a2a;display:flex;align-items:center;gap:4px}
+.ob-cdot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.ob-wo-list{padding:0 6px 6px;display:flex;flex-direction:column;gap:3px}
+.ob-wo-row{background:#1a1a1a;border-radius:5px;border:1px solid #1e1e1e;padding:5px 8px;cursor:pointer;display:flex;align-items:center;gap:5px;transition:background .1s,border-color .1s}
+.ob-wo-row:hover{background:#1d2d1d;border-color:#2D6A2D}
+.ob-wo-row.ob-wd{opacity:.5;background:#141e14;border-color:#1a3a1a}
+.ob-wo-row.ob-wi{border-color:#5a4000}
+.ob-wnum{font-size:10px;font-weight:800;color:#A8D5A8;white-space:nowrap;flex-shrink:0;font-variant-numeric:tabular-nums}
+.ob-wnum.ob-nd{color:#4CAF7D}
+.ob-wnum.ob-ni{color:#f0a500}
+.ob-wsnip{flex:1;min-width:0;font-size:9px;color:#2a2a2a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ob-wpbar{width:24px;height:3px;background:#222;border-radius:2px;overflow:hidden;flex-shrink:0}
+.ob-wpfill{height:100%;border-radius:2px}
+.ob-wplbl{font-size:9px;font-weight:700;white-space:nowrap;flex-shrink:0}
+.ob-wtag{font-size:8px;font-weight:700;padding:1px 4px;border-radius:3px;white-space:nowrap;background:#1e1e1e;color:#2a2a2a;border:1px solid #222}
+.ob-warr{font-size:8px;color:#1e1e1e;flex-shrink:0}
+.ob-day-empty{padding:16px 8px;text-align:center;font-size:10px;color:#1e1e1e;font-style:italic}
+/* pickup bar */
+.ob-pickup{flex-shrink:0;background:#100f00;border-top:2px solid #f0a500;padding:4px 18px;display:flex;align-items:center;gap:8px;min-height:36px;overflow-x:auto;scrollbar-width:none}
+.ob-pickup::-webkit-scrollbar{display:none}
+.ob-pickup-lbl{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#f0a500;white-space:nowrap;flex-shrink:0}
+.ob-pchip{background:#1a1800;border:1px solid #f0a50044;border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700;color:#f0a500;white-space:nowrap;flex-shrink:0;cursor:pointer}
+.ob-pchip:hover{background:#2a2800}
+/* detail modal */
+#ob-modal-bg{display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.82);align-items:center;justify-content:center;padding:24px}
+#ob-modal-bg.ob-mopen{display:flex}
+.ob-modal{background:#151515;border-radius:12px;border:2px solid #2a2a2a;width:100%;max-width:640px;max-height:88vh;overflow-y:auto;box-shadow:0 20px 80px rgba(0,0,0,.85);scrollbar-width:thin;scrollbar-color:#222 #151515}
+.ob-modal::-webkit-scrollbar{width:4px}
+.ob-modal::-webkit-scrollbar-thumb{background:#2a2a2a;border-radius:2px}
+.ob-mhead{padding:20px 24px 12px;border-bottom:1px solid #1e1e1e;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;position:sticky;top:0;background:#151515;z-index:1;border-radius:12px 12px 0 0}
+.ob-mcust{font-size:24px;font-weight:900;color:#fff}
+.ob-mwnum{font-size:12px;color:#A8D5A8;font-weight:700;margin-top:3px}
+.ob-mclose{background:#1e1e1e;border:none;color:#555;border-radius:6px;width:32px;height:32px;font-size:16px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.ob-mclose:hover{background:#2a2a2a;color:#fff}
+.ob-mbody{padding:16px 24px 24px}
+.ob-mgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px}
+.ob-mbox{background:#1a1a1a;border-radius:6px;padding:9px 11px}
+.ob-mblbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#3a3a3a;margin-bottom:3px}
+.ob-mbval{font-size:13px;font-weight:700;color:#fff}
+.ob-mnotes{background:#1e1800;border:1px solid #f0a50033;border-radius:6px;padding:9px 11px;margin-bottom:12px;font-size:12px;color:#d4a843}
+.ob-maddr{background:#1a1a1a;border-radius:6px;padding:8px 11px;margin-bottom:12px;font-size:12px;color:#555}
+.ob-mlilbl{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#3a3a3a;margin-bottom:7px}
+.ob-litbl{width:100%;border-collapse:collapse}
+.ob-litbl th{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#2a2a2a;padding:4px 7px;text-align:left;border-bottom:1px solid #1e1e1e}
+.ob-litbl td{padding:7px 7px;border-bottom:1px solid #1a1a1a;font-size:12px;vertical-align:top}
+.ob-litbl tr:last-child td{border-bottom:none}
+.ob-ldot{width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:middle}
+.ob-ldone{background:#4CAF7D;box-shadow:0 0 4px #4CAF7D55}
+.ob-lproc{background:#f0a500;box-shadow:0 0 4px #f0a50055}
+.ob-lpend{background:#252525}
+.ob-lnote{font-size:10px;color:#6a4010;margin-top:2px;font-style:italic}
+.ob-lby{font-size:9px;color:#2D6A2D;margin-top:2px}
 </style>
 </head>
 <body>
@@ -1857,7 +1944,7 @@ const VIEWS = {
   queue:{title:'Shop Queue — Unassigned',actions:'<div class="flex gap8"><button id="queue-toggle" class="btn btn-sm" onclick="showAllQueue=!showAllQueue;updateQueueToggle();renderQueue()">Show All</button><button class="btn btn-sm" onclick="resetQueuePriorities()" title="Clear manual priorities — revert to delivery date order">↺ Reset Order</button></div>'},
   myview:{title:'My Tasks',actions:''},
   truck:{title:'Truck Planner',actions:'<button class="btn btn-primary no-print" onclick="printTruck()">🖨 Print Load Sheet</button> <a href="https://app03.linxup.com/ng/portal/index.html" target="_blank" rel="noopener" class="btn no-print" style="text-decoration:none">📡 Linxup Tracking</a>'},
-  dashboard:{title:'Master Dashboard',actions:'<button class="btn" onclick="enterBoardView()" style="background:#1C2E1C;color:#fff;border:none">📺 Board View</button>'},
+  dashboard:{title:'Master Dashboard',actions:'<button class="btn" onclick="enterBoardView()" style="background:#1C2E1C;color:#fff;border:none">📺 Board View</button> <button class="btn" onclick="enterOfficeBoardView()" style="background:#0f1f3f;color:#A8D5A8;border:1px solid #2D6A2D">🖥 Office Board</button>'},
   customers:{title:'Customer Admin',actions:'<button class="btn btn-primary" onclick="addNewCustomer()">+ Add Customer</button>'},
   settings:{title:'Settings — Admin',actions:''}
 };
@@ -9411,6 +9498,182 @@ async function bootApp(){
   }
 }
 bootApp();
+
+// ══ OFFICE BOARD ══════════════════════════════════════
+let _obTimer=null,_obClockTimer=null;
+
+function enterOfficeBoardView(){
+  document.getElementById('ob-overlay').classList.add('ob-active');
+  if(document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(()=>{});
+  _obRender();
+  _obTimer=setInterval(async()=>{
+    const ok=await sbLoadState();
+    if(ok){try{localStorage.setItem('kzn_state',JSON.stringify(state));}catch(e){}}
+    else{try{const s=localStorage.getItem('kzn_state');if(s){const p=JSON.parse(s);state.wos=p.wos||state.wos;state.trucks=p.trucks||state.trucks;}}catch(e){}}
+    _obRender();
+  },15000);
+  _obClockTimer=setInterval(()=>{const el=document.getElementById('ob-clock');if(el)el.textContent=new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});},1000);
+  const cl=document.getElementById('ob-clock');if(cl)cl.textContent=new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+}
+function exitOfficeBoardView(){
+  document.getElementById('ob-overlay').classList.remove('ob-active');
+  clearInterval(_obTimer);_obTimer=null;
+  clearInterval(_obClockTimer);_obClockTimer=null;
+  if(document.exitFullscreen)document.exitFullscreen().catch(()=>{});
+}
+function _obRender(){_obGrid();_obPickups();}
+
+function _obColor(custName){
+  const grp=getCustGroup(custName);
+  if(grp)return grp.color;
+  const c=getCustomers().find(x=>x.name===custName);
+  if(c&&c.zone&&ZONE_COLORS[c.zone])return ZONE_COLORS[c.zone];
+  const P=['#4AA8D8','#4CAF7D','#9B59B6','#E67E22','#E85D75','#4ECDC4','#D4A843','#A29BFE'];
+  let h=0;for(let i=0;i<custName.length;i++)h=(h*31+custName.charCodeAt(i))>>>0;
+  return P[h%P.length];
+}
+
+function _obGrid(){
+  const grid=document.getElementById('ob-grid');if(!grid)return;
+  const days=getWeekDays(),today=localISO(new Date());
+  const TC=['#4AA8D8','#4CAF7D','#9B59B6','#E67E22'],TI=['🚚','🚛','🛻','🚜'];
+  grid.innerHTML=days.map(d=>{
+    const iso=localISO(d),isToday=iso===today;
+    const dayWOs=state.wos.filter(w=>w.delivery===iso);
+    const totalLbs=dayWOs.reduce((s,w)=>s+getWOWeight(w.id),0);
+    const doneCount=dayWOs.filter(w=>woStatus(w)==='Complete').length;
+    const wrap=shouldWrap(iso);
+    let dayBody='';
+    if(!dayWOs.length){
+      dayBody='<div class="ob-day-empty">No deliveries</div>';
+    } else {
+      const secs=[];
+      state.trucks.forEach((t,i)=>{
+        const ws=dayWOs.filter(w=>getWOTruckId(w.id)===String(t.id));
+        if(ws.length) secs.push({lbl:TI[i%4]+' '+t.name.split('—')[0].trim(),color:TC[i%4],wos:ws});
+      });
+      const noT=dayWOs.filter(w=>!getWOTruckId(w.id));
+      if(noT.length) secs.push({lbl:'⚠ No Truck',color:'#FAC775',wos:noT});
+      dayBody=secs.map(sec=>{
+        const cm={};
+        sec.wos.forEach(wo=>{(cm[wo.customer||(wo.customer='?')]||(cm[wo.customer]=[])).push(wo);});
+        const names=Object.keys(cm).sort((a,b)=>{
+          const ad=cm[a].every(w=>woStatus(w)==='Complete'),bd=cm[b].every(w=>woStatus(w)==='Complete');
+          if(ad!==bd)return ad?1:-1;return a.localeCompare(b);
+        });
+        return '<div class="ob-tdiv" style="color:'+sec.color+'">'
+          +'<div class="ob-tdiv-line" style="background:'+sec.color+'"></div>'
+          +_obE(sec.lbl)
+          +'<div class="ob-tdiv-line" style="background:'+sec.color+'"></div>'
+          +'</div>'
+          +names.map(n=>_obCard(n,cm[n])).join('');
+      }).join('');
+    }
+    return '<div class="ob-day-col">'
+      +'<div class="ob-day-hdr'+(isToday?' ob-today-hdr':'')+'">'
+      +'<div class="ob-day-name">'+d.toLocaleDateString('en-US',{weekday:'short'})+(wrap?' 🌂':'')+'</div>'
+      +'<div class="ob-day-date">'+d.toLocaleDateString('en-US',{month:'short',day:'numeric'})+'</div>'
+      +'<div class="ob-day-meta">'+(dayWOs.length?doneCount+'/'+dayWOs.length+' WO'+(dayWOs.length!==1?'s':'')+(totalLbs?' · '+totalLbs.toLocaleString()+' lbs':''):'&mdash;')+'</div>'
+      +'</div>'
+      +'<div class="ob-day-body">'+dayBody+'</div>'
+      +'</div>';
+  }).join('');
+}
+
+function _obCard(custName,wos){
+  const color=_obColor(custName);
+  const allD=wos.every(w=>woStatus(w)==='Complete');
+  const anyI=wos.some(w=>woStatus(w)==='In Process');
+  let bc='b-pend',bt='&mdash;';
+  if(allD){bc='b-done';bt='✓';}else if(anyI){bc='b-proc';bt='▶';}
+  const cu=getCustomers().find(c=>c.name===custName)||{};
+  const zone=cu.zone||wos[0]?.zone||'';
+  return '<div class="ob-card">'
+    +'<div class="ob-card-bar" style="background:'+color+'"></div>'
+    +'<div class="ob-card-name-row">'
+    +'<div class="ob-cname'+(allD?' ob-done':'')+'">'+_obE(custName)+'</div>'
+    +'<span class="ob-cbadge '+bc+'">'+bt+'</span>'
+    +'</div>'
+    +(zone?'<div class="ob-cmeta"><span class="ob-cdot" style="background:'+color+'"></span><span>'+_obE(zone)+'</span></div>':'')
+    +'<div class="ob-wo-list">'+wos.map(_obWORow).join('')+'</div>'
+    +'</div>';
+}
+
+function _obWORow(wo){
+  const st=woStatus(wo),items=wo.items||[];
+  const done=items.filter(i=>i.status==='Complete').length,total=items.length;
+  const pct=total>0?Math.round(done/total*100):0;
+  let nc='',rc='',fc='#333';
+  if(st==='Complete'){nc='ob-nd';rc='ob-wd';fc='#4CAF7D';}
+  else if(st==='In Process'){nc='ob-ni';rc='ob-wi';fc='#f0a500';}
+  const snip=items.slice(0,2).map(i=>{const p=[];if(i.gauge)p.push(i.gauge);if(i.size)p.push(i.size);else if(i.productCat)p.push(i.productCat.replace('Other / Hardware','Hdwr').replace('Flat Sheet','Flat'));if(i.qty)p.push('×'+i.qty);return p.join(' ');}).filter(Boolean).join(' · ')+(items.length>2?'…':'');
+  return '<div class="ob-wo-row '+rc+'" onclick="obDetail('+wo.id+')">'
+    +'<span class="ob-wnum '+nc+'">#'+_obE(String(wo.woNum))+'</span>'
+    +'<span class="ob-wsnip">'+(_obE(snip)||'&mdash;')+'</span>'
+    +(total>0?'<div class="ob-wpbar"><div class="ob-wpfill" style="width:'+pct+'%;background:'+fc+'"></div></div><span class="ob-wplbl" style="color:'+fc+'">'+done+'/'+total+'</span>':'')
+    +'<span class="ob-warr">▸</span>'
+    +'</div>';
+}
+
+function _obPickups(){
+  const bar=document.getElementById('ob-pickup-bar'),items=document.getElementById('ob-pickup-items');
+  if(!bar||!items)return;
+  const today=localISO(new Date());
+  const ps=state.wos.filter(w=>{
+    if(!w.isPickup||w.delivered)return false;
+    if(w.pickupDate&&w.pickupDate<today)return false;
+    return woStatus(w)!=='Complete';
+  });
+  if(!ps.length){bar.style.display='none';return;}
+  bar.style.display='flex';
+  items.innerHTML=ps.map(wo=>'<div class="ob-pchip" onclick="obDetail('+wo.id+')">'+_obE(wo.customer)+' — WO #'+_obE(String(wo.woNum))+'</div>').join('');
+}
+
+function obDetail(woId){
+  const wo=state.wos.find(w=>w.id===woId);if(!wo)return;
+  const st=woStatus(wo),stC=st==='Complete'?'#4CAF7D':st==='In Process'?'#f0a500':'#555';
+  const items=wo.items||[],done=items.filter(i=>i.status==='Complete').length;
+  const wt=getWOWeight(wo.id),truck=state.trucks.find(t=>String(t.id)===String(getWOTruckId(wo.id)));
+  const color=_obColor(wo.customer);
+  document.getElementById('ob-mcust').textContent=wo.customer;
+  document.getElementById('ob-mwnum').textContent='WO #'+wo.woNum+(wo.po?' · PO: '+wo.po:'');
+  document.getElementById('ob-modal').style.borderColor=color;
+  const rows=items.map(li=>{
+    const d=li.status==='Complete',ip=li.status==='In Process';
+    const dc=d?'ob-ldone':ip?'ob-lproc':'ob-lpend';
+    const lbl=[li.gauge?li.gauge+' Ga':'',li.size||li.productCat||''].filter(Boolean).join(' ');
+    return`<tr><td><span class="ob-ldot ${dc}"></span><strong style="color:#ccc">${_obE(lbl)||'—'}</strong>${li.notes?`<div class="ob-lnote">📝 ${_obE(li.notes)}</div>`:''}${d&&li.completedBy?`<div class="ob-lby">✓ ${_obE(li.completedBy)}</div>`:''}</td>
+    <td style="color:#666">${_obE(String(li.qty||'—'))}</td>
+    <td style="color:#666">${li.weight?Math.round(li.weight).toLocaleString()+' lbs':'—'}</td>
+    <td style="font-size:11px;font-weight:700;color:${d?'#4CAF7D':ip?'#f0a500':'#333'}">${li.status||'Pending'}</td>
+    <td style="color:#444;font-size:10px">${_obE(li.assignee||'—')}</td>
+    <td style="color:#4AA8D8;font-size:10px">${_obE(li.station||'—')}</td></tr>`;
+  }).join('');
+  document.getElementById('ob-mbody').innerHTML=`
+    <div class="ob-mgrid">
+      <div class="ob-mbox"><div class="ob-mblbl">Status</div><div class="ob-mbval" style="color:${stC}">${st}</div></div>
+      <div class="ob-mbox"><div class="ob-mblbl">Progress</div><div class="ob-mbval" style="color:${stC}">${done}/${items.length} items</div></div>
+      <div class="ob-mbox"><div class="ob-mblbl">Delivery</div><div class="ob-mbval">${wo.delivery?fmtDate(wo.delivery):'Not set'}</div></div>
+      <div class="ob-mbox"><div class="ob-mblbl">Truck</div><div class="ob-mbval">${truck?_obE(truck.name.split('—')[0].trim()):'Not assigned'}</div></div>
+      ${wt>0?`<div class="ob-mbox"><div class="ob-mblbl">Weight</div><div class="ob-mbval">${Math.round(wt).toLocaleString()} lbs</div></div>`:''}
+      ${wo.zone?`<div class="ob-mbox"><div class="ob-mblbl">Zone</div><div class="ob-mbval" style="font-size:12px">${_obE(wo.zone)}</div></div>`:''}
+    </div>
+    ${wo.address||wo.cityst?`<div class="ob-maddr">📍 ${_obE([wo.address,wo.cityst].filter(Boolean).join(', '))}</div>`:''}
+    ${wo.notes?`<div class="ob-mnotes">📝 ${_obE(wo.notes)}</div>`:''}
+    ${wo.delivered?`<div style="background:#1a3a1a;border-radius:6px;padding:8px 11px;margin-bottom:12px;color:#4CAF7D;font-weight:700;font-size:12px">🚚 Delivered${wo.deliveredBy?' by '+_obE(wo.deliveredBy):''}</div>`:''}
+    <div class="ob-mlilbl">Line Items</div>
+    ${items.length?`<div style="overflow-x:auto"><table class="ob-litbl"><thead><tr><th>Product</th><th>Qty</th><th>Weight</th><th>Status</th><th>Operator</th><th>Station</th></tr></thead><tbody>${rows}</tbody></table></div>`:'<div style="color:#333;font-style:italic;padding:8px 0">No line items</div>'}
+  `;
+  document.getElementById('ob-modal-bg').classList.add('ob-mopen');
+}
+function obCloseDetail(){document.getElementById('ob-modal-bg').classList.remove('ob-mopen');}
+function _obE(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){
+    if(document.getElementById('ob-modal-bg')?.classList.contains('ob-mopen')){obCloseDetail();return;}
+    if(document.getElementById('ob-overlay')?.classList.contains('ob-active')){exitOfficeBoardView();return;}
+  }
+});
 </script>
 <script>
 if("serviceWorker" in navigator){
@@ -9457,5 +9720,34 @@ if("serviceWorker" in navigator){
     <div id="board-pickup-items" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"></div>
   </div>
 </div>
+
+<!-- ══ OFFICE BOARD OVERLAY ══ -->
+<div id="ob-overlay">
+  <div class="ob-hdr">
+    <div><div class="ob-brand">SHERWOOD STEEL</div><div class="ob-sub">Office Board — Delivery Schedule</div></div>
+    <div id="ob-clock" class="ob-clock"></div>
+    <div class="ob-btns">
+      <button onclick="toggleWakeLock()" style="background:#1C2E1C;color:#A8D5A8;border:1px solid #2D6A2D;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px">☀ Keep Awake</button>
+      <button onclick="exitOfficeBoardView()" style="background:#222;color:#aaa;border:1px solid #333;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px">✕ Exit</button>
+    </div>
+  </div>
+  <div class="ob-grid" id="ob-grid"></div>
+  <div class="ob-pickup" id="ob-pickup-bar" style="display:none">
+    <div class="ob-pickup-lbl">📦 Pick Ups</div>
+    <div id="ob-pickup-items" style="display:flex;gap:8px;align-items:center"></div>
+  </div>
+</div>
+
+<!-- Office board detail modal -->
+<div id="ob-modal-bg" onclick="if(event.target===this)obCloseDetail()">
+  <div class="ob-modal" id="ob-modal">
+    <div class="ob-mhead">
+      <div><div class="ob-mcust" id="ob-mcust"></div><div class="ob-mwnum" id="ob-mwnum"></div></div>
+      <button class="ob-mclose" onclick="obCloseDetail()">✕</button>
+    </div>
+    <div class="ob-mbody" id="ob-mbody"></div>
+  </div>
+</div>
+
 </body>
 </html>
