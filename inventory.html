@@ -725,6 +725,7 @@ function parseMJS(ws){
     if(ud>=0&&row[ud])continue;
     const heatNum=hn>=0?String(row[hn]||'').trim():'';
     const mjsTag=mt>=0?String(row[mt]||'').trim():'';
+    if(!heatNum&&!mjsTag)continue; // skip summary/total rows
     const bundleNum=mjsTag||heatNum||`mjs-${i}`;
     res.push({gauge:g>=0?String(row[g]||'').trim():'',width:w>=0?String(row[w]||'').trim():'',coating:co>=0?String(row[co]||'').trim():'',heatNum,mjsTag,bundleNum,lf:lfv,weight:wtv,cplDate:cd>=0?String(row[cd]||'').trim():'',price:pr>=0?parseFloat(String(row[pr]||'').replace(/[$,]/g,''))||0:0,tag:tg>=0?String(row[tg]||'').trim():''});
   }
