@@ -9486,8 +9486,22 @@ async function bootApp(){
 bootApp();
 
 // ══ OFFICE BOARD ══════════════════════════════════════
-let _obTimer=null,_obClockTimer=null;
+let _obTimer=null,_obClockTimer=null,_obVisHandler=null;
 
+function _obSetSync(ok){
+  const el=document.getElementById('ob-sync');if(!el)return;
+  const t=new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',second:'2-digit'});
+  if(ok){el.style.color='#2D6A2D';el.innerHTML='✓ Updated<br>'+t;}
+  else{el.style.color='#c0392b';el.innerHTML='⚠ Offline<br>'+t;}
+}
+async function obManualRefresh(){
+  const el=document.getElementById('ob-sync');
+  if(el){el.style.color='#888';el.innerHTML='Refreshing…';}
+  const ok=await sbLoadState();
+  if(ok){try{localStorage.setItem('kzn_state',JSON.stringify(state));}catch(e){}}
+  _obRender();
+  _obSetSync(ok);
+}
 function enterOfficeBoardView(){
   document.getElementById('ob-overlay').classList.add('ob-active');
   if(document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(()=>{});
@@ -9496,9 +9510,21 @@ function enterOfficeBoardView(){
     const ok=await sbLoadState();
     if(ok){try{localStorage.setItem('kzn_state',JSON.stringify(state));}catch(e){}}else{try{const s=localStorage.getItem('kzn_state');if(s){const p=JSON.parse(s);state.wos=p.wos||state.wos;state.trucks=p.trucks||state.trucks;}}catch(e){}}
     _obRender();
-  },15000);
+    _obSetSync(ok);
+  },10000);
   _obClockTimer=setInterval(()=>{const el=document.getElementById('ob-clock');if(el)el.textContent=new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});},1000);
   const cl=document.getElementById('ob-clock');if(cl)cl.textContent=new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+  // Force refresh when TV screen wakes from sleep / tab becomes visible again
+  // Browsers throttle setInterval when hidden, so this ensures fresh data on wake
+  _obVisHandler = async()=>{
+    if(document.visibilityState==='visible' && document.getElementById('ob-overlay')?.classList.contains('ob-active')){
+      const ok=await sbLoadState();
+      if(ok){try{localStorage.setItem('kzn_state',JSON.stringify(state));}catch(e){}}
+      _obRender();
+      _obSetSync(ok);
+    }
+  };
+  document.addEventListener('visibilitychange', _obVisHandler);
   // Auto-activate wake lock so screen stays on
   if(!_wakeLock) toggleWakeLock();
 }
@@ -9506,6 +9532,7 @@ function exitOfficeBoardView(){
   document.getElementById('ob-overlay').classList.remove('ob-active');
   clearInterval(_obTimer);_obTimer=null;
   clearInterval(_obClockTimer);_obClockTimer=null;
+  if(_obVisHandler){document.removeEventListener('visibilitychange',_obVisHandler);_obVisHandler=null;}
   if(document.exitFullscreen)document.exitFullscreen().catch(()=>{});
 }
 function _obRender(){_obGrid();_obPickups();}
@@ -9841,8 +9868,12 @@ if("serviceWorker" in navigator){
 <div id="ob-overlay">
   <div class="ob-hdr">
     <div><div class="ob-brand">SHERWOOD STEEL</div><div class="ob-sub">Office Board — Delivery Schedule</div></div>
-    <div id="ob-clock" class="ob-clock"></div>
+    <div style="display:flex;align-items:center;gap:14px">
+      <div id="ob-clock" class="ob-clock"></div>
+      <div id="ob-sync" style="font-size:10px;color:#2D6A2D;font-weight:600;text-align:right;line-height:1.3">—</div>
+    </div>
     <div class="ob-btns">
+      <button onclick="obManualRefresh()" style="background:#1C2E1C;color:#A8D5A8;border:1px solid #2D6A2D;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px">↻ Refresh</button>
       <button id="ob-wake-btn" onclick="toggleWakeLock()" style="background:#1C2E1C;color:#A8D5A8;border:1px solid #2D6A2D;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px">☀ Keep Awake</button>
       <button onclick="exitOfficeBoardView()" style="background:#222;color:#aaa;border:1px solid #333;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px">✕ Exit</button>
     </div>
