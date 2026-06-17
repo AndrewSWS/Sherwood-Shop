@@ -9753,14 +9753,14 @@ function _obGrid(){
           el.innerHTML=company+'<br><span style="white-space:nowrap">\u2014 '+city+'</span>';
           el.style.whiteSpace='normal';
           el.style.wordBreak='normal';
-          const maxSz=Math.min(rowH*0.46,52);
+          const maxSz=Math.min(rowH*0.46,36);
           let lo=9,hi=maxSz;
           for(let n=0;n<10;n++){const m=(lo+hi)/2;el.style.fontSize=m+'px';if(el.scrollHeight<=rowH)lo=m;else hi=m;}
           return Math.floor(lo);
         } else {
           el.innerHTML=_obE(text);
           el.style.whiteSpace='nowrap';
-          const maxSz=Math.min(rowH*0.62,68);
+          const maxSz=Math.min(rowH*0.62,48);
           let lo=10,hi=maxSz;
           for(let n=0;n<9;n++){const m=(lo+hi)/2;el.style.fontSize=m+'px';if(el.scrollWidth<=rowW)lo=m;else hi=m;}
           return Math.floor(lo);
