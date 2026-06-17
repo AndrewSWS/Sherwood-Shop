@@ -9729,46 +9729,53 @@ function _obGrid(){
 
   // Fit each name to fill its row — wrap at city dash, constrain both width and height
   requestAnimationFrame(()=>{
-    grid.querySelectorAll('.ob-name-item').forEach(row=>{
-      const rowH=row.offsetHeight-4, rowW=row.offsetWidth-36;
-      if(rowH<8||rowW<40) return;
-      const el=row.querySelector('.ob-cname');
-      if(!el) return;
-      const text=el.textContent||'';
-      const dashIdx=text.indexOf('\u2014');
-      const hasDash=dashIdx>-1;
-      el.style.display='block';
-      el.style.webkitLineClamp='unset';
-      if(hasDash){
-        // Hard break: company on line 1, city on line 2 (nowrap so city never splits)
-        const company=_obE(text.slice(0,dashIdx).trim());
-        const city=_obE(text.slice(dashIdx+1).trim());
-        el.innerHTML=company+'<br><span style="white-space:nowrap">\u2014 '+city+'</span>';
-        el.style.whiteSpace='normal';
-        el.style.wordBreak='normal';
-        // Binary search: largest font where BOTH lines fit in rowH
-        // Start conservatively — 2 lines each at ~40% of rowH
-        const maxSz=Math.min(rowH*0.46,52);
-        let lo=9,hi=maxSz;
-        for(let n=0;n<10;n++){
-          const m=(lo+hi)/2;
-          el.style.fontSize=m+'px';
-          if(el.scrollHeight<=rowH) lo=m; else hi=m;
+    // Size per column independently — each column finds its own global cap
+    // so busy columns shrink together, light columns can be bigger
+    const cols = Array.from(grid.querySelectorAll('.ob-day-col'));
+    cols.forEach(col=>{
+      const rows = Array.from(col.querySelectorAll('.ob-name-item'));
+      if(!rows.length) return;
+
+      // Pass 1: compute ideal size for each row in this column
+      const sizes = rows.map(row=>{
+        const rowH=row.offsetHeight-4, rowW=row.offsetWidth-36;
+        if(rowH<8||rowW<40) return null;
+        const el=row.querySelector('.ob-cname');
+        if(!el) return null;
+        const text=el.textContent||'';
+        const dashIdx=text.indexOf('\u2014');
+        const hasDash=dashIdx>-1;
+        el.style.display='block';
+        el.style.webkitLineClamp='unset';
+        if(hasDash){
+          const company=_obE(text.slice(0,dashIdx).trim());
+          const city=_obE(text.slice(dashIdx+1).trim());
+          el.innerHTML=company+'<br><span style="white-space:nowrap">\u2014 '+city+'</span>';
+          el.style.whiteSpace='normal';
+          el.style.wordBreak='normal';
+          const maxSz=Math.min(rowH*0.46,52);
+          let lo=9,hi=maxSz;
+          for(let n=0;n<10;n++){const m=(lo+hi)/2;el.style.fontSize=m+'px';if(el.scrollHeight<=rowH)lo=m;else hi=m;}
+          return Math.floor(lo);
+        } else {
+          el.innerHTML=_obE(text);
+          el.style.whiteSpace='nowrap';
+          const maxSz=Math.min(rowH*0.62,68);
+          let lo=10,hi=maxSz;
+          for(let n=0;n<9;n++){const m=(lo+hi)/2;el.style.fontSize=m+'px';if(el.scrollWidth<=rowW)lo=m;else hi=m;}
+          return Math.floor(lo);
         }
-        el.style.fontSize=Math.floor(lo)+'px';
-      } else {
-        // No city — single line, nowrap, fit to width
-        el.innerHTML=_obE(text);
-        el.style.whiteSpace='nowrap';
-        const maxSz=Math.min(rowH*0.62,68);
-        let lo=10,hi=maxSz;
-        for(let n=0;n<9;n++){
-          const m=(lo+hi)/2;
-          el.style.fontSize=m+'px';
-          if(el.scrollWidth<=rowW) lo=m; else hi=m;
-        }
-        el.style.fontSize=Math.floor(lo)+'px';
-      }
+      });
+
+      // Pass 2: all rows in THIS column use the smallest size so they match each other
+      const valid = sizes.filter(s=>s!==null);
+      if(!valid.length) return;
+      const colCap = Math.min(...valid);
+      rows.forEach((row,i)=>{
+        if(sizes[i]===null) return;
+        const el=row.querySelector('.ob-cname');
+        if(el) el.style.fontSize=colCap+'px';
+      });
     });
   });
 }
