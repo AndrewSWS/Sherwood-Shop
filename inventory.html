@@ -180,8 +180,10 @@ async function sbGet(table,params=''){
   catch(e){return null;}
 }
 async function sbUpsert(table,body){
-  try{const r=await fetch(`${SB_URL}/rest/v1/${table}`,{method:'POST',headers:{...SB_HDR,'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(body)});return r.ok;}
-  catch(e){return false;}
+  try{const r=await fetch(`${SB_URL}/rest/v1/${table}`,{method:'POST',headers:{...SB_HDR,'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(body)});
+  if(!r.ok){const txt=await r.text();console.error('sbUpsert '+table+' '+r.status+':',txt);return false;}
+  return true;}
+  catch(e){console.error('sbUpsert '+table+' exception:',e);return false;}
 }
 async function sbDelete(table,bundleNum){
   try{const r=await fetch(`${SB_URL}/rest/v1/${table}?bundle_num=eq.${encodeURIComponent(bundleNum)}`,{method:'DELETE',headers:{...SB_HDR,'Prefer':'return=minimal'}});return r.ok;}
@@ -228,7 +230,7 @@ async function reconcileImport(parsedData, fname){
     // Build lookup of new data by bundleNum
     const newByBundle={};
     for(const row of newRows){
-      const bn=String(row.bundleNum||row.heatNum||row.mjsTag||'').trim();
+      const bn=String(row.mjsTag||row.bundleNum||row.heatNum||'').trim();
       if(bn) newByBundle[bn]=row;
     }
 
@@ -240,7 +242,7 @@ async function reconcileImport(parsedData, fname){
     // Upsert all new/updated rows from Excel
     const upsertBatch=[];
     for(const row of newRows){
-      const bn=String(row.bundleNum||row.heatNum||row.mjsTag||'').trim();
+      const bn=String(row.mjsTag||row.bundleNum||row.heatNum||'').trim();
       if(!bn) continue;
       const qty=parseInt(row.pcs||row.coils||0)+(parseFloat(row.weight||row.lf||0));
       if(qty===0) continue; // skip zero rows from Excel
@@ -723,7 +725,7 @@ function parseMJS(ws){
     if(ud>=0&&row[ud])continue;
     const heatNum=hn>=0?String(row[hn]||'').trim():'';
     const mjsTag=mt>=0?String(row[mt]||'').trim():'';
-    const bundleNum=heatNum||mjsTag||`mjs-${i}`;
+    const bundleNum=mjsTag||heatNum||`mjs-${i}`;
     res.push({gauge:g>=0?String(row[g]||'').trim():'',width:w>=0?String(row[w]||'').trim():'',coating:co>=0?String(row[co]||'').trim():'',heatNum,mjsTag,bundleNum,lf:lfv,weight:wtv,cplDate:cd>=0?String(row[cd]||'').trim():'',price:pr>=0?parseFloat(String(row[pr]||'').replace(/[$,]/g,''))||0:0,tag:tg>=0?String(row[tg]||'').trim():''});
   }
   return res;
