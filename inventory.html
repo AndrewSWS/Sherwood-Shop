@@ -592,20 +592,21 @@ document.getElementById('file-input').addEventListener('change',async function(e
 
 async function importFromWorkbook(wb,fname){
   const findSheet=(...names)=>{
-    const all=wb.SheetNames.filter(s=>names.every(n=>s.toLowerCase().includes(n.toLowerCase())));
+    // Only search visible sheets; fall back to all if none visible match
+    const visibleNames=wb.SheetNames.filter((_,i)=>!(wb.Workbook?.Sheets?.[i]?.Hidden));
+    const pool=visibleNames.length?visibleNames:wb.SheetNames;
+    const all=pool.filter(s=>names.every(n=>s.toLowerCase().includes(n.toLowerCase())));
     if(all.length===1)return wb.Sheets[all[0]];
     if(all.length>1){
-      let best=null,bestR=0;
-      for(const s of all){const ws=wb.Sheets[s];const ref=ws['!ref'];if(!ref)continue;const r=parseInt(ref.split(':')[1].replace(/[A-Z]/g,''))||0;if(r>bestR){bestR=r;best=s;}}
-      return best?wb.Sheets[best]:wb.Sheets[all[0]];
+      const best=all.reduce((a,b)=>a.length<=b.length?a:b);
+      return wb.Sheets[best];
     }
     for(const n of names){
-      const matches=wb.SheetNames.filter(s=>s.toLowerCase().includes(n.toLowerCase()));
+      const matches=pool.filter(s=>s.toLowerCase().includes(n.toLowerCase()));
       if(matches.length===1)return wb.Sheets[matches[0]];
       if(matches.length>1){
-        let best=null,bestR=0;
-        for(const s of matches){const ws=wb.Sheets[s];const ref=ws['!ref'];if(!ref)continue;const r=parseInt(ref.split(':')[1].replace(/[A-Z]/g,''))||0;if(r>bestR){bestR=r;best=s;}}
-        if(best)return wb.Sheets[best];
+        const best=matches.reduce((a,b)=>a.length<=b.length?a:b);
+        return wb.Sheets[best];
       }
     }
     return null;
@@ -650,7 +651,7 @@ function parseInvSheets(ws){
     let bundleNum=bnum>=0?String(row[bnum]||'').trim():'';
     if(!bundleNum){
       // Generate a stable key for rows without a bundle number
-      bundleNum=`${gv}-${(sz>=0?String(row[sz]||''):'')+''}-${vd>=0?String(row[vd]||''):''}`.replace(/\s+/g,'-').replace(/[^a-zA-Z0-9-]/g,'').toLowerCase()+'-nobundle';
+      bundleNum=`${gv}-${(sz>=0?String(row[sz]||''):'')+''}-${vd>=0?String(row[vd]||''):''}`.replace(/\s+/g,'-').replace(/[^a-zA-Z0-9-]/g,'').toLowerCase()+`-nobundle-${i}`;
       if(!bundleNum||bundleNum==='-nobundle')continue;
     }
     res.push({section:sec,gauge:gv,size:sz>=0?String(row[sz]||'').trim():'',vendor:vd>=0?String(row[vd]||'').trim():'',pcs:parseInt(pv)||0,bundle:String(row[bn]||'').trim(),bundleNum,price:pr>=0?parseFloat(String(row[pr]||'').replace(/[$,]/g,''))||0:0,total:to>=0?parseFloat(String(row[to]||'').replace(/[$,]/g,''))||0:0});
