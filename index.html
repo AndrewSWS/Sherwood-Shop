@@ -309,6 +309,81 @@ select{cursor:pointer}
 .board-stop-cust{font-size:16px;font-weight:800;color:#fff;line-height:1.2}
 .board-stop-wo{font-size:10px;color:#666;margin-top:1px}
 .board-stop-done{font-size:10px;color:#4CAF7D;font-weight:700;margin-top:2px}
+/* ── OFFICE BOARD ── */
+#ob-overlay{display:none;position:fixed;inset:0;z-index:9998;background:#f4f6f4;color:#111;flex-direction:column;font-family:inherit;overflow:hidden}
+#ob-overlay.ob-active{display:flex}
+/* Slim header */
+.ob-hdr{flex-shrink:0;background:#1C2E1C;padding:0 14px;height:38px;display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:3px solid #2D6A2D}
+.ob-brand{font-size:12px;font-weight:800;letter-spacing:.05em;color:#A8D5A8;text-transform:uppercase}
+.ob-clock{font-size:18px;font-weight:800;color:#fff;font-variant-numeric:tabular-nums;letter-spacing:.04em}
+.ob-btns{display:flex;gap:5px}
+/* 5 columns */
+.ob-grid{flex:1;min-height:0;display:grid;grid-template-columns:repeat(5,1fr);gap:2px;background:#d8ddd8;overflow:hidden}
+.ob-day-col{display:flex;flex-direction:column;overflow:hidden;background:#f4f6f4;min-height:0}
+/* Day column header */
+.ob-day-hdr{flex-shrink:0;padding:5px 10px 4px;background:#e8ede8;border-bottom:2px solid #c8d4c8}
+.ob-day-hdr.ob-today-hdr{background:#1C2E1C;border-bottom-color:#2D6A2D}
+.ob-day-name{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#6a7a6a}
+.ob-day-hdr.ob-today-hdr .ob-day-name{color:#A8D5A8}
+.ob-day-date{font-size:9px;color:#9aaa9a;margin-top:1px}
+/* Day body — no scroll, flex fills height */
+.ob-day-body{flex:1;min-height:0;display:flex;flex-direction:column;padding:3px 4px;gap:1px;overflow:hidden}
+/* Truck divider */
+.ob-tdiv{display:flex;align-items:center;gap:3px;padding:2px 2px;font-size:7px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;flex-shrink:0;color:#888}
+.ob-tdiv-line{flex:1;height:1px;background:#ccc;opacity:.6}
+/* Customer name row — fills space evenly */
+.ob-name-item{flex:1;min-height:0;display:flex;align-items:center;padding:0 10px;cursor:pointer;border-left:4px solid #ccc;border-radius:0 4px 4px 0;background:#fff;transition:background .1s,border-color .1s;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.ob-name-item:hover{background:#f0f8f0;border-left-color:#2D6A2D}
+/* Completed: subtle tint, green dot, name stays black — no strikethrough */
+.ob-name-item.ob-ni-done{background:#f5fbf5;border-left-color:#4CAF7D}
+/* In process — amber tint */
+.ob-name-item.ob-ni-proc{background:#fffdf5;border-left-color:#f0a500}
+/* The name itself — font-size set dynamically by JS after render */
+.ob-cname{font-size:2.0vh;font-weight:900;line-height:1.15;color:#111;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;flex:1}
+/* Status dot */
+.ob-sdot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-right:7px}
+.ob-sdot-done{background:#4CAF7D}
+.ob-sdot-proc{background:#f0a500}
+.ob-sdot-pend{background:#ccc}
+/* WO count badge */
+.ob-wo-ct{flex-shrink:0;font-size:8px;font-weight:800;color:#bbb;padding-left:5px;white-space:nowrap}
+/* Empty day */
+.ob-day-empty{flex:1;display:flex;align-items:center;justify-content:center;font-size:10px;color:#ccc;font-style:italic}
+/* Pickup bar */
+.ob-pickup{flex-shrink:0;background:#fff8e6;border-top:2px solid #f0a500;padding:2px 12px;display:flex;align-items:center;gap:7px;height:28px;overflow-x:auto;scrollbar-width:none}
+.ob-pickup::-webkit-scrollbar{display:none}
+.ob-pickup-lbl{font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#f0a500;white-space:nowrap;flex-shrink:0}
+.ob-pchip{background:#fff3cc;border:1px solid #f0a50066;border-radius:3px;padding:1px 7px;font-size:10px;font-weight:700;color:#b07800;white-space:nowrap;flex-shrink:0;cursor:pointer}
+.ob-pchip:hover{background:#ffe8a0}
+/* Detail modal */
+#ob-modal-bg{display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.5);align-items:center;justify-content:center;padding:24px}
+#ob-modal-bg.ob-mopen{display:flex}
+.ob-modal{background:#fff;border-radius:12px;border:1px solid #d0d8d0;width:100%;max-width:680px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.2);scrollbar-width:thin;scrollbar-color:#ccc #fff}
+.ob-modal::-webkit-scrollbar{width:4px}
+.ob-modal::-webkit-scrollbar-thumb{background:#ccc;border-radius:2px}
+.ob-mhead{padding:18px 22px 12px;border-bottom:1px solid #eee;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;position:sticky;top:0;background:#fff;z-index:1;border-radius:12px 12px 0 0}
+.ob-mcust{font-size:22px;font-weight:900;color:#111}
+.ob-mwnum{font-size:11px;color:#2D6A2D;font-weight:700;margin-top:3px}
+.ob-mclose{background:#f0f0f0;border:none;color:#666;border-radius:6px;width:30px;height:30px;font-size:15px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.ob-mclose:hover{background:#e0e0e0;color:#111}
+.ob-mbody{padding:14px 22px 22px}
+.ob-mgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin-bottom:12px}
+.ob-mbox{background:#f7f8f7;border:1px solid #e8ede8;border-radius:6px;padding:8px 10px}
+.ob-mblbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#999;margin-bottom:3px}
+.ob-mbval{font-size:13px;font-weight:700;color:#111}
+.ob-mnotes{background:#fffdf0;border:1px solid #f0e0a0;border-radius:6px;padding:8px 10px;margin-bottom:10px;font-size:12px;color:#7a6020}
+.ob-maddr{background:#f7f8f7;border-radius:6px;padding:7px 10px;margin-bottom:10px;font-size:12px;color:#666}
+.ob-mlilbl{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#999;margin-bottom:7px}
+.ob-litbl{width:100%;border-collapse:collapse}
+.ob-litbl th{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#aaa;padding:4px 7px;text-align:left;border-bottom:1px solid #eee;background:#fafafa}
+.ob-litbl td{padding:7px 7px;border-bottom:1px solid #f0f0f0;font-size:12px;vertical-align:top;color:#333}
+.ob-litbl tr:last-child td{border-bottom:none}
+.ob-ldot{width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:middle}
+.ob-ldone{background:#4CAF7D}
+.ob-lproc{background:#f0a500}
+.ob-lpend{background:#ccc}
+.ob-lnote{font-size:10px;color:#8B6020;margin-top:2px;font-style:italic}
+.ob-lby{font-size:9px;color:#2D6A2D;margin-top:2px}
 </style>
 </head>
 <body>
@@ -1063,9 +1138,18 @@ async function _sbGet(table, params='') {
   try {
     const url = `${_SB_URL}/rest/v1/${table}${params ? '?' + params : ''}`;
     const r = await fetch(url, { headers: _SB_HDR });
-    if (!r.ok) { console.warn('SB GET error', table, r.status, await r.text()); return null; }
+    if (!r.ok) {
+      const msg = await r.text();
+      console.warn('SB GET error', table, r.status, msg);
+      window._sbLastError = r.status + ' ' + table;
+      return null;
+    }
     return await r.json();
-  } catch(e) { return null; }
+  } catch(e) {
+    console.warn('SB GET fetch error', table, e.message);
+    window._sbLastError = e.message;
+    return null;
+  }
 }
 
 async function _sbPost(table, body) {
@@ -1857,7 +1941,7 @@ const VIEWS = {
   queue:{title:'Shop Queue — Unassigned',actions:'<div class="flex gap8"><button id="queue-toggle" class="btn btn-sm" onclick="showAllQueue=!showAllQueue;updateQueueToggle();renderQueue()">Show All</button><button class="btn btn-sm" onclick="resetQueuePriorities()" title="Clear manual priorities — revert to delivery date order">↺ Reset Order</button></div>'},
   myview:{title:'My Tasks',actions:''},
   truck:{title:'Truck Planner',actions:'<button class="btn btn-primary no-print" onclick="printTruck()">🖨 Print Load Sheet</button> <a href="https://app03.linxup.com/ng/portal/index.html" target="_blank" rel="noopener" class="btn no-print" style="text-decoration:none">📡 Linxup Tracking</a>'},
-  dashboard:{title:'Master Dashboard',actions:'<button class="btn" onclick="enterBoardView()" style="background:#1C2E1C;color:#fff;border:none">📺 Board View</button>'},
+  dashboard:{title:'Master Dashboard',actions:'<button class="btn" onclick="enterBoardView()" style="background:#1C2E1C;color:#fff;border:none">📺 Board View</button> <button class="btn" onclick="enterOfficeBoardView()" style="background:#0f1f3f;color:#A8D5A8;border:1px solid #2D6A2D">🖥 Office Board</button>'},
   customers:{title:'Customer Admin',actions:'<button class="btn btn-primary" onclick="addNewCustomer()">+ Add Customer</button>'},
   settings:{title:'Settings — Admin',actions:''}
 };
@@ -2512,16 +2596,59 @@ function showDupWOModal(existing, incoming){
   const removedItems = existing.items.filter(i=>!incomingByQty[qtyKey(i)]);
 
   // Match notes by QB item code (e.g. GlvSht:263696) — survives category/size edits
+  // Two-pass: first lock exact qty+code matches, then flag genuine changes.
+  // QB items already identified as NEW (newItems) are excluded from note comparison —
+  // a new item sharing a qty with an existing item is NOT a note change.
   const extractCode = n=>{ if(!n) return null; const m = n.match(/^[A-Za-z]+:([A-Za-z0-9.]+)/); return m ? m[1].toLowerCase() : null; };
-  const sysQtySetM = new Set(existing.items.map(i=>String(i.qty).trim()));
   const sysCodeSetM = new Set(existing.items.map(i=>extractCode(i.notes)).filter(Boolean));
-  const notesChanges = incoming.items.filter(qbItem=>{
-    if(!qbItem.notes) return false;
-    if(!sysQtySetM.has(String(qbItem.qty).trim())) return false;
+  const newItemSet = new Set(newItems); // QB items already classified as new additions
+
+  // Build a pool of sys items available for note matching (keyed by qty, multi-valued)
+  const sysPoolByQty = {};
+  existing.items.forEach(i=>{
+    const q = String(i.qty).trim();
+    if(!sysPoolByQty[q]) sysPoolByQty[q] = [];
+    sysPoolByQty[q].push(i);
+  });
+  const usedSysForNotes = new Set();
+
+  // Pass 1: lock exact qty+code matches — these are unchanged
+  incoming.items.forEach(qbItem=>{
+    if(!qbItem.notes || newItemSet.has(qbItem)) return;
     const qbCode = extractCode(qbItem.notes);
-    if(!qbCode) return false;
-    return !sysCodeSetM.has(qbCode); // only flag if code completely absent from system
-  }).map(qbItem=>({ qbItem, sysItem: existingByQty[qtyKey(qbItem)] }));
+    const qbQty  = String(qbItem.qty).trim();
+    const pool   = (sysPoolByQty[qbQty]||[]).filter(s=>!usedSysForNotes.has(s));
+    const exact  = pool.find(s=>extractCode(s.notes)===qbCode);
+    if(exact) usedSysForNotes.add(exact); // locked — no change
+  });
+
+  // Pass 2: remaining QB items with notes that didn't match in pass 1
+  const surplus = incoming.items.length - existing.items.length;
+  let noteNewSlots = surplus; // new-item budget — consume before flagging as changes
+  const notesChanges = [];
+  incoming.items.forEach(qbItem=>{
+    if(!qbItem.notes || newItemSet.has(qbItem)) return;
+    const qbCode = extractCode(qbItem.notes);
+    if(!qbCode) return;
+    const qbQty  = String(qbItem.qty).trim();
+    // Already handled in pass 1?
+    const pool   = (sysPoolByQty[qbQty]||[]).filter(s=>!usedSysForNotes.has(s));
+    if(!pool.length){
+      // No sys item left for this qty — treat as new
+      if(noteNewSlots > 0) noteNewSlots--;
+      return;
+    }
+    // Sys items exist with this qty but code didn't match in pass 1
+    if(noteNewSlots > 0){
+      // Still have surplus budget — this could be a new item sharing a qty, not a change
+      noteNewSlots--;
+      return;
+    }
+    // No budget left — genuine note change
+    const sysItem = pool[0];
+    usedSysForNotes.add(sysItem);
+    notesChanges.push({ qbItem, sysItem });
+  });
 
   const hasChanges = newItems.length > 0 || qtyChanges.length > 0 || removedItems.length > 0 || notesChanges.length > 0;
 
@@ -2634,13 +2761,22 @@ function mergeDupWO(existingId){
   const incoming = window._dupIncomingWO;
   if(!existing||!incoming) return;
 
-  // Match by qty — category/gauge/size may have been changed in system
-  const qtyKey2 = i=>String(i.qty).trim();
-  const existingByQty2 = {};
-  existing.items.forEach(i=>{ existingByQty2[qtyKey2(i)] = i; });
 
-  const newItems = incoming.items.filter(item=>!existingByQty2[qtyKey2(item)]);
-  const qtyUpdated = []; // matched by qty so no qty changes possible
+  // Match by qty using a pool (multi-value) so duplicate qtys are handled correctly.
+  // e.g. if system has one ×5 and QB has two ×5, the second ×5 is a new item.
+  const qtyKey2 = i=>String(i.qty).trim();
+  const existingQtyPool = existing.items.map(i=>qtyKey2(i)); // pool, not a map
+  const usedExistingIdxs = new Set();
+
+  // For each incoming item, try to consume one slot from the existing pool
+  const newItems = incoming.items.filter(item=>{
+    const q = qtyKey2(item);
+    const idx = existingQtyPool.findIndex((eq, i)=>eq===q && !usedExistingIdxs.has(i));
+    if(idx === -1) return true;  // no slot left — this is a new item
+    usedExistingIdxs.add(idx);
+    return false; // consumed a slot — existing item
+  });
+
 
   // IMPORTANT: preserve existing WO scheduling — never overwrite with blank
   // The incoming WO from QB import has no delivery date/truck/delivered info
@@ -2678,25 +2814,31 @@ function mergeDupWO(existingId){
     }).catch(e=>console.warn('merge new item error',e));
   });
 
-  // Update notes on existing items using QB item code matching
-  // This avoids wrong-item assignment when multiple items share the same qty
+  // Update notes on existing items — skip any QB item that was a new addition
+  // (new items already have their note set correctly from QB; updating would corrupt old items)
+  const newItemSet2 = new Set(newItems);
   const extractCode = n=>{ if(!n) return null; const m=n.match(/^[A-Za-z]+:([A-Za-z0-9.]+)/); return m?m[1].toLowerCase():null; };
   const notesUpdated = [];
+  const usedForNotes = new Set();
   incoming.items.forEach(qbItem=>{
     if(!qbItem.notes) return;
+    if(newItemSet2.has(qbItem)) return; // new addition — skip, don't touch existing items
+
     const qbCode = extractCode(qbItem.notes);
     // Find system item: 1) exact code match, 2) same qty+no code, 3) same qty any
+    // Exclude newly added items from matching (they weren't in the original WO)
+    const originalItems = existing.items.filter(i=>!newItemSet2.has(i)&&!usedForNotes.has(i));
     let sysItem = qbCode
-      ? existing.items.find(s=>extractCode(s.notes)===qbCode)  // exact code match
+      ? originalItems.find(s=>extractCode(s.notes)===qbCode)
       : null;
     if(!sysItem){
-      const sameQty = existing.items.filter(s=>String(s.qty).trim()===String(qbItem.qty).trim());
-      // Prefer item with no note or no extractable code (e.g. old note like "55")
-      sysItem = sameQty.find(s=>!(s.notes||'').trim()) // blank note
-             || sameQty.find(s=>!extractCode(s.notes)) // has note but no code pattern
-             || sameQty[0]; // last resort: first same-qty item
+      const sameQty = originalItems.filter(s=>String(s.qty).trim()===String(qbItem.qty).trim());
+      sysItem = sameQty.find(s=>!(s.notes||'').trim())
+             || sameQty.find(s=>!extractCode(s.notes))
+             || sameQty[0];
     }
     if(!sysItem) return;
+    usedForNotes.add(sysItem);
     const qbNote = qbItem.notes.trim();
     const sysNote = (sysItem.notes||'').trim();
     if(qbNote !== sysNote){
@@ -3098,47 +3240,45 @@ function enterBoardView(){
 // ── WAKE LOCK (Keep screen awake in board view) ──────────────────────────
 let _wakeLock = null;
 
+function _updateWakeButtons(on){
+  [document.getElementById('kiosk-btn'), document.getElementById('ob-wake-btn')].forEach(btn=>{
+    if(!btn) return;
+    if(on){
+      btn.textContent = '\u2605 Screen Awake';
+      btn.style.color = '#1C2E1C';
+      btn.style.borderColor = '#A8D5A8';
+      btn.style.background = '#A8D5A8';
+    } else {
+      btn.textContent = '\u2600 Keep Awake';
+      btn.style.color = '#A8D5A8';
+      btn.style.borderColor = '#2D6A2D';
+      btn.style.background = '#1C2E1C';
+    }
+  });
+}
 async function toggleWakeLock(){
-  const btn = document.getElementById('kiosk-btn');
   if(_wakeLock){
-    // Turn off
     await _wakeLock.release();
     _wakeLock = null;
-    if(btn){
-      btn.textContent = '☀ Keep Awake';
-      btn.style.color = '#A8D5A8';
-      btn.style.borderColor = '#A8D5A8';
-      btn.style.background = '#333';
-    }
+    _updateWakeButtons(false);
     toast('Screen sleep re-enabled');
   } else {
-    // Turn on
     try {
       _wakeLock = await navigator.wakeLock.request('screen');
-      if(btn){
-        btn.textContent = '✓ Screen Awake';
-        btn.style.color = '#1C2E1C';
-        btn.style.borderColor = '#A8D5A8';
-        btn.style.background = '#A8D5A8';
-      }
-      toast('✓ Screen will stay on');
-      // Re-acquire if page visibility changes (e.g. tab switch and back)
+      _updateWakeButtons(true);
+      toast('\u2713 Screen will stay on');
       _wakeLock.addEventListener('release', ()=>{
-        if(btn && _wakeLock){
-          btn.textContent = '☀ Keep Awake';
-          btn.style.color = '#A8D5A8';
-          btn.style.borderColor = '#A8D5A8';
-          btn.style.background = '#333';
-          _wakeLock = null;
-        }
+        _wakeLock = null;
+        _updateWakeButtons(false);
       });
       document.addEventListener('visibilitychange', async ()=>{
         if(_wakeLock && document.visibilityState==='visible'){
           _wakeLock = await navigator.wakeLock.request('screen');
+          _updateWakeButtons(true);
         }
       });
     } catch(err){
-      toast('⚠ Wake Lock not supported on this browser/device');
+      toast('\u26a0 Wake Lock not supported on this browser/device');
       console.warn('Wake Lock error:', err);
     }
   }
@@ -8560,50 +8700,55 @@ function renderQBList(invoices){
         }).join('');
         diffHtml += `</div>`;
 
-        // Packing notes comparison:
-        // Match each QB item to a WO item by:
-        //   Step 1 — find ALL WO items with the same qty as this QB item
-        //   Step 2 — among those, find one whose note code matches the QB code
-        //   Step 3 — if exactly one qty match exists and code doesn't match → note changed
-        //   Step 4 — if multiple qty matches and none have matching code → note changed
-        //   WO items with no notes are manual/system-only — excluded from comparison
+        // Packing notes comparison — two-pass to avoid confusing new items with note changes:
+        // Pass 1: lock in exact qty+code matches first (these are definitely unchanged)
+        // Pass 2: for remaining QB items, only match against remaining sys items by qty
+        //         BUT if QB has more items than sys (count surplus), unmatched QB items
+        //         with no sys counterpart are NEW additions — not note changes.
         const _nc = n=>{ if(!n) return ''; const m=n.match(/^([^\s(]+)/); return m?m[1].toLowerCase():''; };
-        const sysNoteItems = existing.items.filter(i=>i.notes); // only WO items that have a note
+        const sysNoteItems = existing.items.filter(i=>i.notes);
         const usedSysIds = new Set();
         const notesChanged = [];
+        const surplus = inv.items.length - existing.items.length;
 
+        // Pass 1: lock in exact qty + code matches
         inv.items.forEach(qbItem=>{
-          if(!qbItem.notes) return; // QB item has no note, nothing to compare
+          if(!qbItem.notes) return;
+          const qbCode = _nc(qbItem.notes);
+          const qbQty  = String(qbItem.qty).trim();
+          const exactMatch = sysNoteItems.find(s=>!usedSysIds.has(s)&&String(s.qty).trim()===qbQty&&_nc(s.notes)===qbCode);
+          if(exactMatch) usedSysIds.add(exactMatch);
+        });
+
+        // Pass 2: remaining QB items — new additions consume surplus slots before flagging changes
+        let newItemSlots = surplus;
+        inv.items.forEach(qbItem=>{
+          if(!qbItem.notes) return;
           const qbCode = _nc(qbItem.notes);
           const qbQty  = String(qbItem.qty).trim();
 
-          // Step 1: all WO items with matching qty (that haven't been used yet)
+          // Already locked in pass 1?
+          const alreadyLocked = sysNoteItems.find(s=>usedSysIds.has(s)&&String(s.qty).trim()===qbQty&&_nc(s.notes)===qbCode);
+          if(alreadyLocked) return;
+
           const qtyMatches = sysNoteItems.filter(s=>!usedSysIds.has(s)&&String(s.qty).trim()===qbQty);
 
-          let sysItem = null;
-
-          if(qtyMatches.length === 1){
-            // Only one WO item with this qty — that's our match regardless of code
-            sysItem = qtyMatches[0];
-          } else if(qtyMatches.length > 1){
-            // Multiple WO items share this qty — find the one whose code matches
-            const codeMatch = qtyMatches.find(s=>_nc(s.notes)===qbCode);
-            if(codeMatch){
-              // Found exact code match among the qty group — not changed
-              sysItem = codeMatch;
-            } else {
-              // No code match found among qty group — pick first unused, flag as changed
-              sysItem = qtyMatches[0];
-            }
-          } else {
-            // No qty match at all — try code match across all remaining WO items
-            sysItem = sysNoteItems.find(s=>!usedSysIds.has(s)&&_nc(s.notes)===qbCode)||null;
+          if(!qtyMatches.length){
+            // No sys item with this qty — new item, consume a surplus slot
+            if(newItemSlots > 0) newItemSlots--;
+            return;
           }
 
-          if(!sysItem) return; // no WO counterpart found, skip
+          // Sys items exist with this qty but none matched our code in pass 1.
+          // If surplus budget remains, treat as new addition sharing a qty — not a note change.
+          if(newItemSlots > 0){
+            newItemSlots--;
+            return;
+          }
 
+          // No surplus budget — genuine note change on an existing item
+          const sysItem = qtyMatches[0];
           usedSysIds.add(sysItem);
-
           const qbNote  = qbItem.notes.trim().toLowerCase();
           const sysNote = sysItem.notes.trim().toLowerCase();
           if(qbNote !== sysNote){
@@ -9348,6 +9493,368 @@ async function bootApp(){
   }
 }
 bootApp();
+
+// ══ OFFICE BOARD ══════════════════════════════════════
+let _obTimer=null,_obClockTimer=null,_obVisHandler=null;
+
+function _obSetSync(ok){
+  const el=document.getElementById('ob-sync');if(!el)return;
+  const t=new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',second:'2-digit'});
+  if(ok){el.style.color='#6aaa6a';el.textContent='✓ '+t;}
+  else{
+    const reason=window._sbLastError?(' ('+window._sbLastError+')'):'';
+    el.style.color='#e05050';el.textContent='⚠ Offline '+t+reason;
+  }
+}
+async function obManualRefresh(){
+  const el=document.getElementById('ob-sync');
+  if(el){el.style.color='#888';el.textContent='↻ …';}
+  try{
+    const ok=await sbLoadState();
+    if(ok){try{localStorage.setItem('kzn_state',JSON.stringify(state));}catch(e){}}
+    _obRender();
+    _obSetSync(ok);
+  }catch(e){
+    _obSetSync(false);
+  }
+}
+function enterOfficeBoardView(){
+  document.getElementById('ob-overlay').classList.add('ob-active');
+  if(document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(()=>{});
+  _obRender();
+  _obSetSync(true); // show initial sync time immediately on entry
+  _obTimer=setInterval(async()=>{
+    if(ok){try{localStorage.setItem('kzn_state',JSON.stringify(state));}catch(e){}}else{try{const s=localStorage.getItem('kzn_state');if(s){const p=JSON.parse(s);state.wos=p.wos||state.wos;state.trucks=p.trucks||state.trucks;}}catch(e){}}
+    _obRender();
+    _obSetSync(ok);
+  },10000);
+  _obClockTimer=setInterval(()=>{const el=document.getElementById('ob-clock');if(el)el.textContent=new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});},1000);
+  const cl=document.getElementById('ob-clock');if(cl)cl.textContent=new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+  // Force refresh when TV screen wakes from sleep / tab becomes visible again
+  // Browsers throttle setInterval when hidden, so this ensures fresh data on wake
+  _obVisHandler = async()=>{
+    if(document.visibilityState==='visible' && document.getElementById('ob-overlay')?.classList.contains('ob-active')){
+      const ok=await sbLoadState();
+      if(ok){try{localStorage.setItem('kzn_state',JSON.stringify(state));}catch(e){}}
+      _obRender();
+      _obSetSync(ok);
+    }
+  };
+  document.addEventListener('visibilitychange', _obVisHandler);
+  // Auto-activate wake lock so screen stays on
+  if(!_wakeLock) toggleWakeLock();
+}
+function exitOfficeBoardView(){
+  document.getElementById('ob-overlay').classList.remove('ob-active');
+  clearInterval(_obTimer);_obTimer=null;
+  clearInterval(_obClockTimer);_obClockTimer=null;
+  if(_obVisHandler){document.removeEventListener('visibilitychange',_obVisHandler);_obVisHandler=null;}
+  if(document.exitFullscreen)document.exitFullscreen().catch(()=>{});
+}
+function _obRender(){_obGrid();_obPickups();}
+function _obPickups(){
+  const bar=document.getElementById('ob-pickup-bar');if(!bar)return;
+  const pickups=state.wos.filter(w=>w.isPickup&&woStatus(w)!=='Complete');
+  bar.style.display=pickups.length?'flex':'none';
+  if(!pickups.length)return;
+  const chips=bar.querySelectorAll('.ob-pchip');
+  chips.forEach(c=>c.remove());
+  pickups.forEach(w=>{
+    const chip=document.createElement('span');
+    chip.className='ob-pchip';
+    chip.textContent=_obAbbrev(w.customer||'?');
+    chip.onclick=()=>obDetail(w.id);
+    bar.appendChild(chip);
+  });
+}
+
+function _obColor(custName){
+  const grp=getCustGroup(custName);
+  if(grp)return grp.color;
+  const c=getCustomers().find(x=>x.name===custName);
+  if(c&&c.zone&&ZONE_COLORS[c.zone])return ZONE_COLORS[c.zone];
+  const P=['#4AA8D8','#4CAF7D','#9B59B6','#E67E22','#E85D75','#4ECDC4','#D4A843','#A29BFE'];
+  let h=0;for(let i=0;i<custName.length;i++)h=(h*31+custName.charCodeAt(i))>>>0;
+  return P[h%P.length];
+}
+
+// ── Smart customer name abbreviation ──────────────────
+function _obAbbrev(name){
+  if(!name) return name;
+
+  // Strip DBA clauses before any splitting (e.g. "Name- a ThermoCool")
+  name = name.replace(/-\s*an?\s+[A-Z][^—–]*/i, '').trim();
+
+  // Split on the LAST em/en-dash — that's always the city
+  // Everything before it (including any branch dashes) is the company identity
+  const parts = name.split(/\s*[—–]\s*/);
+  let city = '';
+  let base = name;
+  if(parts.length >= 2){
+    city = parts[parts.length - 1].trim();
+    // Company base = all parts except the last, joined back
+    // If 3+ parts: e.g. "Johnstone — Cherry Hill Group — Bensalem"
+    //   parts = ["Johnstone", "Cherry Hill Group", "Bensalem"]
+    //   base = "Johnstone Cherry Hill Group" (merge branch into name)
+    if(parts.length >= 3){
+      // Merge middle branch parts into the base (drop the dashes between them)
+      base = parts.slice(0, parts.length - 1).join(' ').trim();
+    } else {
+      base = parts[0].trim();
+    }
+  }
+
+  // Normalize attached hyphen "Word- " → space
+  base = base.replace(/(\w)-\s+/g, '$1 ');
+
+  // Strip DBA clauses from base
+  base = base.replace(/\s*-\s*an?\s+[A-Z].*/i, '').trim();
+  base = base.replace(/,?\s*an?\s+division\s+of\b.*/i, '').trim();
+
+  // Strip DBA city values like "a ThermoCool Company"
+  const wasDBA = /^an?\s+/i.test(city);
+  if(wasDBA) city = '';
+
+  // Drop trailing legal suffixes from base
+  base = base.replace(/\b(LLC|L\.L\.C\.?|Inc\.?|Corp\.?|Co\.?|Ltd\.?|LTD|LP|LLP|P\.C\.?|P\.A\.?)\s*\.?$/i, '').trim().replace(/[,\.]+$/, '').trim();
+
+  // Clean city: strip legal suffixes and generic branch words
+  if(city){
+    city = city.replace(/\b(LLC|L\.L\.C\.?|Inc\.?|Corp\.?|Co\.?|Ltd\.?)\s*\.?$/i,'').trim().replace(/[,\.]+$/,'').trim();
+    city = city.replace(/\b(Group|Holdings|Partners|Associates|Enterprises|Division|Branch|Location)\b\s*/gi,'').trim();
+    city = city.replace(/\s{2,}/g,' ').trim();
+  }
+
+  // Words that add no value when trailing the base name
+  const dropTrailing = /^(Company|Companies|Associates|Enterprises|Group|Holdings|Partners|Services|Solutions|Systems|Industries|Distribution|Distributing|Supply|Wire|Cloth|Sheet|Resources|Products|Equipment|Hardware|International|General|Mechanical|Mech|Plumbing|Plbg|Metal|Steel|HVAC|Heating|Htg|Cooling|Air|Conditioning|Refrigeration|Refrig|Ventilation|Vent|Construction|Const|Electrical|Elec|Fabrication|Fabricators|Contractors|Contr\.|&)$/i;
+
+  let w = base.split(/\s+/);
+  const tooGenericAlone = /^(United|National|General|American|Standard|Quality|Premier|Elite|Pro|Advanced|Total|Global|Summit|Allied|Heritage|Liberty|Superior|Century|Tri|Mid|Atlantic|Eastern|Western|Northern|Southern)$/i;
+  let stripped = true;
+  while(stripped && w.length > 1){
+    stripped = false;
+    const wouldLeave = w.slice(0,-1).join(' ');
+    const last = w[w.length-1];
+    if(w.length === 2 && tooGenericAlone.test(wouldLeave)) break;
+    if(w.length > 1 && dropTrailing.test(last)){
+      w.pop(); base = w.join(' '); stripped = true; continue;
+    }
+    if(w.length > 2){
+      const last2 = w.slice(-2).join(' ');
+      if(dropTrailing.test(last2)){ w.splice(-2); base = w.join(' '); stripped = true; continue; }
+    }
+    if(w.length > 3){
+      const last3 = w.slice(-3).join(' ');
+      if(/^(Htg\s*&\s*A\/C|Plbg\s+Htg|Htg\s+&\s+Cooling|&\s+Air\s+Conditioning|&\s+Air\s+Cond)$/i.test(last3)){
+        w.splice(-3); base = w.join(' '); stripped = true; continue;
+      }
+    }
+  }
+
+  // Drop trailing Sheet Metal / Metal when DBA was present
+  if(wasDBA){
+    base = base.replace(/\s+Sheet\s+Metal$/i,'').replace(/\s+Metal$/i,'').trim();
+  }
+
+  // Abbreviate remaining long words
+  const abbrevMap = [
+    [/\bMechanical\b/gi,   'Mech'],
+    [/\bPlumbing\b/gi,     'Plbg'],
+    [/\bConstruction\b/gi, 'Const'],
+    [/\bRefrigeration\b/gi,'Refrig'],
+    [/\bVentilation\b/gi,  'Vent'],
+    [/\bElectrical\b/gi,   'Elec'],
+    [/\bContractors\b/gi,  'Contr.'],
+    [/\bEngineering\b/gi,  'Eng'],
+    [/\bManagement\b/gi,   'Mgmt'],
+    [/\bEnvironmental\b/gi,'Envir'],
+    [/\bCommercial\b/gi,   'Comm'],
+    [/\bIndustrial\b/gi,   'Indl'],
+    [/\bAssociates\b/gi,   'Assoc'],
+    [/\bEnterprises\b/gi,  'Ent'],
+  ];
+  for(const [rx, rep] of abbrevMap) base = base.replace(rx, rep);
+
+  return city ? base + ' \u2014 ' + city : base;
+}
+
+function _obGrid(){
+  const grid=document.getElementById('ob-grid');if(!grid)return;
+  const days=getWeekDays(),today=localISO(new Date());
+  const TC=['#4AA8D8','#4CAF7D','#9B59B6','#E67E22'],TI=['\uD83D\uDE9A','\uD83D\uDE9B','\uD83D\uDEFB','\uD83D\uDE9C'];
+
+  grid.innerHTML=days.map(d=>{
+    const iso=localISO(d),isToday=iso===today;
+    const dayWOs=state.wos.filter(w=>w.delivery===iso);
+    const totalLbs=dayWOs.reduce((s,w)=>s+getWOWeight(w.id),0);
+    const doneCount=dayWOs.filter(w=>woStatus(w)==='Complete').length;
+    const wrap=shouldWrap(iso);
+    let dayBody='';
+    if(!dayWOs.length){
+      dayBody='<div class="ob-day-empty">No deliveries</div>';
+    } else {
+      const secs=[];
+      state.trucks.forEach((t,i)=>{
+        const ws=dayWOs.filter(w=>getWOTruckId(w.id)===String(t.id));
+        if(ws.length) secs.push({lbl:TI[i%4]+' '+t.name.split('\u2014')[0].trim(),color:TC[i%4],wos:ws});
+      });
+      const noT=dayWOs.filter(w=>!getWOTruckId(w.id));
+      if(noT.length) secs.push({lbl:'\u26a0 No Truck',color:'#FAC775',wos:noT});
+      dayBody=secs.map(sec=>{
+        const cm={};
+        sec.wos.forEach(wo=>{const k=wo.customer||'?';(cm[k]||(cm[k]=[])).push(wo);});
+        const names=Object.keys(cm).sort((a,b)=>{
+          const ad=cm[a].every(w=>woStatus(w)==='Complete'),bd=cm[b].every(w=>woStatus(w)==='Complete');
+          if(ad!==bd)return ad?1:-1;return a.localeCompare(b);
+        });
+        return '<div class="ob-tdiv" style="color:'+sec.color+';flex-shrink:0">'
+          +'<div class="ob-tdiv-line" style="background:'+sec.color+'"></div>'
+          +_obE(sec.lbl)
+          +'<div class="ob-tdiv-line" style="background:'+sec.color+'"></div>'
+          +'</div>'
+          +names.map(n=>_obNameRow(n,cm[n],sec.color)).join('');
+      }).join('');
+    }
+    const metaStr=dayWOs.length
+      ? doneCount+'/'+dayWOs.length+' WO'+(dayWOs.length!==1?'s':'')+(totalLbs?' \u00b7 '+Math.round(totalLbs/1000)+'k lbs':'')
+      : '';
+    return '<div class="ob-day-col">'
+      +'<div class="ob-day-hdr'+(isToday?' ob-today-hdr':'')+'">'
+      +'<span class="ob-day-name">'+d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})+(wrap?' \uD83C\uDF02':'')+'</span>'
+      +(metaStr?'<div class="ob-day-date">'+metaStr+'</div>':'')
+      +'</div>'
+      +'<div class="ob-day-body">'+dayBody+'</div>'
+      +'</div>';
+  }).join('');
+
+  // Fit each name to fill its row — wrap at city dash, constrain both width and height
+  requestAnimationFrame(()=>{
+    // Size per column independently — each column finds its own global cap
+    // so busy columns shrink together, light columns can be bigger
+    const cols = Array.from(grid.querySelectorAll('.ob-day-col'));
+    cols.forEach(col=>{
+      const rows = Array.from(col.querySelectorAll('.ob-name-item'));
+      if(!rows.length) return;
+
+      // Pass 1: compute ideal size for each row in this column
+      const sizes = rows.map(row=>{
+        const rowH=row.offsetHeight-4, rowW=row.offsetWidth-36;
+        if(rowH<8||rowW<40) return null;
+        const el=row.querySelector('.ob-cname');
+        if(!el) return null;
+        const text=el.textContent||'';
+        const dashIdx=text.indexOf('\u2014');
+        const hasDash=dashIdx>-1;
+        el.style.display='block';
+        el.style.webkitLineClamp='unset';
+        if(hasDash){
+          const company=_obE(text.slice(0,dashIdx).trim());
+          const city=_obE(text.slice(dashIdx+1).trim());
+          el.innerHTML=company+'<br><span style="white-space:nowrap">\u2014 '+city+'</span>';
+          el.style.whiteSpace='normal';
+          el.style.wordBreak='normal';
+          const maxSz=Math.min(rowH*0.46,36);
+          let lo=9,hi=maxSz;
+          for(let n=0;n<10;n++){const m=(lo+hi)/2;el.style.fontSize=m+'px';if(el.scrollHeight<=rowH)lo=m;else hi=m;}
+          return Math.floor(lo);
+        } else {
+          el.innerHTML=_obE(text);
+          el.style.whiteSpace='nowrap';
+          const maxSz=Math.min(rowH*0.62,48);
+          let lo=10,hi=maxSz;
+          for(let n=0;n<9;n++){const m=(lo+hi)/2;el.style.fontSize=m+'px';if(el.scrollWidth<=rowW)lo=m;else hi=m;}
+          return Math.floor(lo);
+        }
+      });
+
+      // Pass 2: all rows in THIS column use the smallest size so they match each other
+      const valid = sizes.filter(s=>s!==null);
+      if(!valid.length) return;
+      const colCap = Math.min(...valid);
+      rows.forEach((row,i)=>{
+        if(sizes[i]===null) return;
+        const el=row.querySelector('.ob-cname');
+        if(el) el.style.fontSize=colCap+'px';
+      });
+    });
+  });
+}
+
+function _obNameRow(custName,wos,accentColor){
+  const allD=wos.every(w=>woStatus(w)==='Complete');
+  const anyI=wos.some(w=>woStatus(w)==='In Process');
+  let cls='ob-name-item',dotCls='ob-sdot-pend';
+  // Completed: keep name black, just use green dot — don't strike through
+  if(allD){cls+=' ob-ni-done';dotCls='ob-sdot-done';}
+  else if(anyI){cls+=' ob-ni-proc';dotCls='ob-sdot-proc';}
+  const color=accentColor||_obColor(custName);
+  const woCt=wos.length>1?'<span class="ob-wo-ct">'+wos.length+' WOs</span>':'';
+  const ids=JSON.stringify(wos.map(w=>w.id));
+  const displayName=_obAbbrev(custName);
+  return '<div class="'+cls+'" style="border-left-color:'+color+'" onclick="obDetailMulti('+_obE(ids)+')">'+
+    '<span class="ob-sdot '+dotCls+'"></span>'+
+    '<span class="ob-cname">'+_obE(displayName)+'</span>'+
+    woCt+
+    '</div>';
+}
+
+function _obWOBlock(wo,color){
+  const st=woStatus(wo),stC=st==='Complete'?'#4CAF7D':st==='In Process'?'#f0a500':'#555';
+  const items=wo.items||[],done=items.filter(i=>i.status==='Complete').length;
+  const wt=getWOWeight(wo.id);
+  const truck=state.trucks.find(t=>String(t.id)===String(getWOTruckId(wo.id)));
+  const rows=items.map(li=>{
+    const d=li.status==='Complete',ip=li.status==='In Process';
+    const dc=d?'ob-ldone':ip?'ob-lproc':'ob-lpend';
+    const lbl=[li.gauge?li.gauge+' Ga':'',li.size||li.productCat||''].filter(Boolean).join(' ');
+    return '<tr><td><span class="ob-ldot '+dc+'"></span><strong style="color:#111">'+_obE(lbl||'&mdash;')+'</strong>'
+      +(li.notes?'<div class="ob-lnote">'+_obE(li.notes)+'</div>':'')
+      +(d&&li.completedBy?'<div class="ob-lby">&#10003; '+_obE(li.completedBy)+'</div>':'')
+      +'</td>'
+      +'<td style="color:#555">'+_obE(String(li.qty||'&mdash;'))+'</td>'
+      +'<td style="color:#555">'+(li.weight?Math.round(li.weight).toLocaleString()+' lbs':'&mdash;')+'</td>'
+      +'<td style="font-size:11px;font-weight:700;color:'+(d?'#2D6A2D':ip?'#c07800':'#999')+'">'+li.status+'</td>'
+      +'<td style="color:#666;font-size:10px">'+_obE(li.assignee||'&mdash;')+'</td>'
+      +'<td style="color:#185FA5;font-size:10px">'+_obE(li.station||'&mdash;')+'</td></tr>';
+  }).join('');
+  return '<div style="background:#f7f8f7;border-radius:8px;padding:12px 14px;margin-bottom:10px;border-left:3px solid '+color+';border:1px solid #e8ede8;border-left:3px solid '+color+'">'
+    +'<div class="ob-mgrid">'
+    +'<div class="ob-mbox"><div class="ob-mblbl">WO # &amp; Status</div><div class="ob-mbval" style="color:'+stC+'">#'+_obE(String(wo.woNum))+' &mdash; '+st+'</div></div>'
+    +'<div class="ob-mbox"><div class="ob-mblbl">Progress</div><div class="ob-mbval" style="color:'+stC+'">'+done+'/'+items.length+' items</div></div>'
+    +'<div class="ob-mbox"><div class="ob-mblbl">Truck</div><div class="ob-mbval">'+(truck?_obE(truck.name.split('\u2014')[0].trim()):'Not assigned')+'</div></div>'
+    +(wt>0?'<div class="ob-mbox"><div class="ob-mblbl">Weight</div><div class="ob-mbval">'+Math.round(wt).toLocaleString()+' lbs</div></div>':'')
+    +'</div>'
+    +(wo.address||wo.cityst?'<div class="ob-maddr">'+_obE([wo.address,wo.cityst].filter(Boolean).join(', '))+'</div>':'')
+    +(wo.notes?'<div class="ob-mnotes">'+_obE(wo.notes)+'</div>':'')
+    +(items.length?'<div class="ob-mlilbl">Line Items</div><div style="overflow-x:auto"><table class="ob-litbl"><thead><tr><th>Product</th><th>Qty</th><th>Weight</th><th>Status</th><th>Operator</th><th>Station</th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<div style="color:#333;font-style:italic;font-size:12px;padding:8px 0">No line items</div>')
+    +'</div>';
+}
+
+function obDetailMulti(woIds){
+  if(!Array.isArray(woIds)) woIds=[woIds];
+  const wos=woIds.map(id=>state.wos.find(w=>w.id===id)).filter(Boolean);
+  if(!wos.length)return;
+  const color=_obColor(wos[0].customer);
+  document.getElementById('ob-mcust').textContent=wos[0].customer;
+  document.getElementById('ob-mwnum').textContent=wos.length===1
+    ?'WO #'+wos[0].woNum+(wos[0].po?' \u00b7 PO: '+wos[0].po:'')
+    :wos.length+' Work Orders Today';
+  document.getElementById('ob-modal').style.borderColor=color;
+  document.getElementById('ob-mbody').innerHTML=wos.map(wo=>_obWOBlock(wo,color)).join('');
+  document.getElementById('ob-modal-bg').classList.add('ob-mopen');
+}
+
+function obDetail(woId){
+  obDetailMulti([woId]);
+}
+function obCloseDetail(){document.getElementById('ob-modal-bg').classList.remove('ob-mopen');}
+function _obE(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){
+    if(document.getElementById('ob-modal-bg')?.classList.contains('ob-mopen')){obCloseDetail();return;}
+    if(document.getElementById('ob-overlay')?.classList.contains('ob-active')){exitOfficeBoardView();return;}
+  }
+});
 </script>
 <script>
 if("serviceWorker" in navigator){
@@ -9394,5 +9901,38 @@ if("serviceWorker" in navigator){
     <div id="board-pickup-items" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"></div>
   </div>
 </div>
+
+<!-- ══ OFFICE BOARD OVERLAY ══ -->
+<div id="ob-overlay">
+  <div class="ob-hdr">
+    <div style="display:flex;flex-direction:column;justify-content:center;gap:1px">
+      <div class="ob-brand">SHERWOOD STEEL</div>
+      <div id="ob-sync" style="font-size:10px;color:#6aaa6a;font-weight:600;white-space:nowrap">—</div>
+    </div>
+    <div id="ob-clock" class="ob-clock" style="position:absolute;left:50%;transform:translateX(-50%)"></div>
+    <div class="ob-btns">
+      <button onclick="obManualRefresh()" style="background:#1C2E1C;color:#A8D5A8;border:1px solid #2D6A2D;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px">↻ Refresh</button>
+      <button id="ob-wake-btn" onclick="toggleWakeLock()" style="background:#1C2E1C;color:#A8D5A8;border:1px solid #2D6A2D;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px">☀ Keep Awake</button>
+      <button onclick="exitOfficeBoardView()" style="background:#222;color:#aaa;border:1px solid #333;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px">✕ Exit</button>
+    </div>
+  </div>
+  <div class="ob-grid" id="ob-grid"></div>
+  <div class="ob-pickup" id="ob-pickup-bar" style="display:none">
+    <div class="ob-pickup-lbl">📦 Pick Ups</div>
+    <div id="ob-pickup-items" style="display:flex;gap:8px;align-items:center"></div>
+  </div>
+</div>
+
+<!-- Office board detail modal -->
+<div id="ob-modal-bg" onclick="if(event.target===this)obCloseDetail()">
+  <div class="ob-modal" id="ob-modal">
+    <div class="ob-mhead">
+      <div><div class="ob-mcust" id="ob-mcust"></div><div class="ob-mwnum" id="ob-mwnum"></div></div>
+      <button class="ob-mclose" onclick="obCloseDetail()">✕</button>
+    </div>
+    <div class="ob-mbody" id="ob-mbody"></div>
+  </div>
+</div>
+
 </body>
 </html>
