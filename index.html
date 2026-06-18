@@ -1213,7 +1213,8 @@ function _liToRow(item, wo) {
     step2_completed_by: item.step2CompletedBy||null, notes: item.notes||null,
     assignee: item.assignee||null, status: item.status||'Pending',
     completed_by: item.completedBy||null, completed_at: item.completedAt||null,
-    delivery: item.delivery||wo.delivery||null, priority: item.priority||null
+    delivery: item.delivery||wo.delivery||null, priority: item.priority||null,
+    waiting_vendor: item.waitingVendor||null
   };
 }
 
@@ -1229,6 +1230,7 @@ function _rowToItem(row) {
     completedBy: row.completed_by, completedAt: row.completed_at,
     delivery: row.delivery, priority: row.priority,
     woNum: row.wo_num, customer: row.customer, woId: row.wo_id,
+    waitingVendor: row.waiting_vendor||'',
     coilNum: row.coil_num||'',
     skidSplits: row.skid_splits ? (typeof row.skid_splits === 'string' ? JSON.parse(row.skid_splits) : row.skid_splits) : []
   };
@@ -1931,6 +1933,9 @@ function updateBadges(){
   document.getElementById('badge-assign').textContent=activeWOs.length;
   const unassigned=activeWOs.flatMap(w=>w.items||[]).filter(i=>!i.assignee&&i.status!=='Complete').length;
   document.getElementById('badge-queue').textContent=unassigned;
+  const waitingCount=activeWOs.flatMap(w=>w.items||[]).filter(i=>i.waitingVendor&&i.status!=='Complete').length;
+  const wBadge=document.getElementById('badge-waiting');
+  if(wBadge)wBadge.textContent=waitingCount;
   const me=state.currentUser;
   const myTasks=me?activeWOs.flatMap(w=>w.items||[]).filter(i=>i.assignee===me&&i.status!=='Complete').length:0;
   document.getElementById('badge-my').textContent=myTasks;
@@ -1944,7 +1949,7 @@ const VIEWS = {
   bundlelog:{title:'Bundle Usage History',actions:'<div class="flex gap8"><button class="btn btn-sm" onclick="exportBundleCSV()">⬇ Export CSV</button></div>'},
   stockneeds:{title:'Stock Needs',actions:''},
   assign:{title:'Assign & Manage WOs',actions:'<div class="flex gap8" style="align-items:center"><input type="text" id="assign-search" placeholder="Search WO, customer..." oninput="filterAssignInPlace(this.value)" style="width:200px;padding:6px 10px;font-size:13px"><button id="assign-toggle" class="btn btn-sm" onclick="showAllAssign=!showAllAssign;updateAssignToggle();renderAssign(document.getElementById(\'assign-search\').value)">Show All</button></div>'},
-  queue:{title:'Shop Queue — Unassigned',actions:'<div class="flex gap8"><button id="queue-toggle" class="btn btn-sm" onclick="showAllQueue=!showAllQueue;updateQueueToggle();renderQueue()">Show All</button><button class="btn btn-sm" onclick="resetQueuePriorities()" title="Clear manual priorities — revert to delivery date order">↺ Reset Order</button></div>'},
+  queue:{title:'Shop Queue — Unassigned',actions:'<div class="flex gap8"><button id="queue-toggle" class="btn btn-sm" onclick="showAllQueue=!showAllQueue;updateQueueToggle();renderQueue()">Show All</button><button class="btn btn-sm" onclick="resetQueuePriorities()" title="Clear manual priorities — revert to delivery date order">↺ Reset Order</button><button class="btn btn-sm" style="background:#2a0a0a;color:#e05555;border:1px solid #5a1a1a;position:relative" onclick="showWaitingModal()">⏳ Waiting <span id="badge-waiting" style="background:#e05555;color:#fff;border-radius:10px;padding:1px 6px;font-size:11px;font-weight:700;margin-left:4px">0</span></button></div>'},
   myview:{title:'My Tasks',actions:''},
   truck:{title:'Truck Planner',actions:'<button class="btn btn-primary no-print" onclick="printTruck()">🖨 Print Load Sheet</button> <a href="https://app03.linxup.com/ng/portal/index.html" target="_blank" rel="noopener" class="btn no-print" style="text-decoration:none">📡 Linxup Tracking</a>'},
   dashboard:{title:'Master Dashboard',actions:'<button class="btn" onclick="enterBoardView()" style="background:#1C2E1C;color:#fff;border:none">📺 Board View</button> <button class="btn" onclick="enterOfficeBoardView()" style="background:#0f1f3f;color:#A8D5A8;border:1px solid #2D6A2D">🖥 Office Board</button>'},
@@ -2290,6 +2295,14 @@ function addLI(data){
   <div id="li-dual-${n}"></div>
   <div class="field"><label class="lbl">Packing / Production Notes</label>
     <input class="li-notes" type="text" placeholder="e.g. wrap individually, cut to 18&quot; strips, bend 90°..." data-notes="${data?(data.notes||'').replace(/"/g,'&quot;'):''}}">
+  </div>
+  <div class="field" style="margin-top:6px">
+    <label class="lbl" style="display:flex;align-items:center;gap:6px;cursor:pointer">
+      <input type="checkbox" class="li-waiting-chk" style="width:14px;height:14px;accent-color:#e05555" ${data&&data.waitingVendor?'checked':''} onchange="liWaitingChange('${n}',this)">
+      <span style="color:#e05555;font-weight:700">&#x23F3; Waiting on Material</span>
+    </label>
+    <input class="li-waiting-vendor" type="text" placeholder="Vendor name..." value="${data&&data.waitingVendor?data.waitingVendor:''}"
+      style="margin-top:4px;${data&&data.waitingVendor?'':'display:none;'}background:#2a1010;border-color:#e05555;color:#f88">
   </div>`;
   container.appendChild(div);
   // Set notes value via JS so quotes/special chars are never truncated by HTML parsing
@@ -2299,6 +2312,14 @@ function addLI(data){
   }
   // Populate gauge dropdown for initial category
   liCatChange(n, initCat, initGauge, initSize, data?data.qty||1:1, data?data.wtUnit||0:0);
+}
+
+function liWaitingChange(n, chk) {
+  const el = document.getElementById('li-'+n);
+  if (!el) return;
+  const vendorInput = el.querySelector('.li-waiting-vendor');
+  if (vendorInput) vendorInput.style.display = chk.checked ? 'block' : 'none';
+  if (!chk.checked && vendorInput) vendorInput.value = '';
 }
 
 function liCatChange(n, cat, preGauge='', preSize='', preQty=1, preWtUnit=0){
@@ -2539,6 +2560,7 @@ function getLIs(){
       step2Status:'Pending',
       step2CompletedBy:'',
       notes:el.querySelector('.li-notes').value,
+      waitingVendor:(el.querySelector('.li-waiting-chk')&&el.querySelector('.li-waiting-chk').checked)?el.querySelector('.li-waiting-vendor').value.trim():'',
       assignee:'',status:'Pending',completedBy:'',completedAt:''
     });
   });
@@ -3369,6 +3391,7 @@ function showBoardWODetail(woId){
         <div style="display:flex;gap:4px;margin-left:auto">${inProgressBtn}${completeBtn}</div>
       </div>
       ${done&&i.completedBy?'<div style="font-size:11px;color:#4CAF7D;margin-top:2px;margin-left:26px">✓ '+i.completedBy+'</div>':''}
+      ${i.waitingVendor?'<div style="font-size:11px;color:#e05555;margin-top:4px;margin-left:26px;font-weight:700">⏳ Waiting on material: '+i.waitingVendor+'</div>':''}
       ${i.notes?'<div style="font-size:11px;color:#999;margin-top:4px;margin-left:26px;line-height:1.4">'+i.notes+'</div>':''}
       ${i.bundle?'<div style="font-size:11px;color:#f0a500;margin-top:2px;margin-left:26px">Bundle: '+i.bundle+'</div>':''}
       ${i.skidSplits&&i.skidSplits.length?'<div style="font-size:10px;color:#888;margin-top:2px;margin-left:26px">Skids: '+i.skidSplits.map(s=>(s.qty||'?')+'×'+(s.size||s.type||'?')).join(' · ')+'</div>':''}
@@ -4720,6 +4743,7 @@ function renderQueue(c){
             item.assignee?`<span class="badge badge-blue">${item.assignee}</span>`:'<span class="badge badge-red">Unassigned</span>'}
         </div>
         ${item.notes?`<div style="font-size:11px;color:var(--text3);margin-top:2px">📝 ${item.notes}</div>`:''}
+        ${item.waitingVendor?`<div style="font-size:11px;font-weight:700;color:#e05555;background:#1a0505;border-radius:4px;padding:3px 8px;margin-top:4px;display:inline-block">⏳ Waiting on: ${escHtml(item.waitingVendor)}</div>`:''}
         ${item.isDual?renderQueueDualSteps(item):''}
       </div>
       <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex-shrink:0">
@@ -5152,6 +5176,37 @@ function switchQStation(s,el){
   el.classList.add('active');
   renderQueue(document.getElementById('content'));
   updateQueueToggle();
+}
+
+function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function showWaitingModal(){
+  const allItems=[];
+  state.wos.forEach(wo=>{
+    (wo.items||[]).forEach(item=>{
+      if(item.waitingVendor&&item.status!=='Complete')
+        allItems.push({...item,customer:wo.customer,woNum:wo.woNum,delivery:wo.delivery,woId:wo.id});
+    });
+  });
+  const rows=allItems.length?allItems.map(i=>`
+    <div style="padding:10px 0;border-bottom:1px solid #222;display:flex;gap:12px;align-items:flex-start">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:700;color:#eef0f6">${escHtml(i.customer)}</div>
+        <div style="font-size:12px;color:#5B9BD5;margin-top:1px">${[i.gauge,i.size||i.productCat].filter(Boolean).join(' · ')||'—'}${i.qty?' × '+i.qty:''}</div>
+        <div style="font-size:11px;color:#888;margin-top:1px">WO #${i.woNum}${i.station?' · '+i.station:''}${i.delivery?' · '+fmtDate(i.delivery):''}</div>
+      </div>
+      <div style="background:#2a0a0a;border:1px solid #5a1a1a;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700;color:#e05555;white-space:nowrap">⏳ ${escHtml(i.waitingVendor)}</div>
+    </div>`).join(''):'<div style="color:#555;padding:20px 0;text-align:center">No items waiting on material</div>';
+  const modal=document.createElement('div');
+  modal.style.cssText='position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.innerHTML=`<div style="background:#1a1a1a;border:1px solid #333;border-radius:12px;padding:20px;max-width:540px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.8)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="font-size:16px;font-weight:800;color:#e05555">⏳ Waiting on Material — ${allItems.length} item${allItems.length!==1?'s':''}</div>
+      <button onclick="this.closest('[style*=fixed]').remove()" style="background:#333;color:#aaa;border:none;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:12px">✕ Close</button>
+    </div>
+    ${rows}
+  </div>`;
+  modal.addEventListener('click',e=>{if(e.target===modal)modal.remove();});
+  document.body.appendChild(modal);
 }
 
 function renderQueueDualSteps(item){
