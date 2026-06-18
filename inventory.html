@@ -594,32 +594,26 @@ document.getElementById('file-input').addEventListener('change',async function(e
 
 async function importFromWorkbook(wb,fname){
   const findSheet=(...names)=>{
-    // Only search visible sheets; fall back to all if none visible match
-    const visibleNames=wb.SheetNames.filter((_,i)=>!(wb.Workbook?.Sheets?.[i]?.Hidden));
-    const pool=visibleNames.length?visibleNames:wb.SheetNames;
+    // Explicitly exclude known legacy/hidden sheet names
+    const EXCLUDE=new Set(['Dashboard','Forecast','SlipDrive','Elgen','ALUM - STAIN','MJS Con']);
+    const pool=wb.SheetNames.filter(s=>!EXCLUDE.has(s));
     const all=pool.filter(s=>names.every(n=>s.toLowerCase().includes(n.toLowerCase())));
     if(all.length===1)return wb.Sheets[all[0]];
-    if(all.length>1){
-      const best=all.reduce((a,b)=>a.length<=b.length?a:b);
-      return wb.Sheets[best];
-    }
+    if(all.length>1){const best=all.reduce((a,b)=>a.length<=b.length?a:b);return wb.Sheets[best];}
     for(const n of names){
       const matches=pool.filter(s=>s.toLowerCase().includes(n.toLowerCase()));
       if(matches.length===1)return wb.Sheets[matches[0]];
-      if(matches.length>1){
-        const best=matches.reduce((a,b)=>a.length<=b.length?a:b);
-        return wb.Sheets[best];
-      }
+      if(matches.length>1){const best=matches.reduce((a,b)=>a.length<=b.length?a:b);return wb.Sheets[best];}
     }
     return null;
   };
 
   const parsed={
     invSheets:   parseInvSheets(findSheet('inv','sheets')),
-    slipDrive:   parseSlipDrive(findSheet('slip','drive')),
-    alumStain:   parseAlumStain(findSheet('alum','stain')),
-    elgen:       parseElgen(findSheet('elgen')),
-    mjsConsignment: parseMJS(findSheet('mjs','consignment'))
+    slipDrive:   parseSlipDrive(findSheet('slip drive','slip','drive')),
+    alumStain:   parseAlumStain(findSheet('alum-stain','alum','stain')),
+    elgen:       parseElgen(findSheet('elgen inv','elgen')),
+    mjsConsignment: parseMJS(findSheet('mjs consignment','mjs','consignment'))
   };
 
   const totalParsed=Object.values(parsed).reduce((s,a)=>s+a.length,0);
@@ -703,7 +697,7 @@ function parseElgen(ws){
   for(let i=hi+1;i<rows.length;i++){
     const row=rows[i];if(!row||row.every(c=>!c))continue;
     const dv=dc>=0?String(row[dc]||'').trim():'';if(!dv)continue;
-    const bundleNum=bn>=0?String(row[bn]||'').trim():'';
+    const bundleNum=dv.replace(/\s+/g,'-').replace(/[^a-zA-Z0-9-]/g,'').toLowerCase();
     res.push({desc:dv,vendor:vd>=0?String(row[vd]||'').trim():'Elgen',pcs:pc>=0?parseInt(row[pc])||0:0,bundleNum,packaging:pk>=0?String(row[pk]||'').trim():'',loc:lc>=0?String(row[lc]||'').trim():'',price:pr>=0?parseFloat(String(row[pr]||'').replace(/[$,]/g,''))||0:0,total:to>=0?parseFloat(String(row[to]||'').replace(/[$,]/g,''))||0:0});
   }
   return res;
