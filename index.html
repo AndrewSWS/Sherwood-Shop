@@ -1296,7 +1296,8 @@ async function sbUpdateLI(woId, itemId, fields) {
     step2CompletedBy:'step2_completed_by', notes:'notes', priority:'priority',
     weight:'weight', qty:'qty', delivery:'delivery', bundle:'bundle',
     coilNum:'coil_num', skidSplits:'skid_splits', station:'station',
-    productCat:'product_cat', gauge:'gauge', size:'size', type:'type'
+    productCat:'product_cat', gauge:'gauge', size:'size', type:'type',
+    waitingVendor:'waiting_vendor'
   };
   for (const [k,v] of Object.entries(fields)) {
     if (fieldMap[k]) {
@@ -2236,7 +2237,7 @@ function addLI(data){
   const empty=document.getElementById('li-empty');
   if(empty)empty.style.display='none';
   const div=document.createElement('div');
-  div.className='li-block mb8';div.id=`li-${n}`;
+  div.className='li-block mb8';div.id=`li-${n}`;if(data){div.dataset.woId=data.woId||'';div.dataset.itemId=data.id||'';}
   if(data&&data.id) div.dataset.liId=String(data.id);
   const catOpts=Object.keys(PRODUCT_CATS).map(c=>`<option${data&&data.productCat===c?' selected':''}>${c}</option>`).join('');
   const initCat=data?data.productCat||'Flat Sheet':'Flat Sheet';
@@ -2298,10 +2299,10 @@ function addLI(data){
   </div>
   <div class="field" style="margin-top:6px">
     <label class="lbl" style="display:flex;align-items:center;gap:6px;cursor:pointer">
-      <input type="checkbox" class="li-waiting-chk" style="width:14px;height:14px;accent-color:#e05555" ${data&&data.waitingVendor?'checked':''} onchange="liWaitingChange('${n}',this)">
+      <input type="checkbox" class="li-waiting-chk" style="width:14px;height:14px;accent-color:#e05555" ${data&&data.waitingVendor?'checked':''} onchange="liWaitingChange('${n}',this);if(!this.checked)liSaveWaiting('${n}','')">
       <span style="color:#e05555;font-weight:700">&#x23F3; Waiting on Material</span>
     </label>
-    <input class="li-waiting-vendor" type="text" placeholder="Vendor name..." value="${data&&data.waitingVendor?data.waitingVendor:''}"
+    <input class="li-waiting-vendor" type="text" placeholder="Vendor name..." value="${data&&data.waitingVendor?data.waitingVendor:''}" onblur="liSaveWaiting('${n}',this.value)" onchange="liSaveWaiting('${n}',this.value)"
       style="margin-top:4px;${data&&data.waitingVendor?'':'display:none;'}background:#2a1010;border-color:#e05555;color:#f88">
   </div>`;
   container.appendChild(div);
@@ -2312,6 +2313,21 @@ function addLI(data){
   }
   // Populate gauge dropdown for initial category
   liCatChange(n, initCat, initGauge, initSize, data?data.qty||1:1, data?data.wtUnit||0:0);
+}
+
+function liSaveWaiting(n, vendor) {
+  const el = document.getElementById('li-'+n);
+  if (!el) return;
+  const woId = parseInt(el.dataset.woId);
+  const itemId = el.dataset.itemId;
+  if (!woId || !itemId) return; // new WO not yet saved — will be saved on WO save
+  const wo = state.wos.find(w=>w.id===woId);
+  if (!wo) return;
+  const item = wo.items.find(i=>String(i.id)===String(itemId));
+  if (!item) return;
+  item.waitingVendor = vendor || '';
+  saveState(); updateBadges();
+  sbUpdateLI(woId, item.id, {waitingVendor: vendor || ''}).catch(e=>console.warn('saveWaiting error',e));
 }
 
 function liWaitingChange(n, chk) {
