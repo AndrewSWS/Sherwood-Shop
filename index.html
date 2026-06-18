@@ -426,6 +426,10 @@ select{cursor:pointer}
     <div class="nav-item" onclick="nav('bundlelog',this)">
       <span class="icon">📦</span> Bundle History
     </div>
+    <div class="nav-item" onclick="nav('stockneeds',this)">
+      <span class="icon">🛒</span> Stock Needs
+      <span class="nav-badge" id="badge-stockneeds" style="display:none"></span>
+    </div>
   </div>
   <div class="nav-section">
     <div class="nav-label">Delivery</div>
@@ -1118,6 +1122,7 @@ let state = {
   customerMeta: {},
   // deliveryGroups: array of {id, name, color} — users can create custom groups
   deliveryGroups: [],
+  // stockNeeds: loaded from Supabase stock_needs table, not stored in state
   trucks: [
     {id:1,name:'Truck 1 — Double Axle',driver:'Driver 1',max:36000,stops:[],shipDate:''},
     {id:2,name:'Truck 2 — Single Axle',driver:'Driver 2',max:11000,stops:[],shipDate:''}
@@ -1937,6 +1942,7 @@ function updateBadges(){
 const VIEWS = {
   create:{title:'New Work Order',actions:'<div class="flex gap8"><button class="btn" onclick="triggerQBImport()">📥 Import from QuickBooks</button><button class="btn btn-primary no-print" onclick="saveWO()">💾 Save Work Order</button></div>'},
   bundlelog:{title:'Bundle Usage History',actions:'<div class="flex gap8"><button class="btn btn-sm" onclick="exportBundleCSV()">⬇ Export CSV</button></div>'},
+  stockneeds:{title:'Stock Needs',actions:''},
   assign:{title:'Assign & Manage WOs',actions:'<div class="flex gap8" style="align-items:center"><input type="text" id="assign-search" placeholder="Search WO, customer..." oninput="filterAssignInPlace(this.value)" style="width:200px;padding:6px 10px;font-size:13px"><button id="assign-toggle" class="btn btn-sm" onclick="showAllAssign=!showAllAssign;updateAssignToggle();renderAssign(document.getElementById(\'assign-search\').value)">Show All</button></div>'},
   queue:{title:'Shop Queue — Unassigned',actions:'<div class="flex gap8"><button id="queue-toggle" class="btn btn-sm" onclick="showAllQueue=!showAllQueue;updateQueueToggle();renderQueue()">Show All</button><button class="btn btn-sm" onclick="resetQueuePriorities()" title="Clear manual priorities — revert to delivery date order">↺ Reset Order</button></div>'},
   myview:{title:'My Tasks',actions:''},
@@ -1968,6 +1974,7 @@ function nav(view,el){
   const c=document.getElementById('content');
   if(view==='create')renderCreate(c);
   else if(view==='bundlelog')renderBundleLog(c);
+  else if(view==='stockneeds')renderStockNeeds(c);
   else if(view==='assign')renderAssign('',c);
   else if(view==='queue')renderQueue(c);
   else if(view==='myview')renderMyView(c);
@@ -4249,6 +4256,189 @@ function queueSort(a, b){
 // ══════════════════════════════════════════════════════════════════════════════
 let _bundleLogData = [];
 let _bundleLogFilters = { customer: '', coilNum: '', bundle: '', dateFrom: '', dateTo: '', station: '' };
+
+// ══════════════════════════════════════════════════════
+// STOCK NEEDS — Supabase backed
+// ══════════════════════════════════════════════════════
+let _stockNeeds = [];  // in-memory cache, loaded from Supabase
+
+async function sbLoadStockNeeds(){
+  const rows = await _sbGet('stock_needs','order=added_at.asc');
+  if(rows) _stockNeeds = rows;
+  updateStockNeedsBadge();
+  return _stockNeeds;
+}
+
+async function addStockNeed(textArg){
+  const inp = document.getElementById('stock-needs-input');
+  const text = (textArg||inp?.value||'').trim();
+  if(!text) return;
+  const row = {
+    id: Date.now(),
+    text,
+    added_by: state.currentUser||'',
+    added_at: new Date().toISOString(),
+    done: false
+  };
+  // Optimistic local update
+  _stockNeeds.push(row);
+  if(inp){ inp.value=''; inp.focus(); }
+  _renderStockNeedsList();
+  updateStockNeedsBadge();
+  // Persist to Supabase
+  await _sbPost('stock_needs', row).catch(e=>console.warn('addStockNeed error',e));
+}
+
+async function toggleStockNeed(id){
+  const item = _stockNeeds.find(n=>n.id===id);
+  if(!item) return;
+  item.done = !item.done;
+  _renderStockNeedsList();
+  updateStockNeedsBadge();
+  await _sbPatch('stock_needs',{id},{done:item.done}).catch(e=>console.warn('toggleStockNeed error',e));
+}
+
+async function deleteStockNeed(id){
+  _stockNeeds = _stockNeeds.filter(n=>n.id!==id);
+  _renderStockNeedsList();
+  updateStockNeedsBadge();
+  await _sbDelete('stock_needs',{id}).catch(e=>console.warn('deleteStockNeed error',e));
+}
+
+async function clearDoneStockNeeds(){
+  const doneIds = _stockNeeds.filter(n=>n.done).map(n=>n.id);
+  if(!doneIds.length) return;
+  _stockNeeds = _stockNeeds.filter(n=>!n.done);
+  _renderStockNeedsList();
+  updateStockNeedsBadge();
+  // Delete each done item from Supabase
+  await Promise.all(doneIds.map(id=>_sbDelete('stock_needs',{id}).catch(e=>console.warn('clearDone error',id,e))));
+}
+
+function updateStockNeedsBadge(){
+  const open = _stockNeeds.filter(n=>!n.done).length;
+  const sb = document.getElementById('badge-stockneeds');
+  if(sb){ sb.textContent=open; sb.style.display=open?'':'none'; }
+  const bb = document.getElementById('board-stock-badge');
+  if(bb){ bb.textContent=open; bb.style.display=open?'':'none'; }
+}
+
+function _renderStockNeedsList(){
+  const list = document.getElementById('stock-needs-list');
+  const count = document.getElementById('stock-needs-count');
+  if(!list) return;
+  const open = _stockNeeds.filter(n=>!n.done);
+  const done = _stockNeeds.filter(n=>n.done);
+  const all = [...open, ...done];
+
+  if(!all.length){
+    list.innerHTML='<div style="text-align:center;padding:24px 0;color:#555;font-size:13px">No stock needs logged yet.</div>';
+    if(count) count.textContent='';
+    return;
+  }
+
+  list.innerHTML = all.map(n=>{
+    const ts = n.added_at ? new Date(n.added_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
+    const by = n.added_by ? ' · '+n.added_by : '';
+    return `<div style="display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid #2a2a2a">
+      <button onclick="toggleStockNeed(${n.id})" style="flex-shrink:0;width:20px;height:20px;border-radius:4px;border:2px solid ${n.done?'#4CAF7D':'#555'};background:${n.done?'#4CAF7D':'transparent'};color:#fff;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;margin-top:1px">${n.done?'✓':''}</button>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;color:${n.done?'#555':'#ddd'};${n.done?'text-decoration:line-through':''};word-break:break-word">${n.text}</div>
+        <div style="font-size:10px;color:#555;margin-top:2px">${ts}${by}</div>
+      </div>
+      <button onclick="deleteStockNeed(${n.id})" style="flex-shrink:0;background:transparent;border:none;color:#444;cursor:pointer;font-size:14px;padding:2px 4px" title="Remove">✕</button>
+    </div>`;
+  }).join('');
+
+  if(count) count.textContent = open.length+' open · '+done.length+' done';
+}
+
+function openStockNeedsBoard(){
+  const modal = document.getElementById('stock-needs-modal');
+  if(!modal) return;
+  modal.style.display='flex';
+  _renderStockNeedsList();
+  // Silently refresh in background — only update if no input is being typed
+  sbLoadStockNeeds().then(()=>{
+    const inp = document.getElementById('stock-needs-input');
+    if(!inp || !inp.value.trim()) _renderStockNeedsList();
+  }).catch(()=>{});
+  setTimeout(()=>{ const inp=document.getElementById('stock-needs-input'); if(inp)inp.focus(); }, 80);
+}
+
+function closeStockNeedsBoard(){
+  const modal = document.getElementById('stock-needs-modal');
+  if(modal) modal.style.display='none';
+}
+
+async function renderStockNeeds(c){
+  if(!c) c=document.getElementById('content');
+
+  // Show loading state immediately
+  c.innerHTML=`<div class="card" style="max-width:640px">
+    <div style="padding:20px;text-align:center;color:var(--text3)">Loading stock needs…</div>
+  </div>`;
+
+  await sbLoadStockNeeds();
+
+  const open = _stockNeeds.filter(n=>!n.done);
+  const done = _stockNeeds.filter(n=>n.done);
+  const all = [...open, ...done];
+
+  const rows = all.length ? all.map(n=>{
+    const ts = n.added_at ? new Date(n.added_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
+    const by = n.added_by||'';
+    return `<div style="display:flex;align-items:flex-start;gap:12px;padding:11px 0;border-bottom:1px solid var(--border)">
+      <button onclick="toggleStockNeed(${n.id});_renderStockNeedsPage()" style="flex-shrink:0;width:22px;height:22px;border-radius:5px;border:2px solid ${n.done?'var(--green)':'var(--border)'};background:${n.done?'var(--green)':'transparent'};color:#fff;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;margin-top:1px">${n.done?'✓':''}</button>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;color:${n.done?'var(--text3)':'var(--text)'};${n.done?'text-decoration:line-through':''};word-break:break-word">${n.text}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:3px">${ts}${by?' · '+by:''}</div>
+      </div>
+      <button onclick="deleteStockNeed(${n.id});_renderStockNeedsPage()" style="flex-shrink:0;background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:15px;padding:2px 6px" title="Remove">✕</button>
+    </div>`;
+  }).join('') : '<div style="text-align:center;padding:40px 0;color:var(--text3);font-size:14px">No stock needs logged yet.</div>';
+
+  c.innerHTML=`
+  <div class="card" style="max-width:640px">
+    <div class="flex gap8 mb16" style="align-items:flex-end">
+      <input id="stock-needs-input" type="text" placeholder="Describe what's needed — material, gauge, size..."
+        style="flex:1;padding:10px 12px;border:1px solid var(--border);border-radius:var(--rad);font-size:13px;font-family:inherit;background:var(--surface);color:var(--text)"
+        onkeydown="if(event.key==='Enter'){addStockNeed().then(_renderStockNeedsPage)}">
+      <button class="btn btn-primary" onclick="addStockNeed().then(_renderStockNeedsPage)">+ Add</button>
+    </div>
+    <div style="margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:13px;font-weight:600;color:var(--text2)">${open.length} open · ${done.length} done</span>
+      <button class="btn btn-sm" onclick="clearDoneStockNeeds().then(_renderStockNeedsPage)">Clear Completed</button>
+    </div>
+    <div id="sn-page-list">${rows}</div>
+  </div>`;
+
+  setTimeout(()=>{ const inp=document.getElementById('stock-needs-input'); if(inp)inp.focus(); }, 80);
+}
+
+function _renderStockNeedsPage(){
+  // Re-render just the list portion of the index page view
+  const listEl = document.getElementById('sn-page-list');
+  if(!listEl){ renderStockNeeds(); return; }
+  const open = _stockNeeds.filter(n=>!n.done);
+  const done = _stockNeeds.filter(n=>n.done);
+  const all = [...open, ...done];
+  listEl.innerHTML = all.length ? all.map(n=>{
+    const ts = n.added_at ? new Date(n.added_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
+    const by = n.added_by||'';
+    return `<div style="display:flex;align-items:flex-start;gap:12px;padding:11px 0;border-bottom:1px solid var(--border)">
+      <button onclick="toggleStockNeed(${n.id});_renderStockNeedsPage()" style="flex-shrink:0;width:22px;height:22px;border-radius:5px;border:2px solid ${n.done?'var(--green)':'var(--border)'};background:${n.done?'var(--green)':'transparent'};color:#fff;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;margin-top:1px">${n.done?'✓':''}</button>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;color:${n.done?'var(--text3)':'var(--text)'};${n.done?'text-decoration:line-through':''};word-break:break-word">${n.text}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:3px">${ts}${by?' · '+by:''}</div>
+      </div>
+      <button onclick="deleteStockNeed(${n.id});_renderStockNeedsPage()" style="flex-shrink:0;background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:15px;padding:2px 6px" title="Remove">✕</button>
+    </div>`;
+  }).join('') : '<div style="text-align:center;padding:40px 0;color:var(--text3);font-size:14px">No stock needs logged yet.</div>';
+  // Update open/done count
+  const countEl = listEl.previousElementSibling?.querySelector('span');
+  if(countEl) countEl.textContent=open.length+' open · '+done.length+' done';
+}
 
 async function renderBundleLog(c) {
   c.innerHTML = `<div style="padding:20px;max-width:1200px;margin:0 auto">
@@ -9476,6 +9666,8 @@ async function launchApp(){
   } catch(e){
     console.warn('Supabase load failed, using local data:', e.message);
   }
+  // Load stock needs from Supabase (separate table)
+  sbLoadStockNeeds().catch(e=>console.warn('sbLoadStockNeeds error',e));
   if(state.currentUser){
     document.getElementById('global-user').value=state.currentUser;
     setUser(state.currentUser);
@@ -9875,6 +10067,7 @@ if("serviceWorker" in navigator){
     <div style="display:flex;align-items:center;gap:16px">
       <div id="board-clock" style="font-size:20px;font-weight:700;color:#A8D5A8;font-variant-numeric:tabular-nums"></div>
       <button id="kiosk-btn" onclick="toggleWakeLock()" style="background:#333;color:#A8D5A8;border:1px solid #A8D5A8;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px">☀ Keep Awake</button>
+      <button onclick="openStockNeedsBoard()" style="background:#1a3a1a;color:#f0a500;border:1px solid #f0a500;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px">🛒 Stock Needs<span id="board-stock-badge" style="display:none;margin-left:6px;background:#f0a500;color:#000;border-radius:10px;padding:0 6px;font-size:11px;font-weight:800"></span></button>
       <button onclick="exitBoardView()" style="background:#333;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px">✕ Exit</button>
     </div>
   </div>
@@ -9931,6 +10124,32 @@ if("serviceWorker" in navigator){
       <button class="ob-mclose" onclick="obCloseDetail()">✕</button>
     </div>
     <div class="ob-mbody" id="ob-mbody"></div>
+  </div>
+</div>
+
+<!-- ══ STOCK NEEDS MODAL ══ -->
+<div id="stock-needs-modal" style="display:none;position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,.7);align-items:center;justify-content:center;padding:20px" onclick="if(event.target===this)closeStockNeedsBoard()">
+  <div style="background:#1a1a2e;border:1px solid #333;border-radius:12px;width:100%;max-width:520px;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 12px 48px rgba(0,0,0,.6)">
+    <div style="padding:16px 20px;border-bottom:1px solid #333;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+      <div>
+        <div style="font-size:16px;font-weight:800;color:#fff">🛒 Stock Needs</div>
+        <div style="font-size:11px;color:#888;margin-top:2px">Items to order or check inventory</div>
+      </div>
+      <button onclick="closeStockNeedsBoard()" style="background:#333;border:none;color:#aaa;border-radius:50%;width:28px;height:28px;font-size:16px;cursor:pointer">✕</button>
+    </div>
+    <div style="padding:14px 20px;border-bottom:1px solid #2a2a2a;flex-shrink:0">
+      <div style="display:flex;gap:8px">
+        <input id="stock-needs-input" type="text" placeholder="e.g. 26ga 36x96 Galv — low on stock..."
+          style="flex:1;padding:10px 12px;background:#222;border:1px solid #444;border-radius:6px;color:#fff;font-size:13px;font-family:inherit"
+          onkeydown="if(event.key==='Enter')addStockNeed()">
+        <button onclick="addStockNeed()" style="background:#f0a500;color:#000;border:none;border-radius:6px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">+ Add</button>
+      </div>
+    </div>
+    <div id="stock-needs-list" style="flex:1;overflow-y:auto;padding:10px 20px;min-height:80px"></div>
+    <div style="padding:10px 20px;border-top:1px solid #2a2a2a;flex-shrink:0;display:flex;justify-content:space-between;align-items:center">
+      <span id="stock-needs-count" style="font-size:11px;color:#666"></span>
+      <button onclick="clearDoneStockNeeds()" style="background:transparent;border:1px solid #333;color:#666;border-radius:4px;padding:4px 10px;font-size:11px;cursor:pointer">Clear Completed</button>
+    </div>
   </div>
 </div>
 
