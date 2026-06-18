@@ -180,10 +180,8 @@ async function sbGet(table,params=''){
   catch(e){return null;}
 }
 async function sbUpsert(table,body){
-  try{const r=await fetch(`${SB_URL}/rest/v1/${table}`,{method:'POST',headers:{...SB_HDR,'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(body)});
-  if(!r.ok){const txt=await r.text();console.error('sbUpsert '+table+' '+r.status+':',txt);return false;}
-  return true;}
-  catch(e){console.error('sbUpsert '+table+' exception:',e);return false;}
+  try{const r=await fetch(`${SB_URL}/rest/v1/${table}`,{method:'POST',headers:{...SB_HDR,'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(body)});return r.ok;}
+  catch(e){return false;}
 }
 async function sbDelete(table,bundleNum){
   try{const r=await fetch(`${SB_URL}/rest/v1/${table}?bundle_num=eq.${encodeURIComponent(bundleNum)}`,{method:'DELETE',headers:{...SB_HDR,'Prefer':'return=minimal'}});return r.ok;}
@@ -207,9 +205,9 @@ async function init(){
 async function loadFromSupabase(){
   let hasData=false;
   for(const [key,table] of Object.entries(SB_TABLES)){
-    const rows=await sbGet(table,'select=bundle_num,data&order=data->>section.asc,data->>gauge.asc');
+    const rows=await sbGet(table,'select=bundle_num,data');
     if(rows&&rows.length>0){
-      // Only show rows with pcs > 0
+      // Only show rows with pcs > 0 (MJS rows rely on weight)
       state[key]=rows.map(r=>r.data).filter(d=>parseInt(d.pcs||d.coils||d.weight||1)>0);
       hasData=true;
     } else state[key]=[];
@@ -230,7 +228,7 @@ async function reconcileImport(parsedData, fname){
     // Build lookup of new data by bundleNum
     const newByBundle={};
     for(const row of newRows){
-      const bn=String(row.mjsTag||row.bundleNum||row.heatNum||'').trim();
+      const bn=String(row.bundleNum||row.heatNum||row.mjsTag||'').trim();
       if(bn) newByBundle[bn]=row;
     }
 
@@ -242,7 +240,7 @@ async function reconcileImport(parsedData, fname){
     // Upsert all new/updated rows from Excel
     const upsertBatch=[];
     for(const row of newRows){
-      const bn=String(row.mjsTag||row.bundleNum||row.heatNum||'').trim();
+      const bn=String(row.bundleNum||row.heatNum||row.mjsTag||'').trim();
       if(!bn) continue;
       const qty=parseInt(row.pcs||row.coils||0)+(parseFloat(row.weight||row.lf||0));
       if(qty===0) continue; // skip zero rows from Excel
@@ -558,10 +556,13 @@ function renderMJS(){
     <td class="td-num">${fmtNum(r.lf)} lf</td><td class="td-num">${fmtNum(r.weight)} lb</td>
     <td style="font-size:11px;color:var(--text-muted)">${r.cplDate||'—'}</td>
     <td class="td-money">${r.price?'$'+parseFloat(r.price).toFixed(3)+'/cwt':'—'}</td>
-    <td style="font-family:monospace;font-weight:700;color:var(--forest)">${r.tag||'—'}</td></tr>`).join('');
+    <td style="font-family:monospace;font-weight:700;color:var(--forest)">${r.tag||'—'}</td>
+    <td class="td-money">${r.total?fmt$(r.total):'—'}</td>
+    <td style="font-size:11px;color:${r.expDate?'var(--amber-dark,#b07000)':'var(--text-muted)'}">${r.expDate||'—'}</td></tr>`).join('');
   document.getElementById('tab-content-mjs').innerHTML=`
     <div class="summary-row">
       <div class="summary-card accent"><div class="cl">Active Coils</div><div class="cv">${state.mjsConsignment.length}</div><div class="cs">no use date = active</div></div>
+      <div class="summary-card"><div class="cl">Total Value</div><div class="cv">${fmt$(sumField(state.mjsConsignment,'total'))}</div><div class="cs">consignment value</div></div>
       <div class="summary-card"><div class="cl">Total Weight</div><div class="cv">${fmtNum(Math.round(sumField(state.mjsConsignment,'weight')))} <span style="font-size:13px;font-weight:500">lbs</span></div><div class="cs">${fmtNum(Math.round(sumField(state.mjsConsignment,'lf')))} total LF</div></div>
     </div>
     <div class="toolbar">
@@ -571,7 +572,7 @@ function renderMJS(){
       <div class="toolbar-right"><button class="btn-sm" onclick="exportTab('mjs')">Export CSV</button></div>
     </div>
     <div class="table-wrap"><div class="table-container"><table>
-      <thead><tr><th>Gauge</th><th>Width</th><th>Coating</th><th>Heat #</th><th>MJS Tag</th><th onclick="toggleSort('mjs','lf')" class="${sortClass(tid,'lf')}">Lin. Feet</th><th onclick="toggleSort('mjs','weight')" class="${sortClass(tid,'weight')}">Weight</th><th>CPL Date</th><th>Price</th><th>Tag #</th></tr></thead>
+      <thead><tr><th>Gauge</th><th>Width</th><th>Coating</th><th>Heat #</th><th>MJS Tag</th><th onclick="toggleSort('mjs','lf')" class="${sortClass(tid,'lf')}">Lin. Feet</th><th onclick="toggleSort('mjs','weight')" class="${sortClass(tid,'weight')}">Weight</th><th>CPL Date</th><th>Price</th><th>Tag #</th><th onclick="toggleSort('mjs','total')" class="${sortClass(tid,'total')}">Total</th><th>Exp. Date</th></tr></thead>
       <tbody>${tbody||emptyState(10)}</tbody>
     </table></div>
     <div class="table-footer"><span>Showing <strong>${rows.length}</strong> of <strong>${state.mjsConsignment.length}</strong></span><span>${fmtNum(Math.round(sumField(rows,'weight')))} lbs filtered</span></div></div>`;
@@ -594,26 +595,31 @@ document.getElementById('file-input').addEventListener('change',async function(e
 
 async function importFromWorkbook(wb,fname){
   const findSheet=(...names)=>{
-    // Explicitly exclude known legacy/hidden sheet names
-    const EXCLUDE=new Set(['Dashboard','Forecast','SlipDrive','Elgen','ALUM - STAIN','MJS Con']);
-    const pool=wb.SheetNames.filter(s=>!EXCLUDE.has(s));
-    const all=pool.filter(s=>names.every(n=>s.toLowerCase().includes(n.toLowerCase())));
+    const all=wb.SheetNames.filter(s=>names.every(n=>s.toLowerCase().includes(n.toLowerCase())));
     if(all.length===1)return wb.Sheets[all[0]];
-    if(all.length>1){const best=all.reduce((a,b)=>a.length<=b.length?a:b);return wb.Sheets[best];}
+    if(all.length>1){
+      let best=null,bestR=0;
+      for(const s of all){const ws=wb.Sheets[s];const ref=ws['!ref'];if(!ref)continue;const r=parseInt(ref.split(':')[1].replace(/[A-Z]/g,''))||0;if(r>bestR){bestR=r;best=s;}}
+      return best?wb.Sheets[best]:wb.Sheets[all[0]];
+    }
     for(const n of names){
-      const matches=pool.filter(s=>s.toLowerCase().includes(n.toLowerCase()));
+      const matches=wb.SheetNames.filter(s=>s.toLowerCase().includes(n.toLowerCase()));
       if(matches.length===1)return wb.Sheets[matches[0]];
-      if(matches.length>1){const best=matches.reduce((a,b)=>a.length<=b.length?a:b);return wb.Sheets[best];}
+      if(matches.length>1){
+        let best=null,bestR=0;
+        for(const s of matches){const ws=wb.Sheets[s];const ref=ws['!ref'];if(!ref)continue;const r=parseInt(ref.split(':')[1].replace(/[A-Z]/g,''))||0;if(r>bestR){bestR=r;best=s;}}
+        if(best)return wb.Sheets[best];
+      }
     }
     return null;
   };
 
   const parsed={
     invSheets:   parseInvSheets(findSheet('inv','sheets')),
-    slipDrive:   parseSlipDrive(findSheet('slip drive','slip','drive')),
-    alumStain:   parseAlumStain(findSheet('alum-stain','alum','stain')),
-    elgen:       parseElgen(findSheet('elgen inv','elgen')),
-    mjsConsignment: parseMJS(findSheet('mjs consignment','mjs','consignment'))
+    slipDrive:   parseSlipDrive(findSheet('slip','drive')),
+    alumStain:   parseAlumStain(findSheet('alum','stain')),
+    elgen:       parseElgen(findSheet('elgen')),
+    mjsConsignment: parseMJS(findSheet('mjs','consignment'))
   };
 
   const totalParsed=Object.values(parsed).reduce((s,a)=>s+a.length,0);
@@ -647,7 +653,7 @@ function parseInvSheets(ws){
     let bundleNum=bnum>=0?String(row[bnum]||'').trim():'';
     if(!bundleNum){
       // Generate a stable key for rows without a bundle number
-      bundleNum=`${gv}-${(sz>=0?String(row[sz]||''):'')+''}-${vd>=0?String(row[vd]||''):''}`.replace(/\s+/g,'-').replace(/[^a-zA-Z0-9-]/g,'').toLowerCase()+`-nobundle-${i}`;
+      bundleNum=`${gv}-${(sz>=0?String(row[sz]||''):'')+''}-${vd>=0?String(row[vd]||''):''}`.replace(/\s+/g,'-').replace(/[^a-zA-Z0-9-]/g,'').toLowerCase()+'-nobundle';
       if(!bundleNum||bundleNum==='-nobundle')continue;
     }
     res.push({section:sec,gauge:gv,size:sz>=0?String(row[sz]||'').trim():'',vendor:vd>=0?String(row[vd]||'').trim():'',pcs:parseInt(pv)||0,bundle:String(row[bn]||'').trim(),bundleNum,price:pr>=0?parseFloat(String(row[pr]||'').replace(/[$,]/g,''))||0:0,total:to>=0?parseFloat(String(row[to]||'').replace(/[$,]/g,''))||0:0});
@@ -697,7 +703,7 @@ function parseElgen(ws){
   for(let i=hi+1;i<rows.length;i++){
     const row=rows[i];if(!row||row.every(c=>!c))continue;
     const dv=dc>=0?String(row[dc]||'').trim():'';if(!dv)continue;
-    const bundleNum=dv.replace(/\s+/g,'-').replace(/[^a-zA-Z0-9-]/g,'').toLowerCase();
+    const bundleNum=bn>=0?String(row[bn]||'').trim():'';
     res.push({desc:dv,vendor:vd>=0?String(row[vd]||'').trim():'Elgen',pcs:pc>=0?parseInt(row[pc])||0:0,bundleNum,packaging:pk>=0?String(row[pk]||'').trim():'',loc:lc>=0?String(row[lc]||'').trim():'',price:pr>=0?parseFloat(String(row[pr]||'').replace(/[$,]/g,''))||0:0,total:to>=0?parseFloat(String(row[to]||'').replace(/[$,]/g,''))||0:0});
   }
   return res;
@@ -708,7 +714,7 @@ function parseMJS(ws){
   for(let i=0;i<Math.min(15,rows.length);i++){const r=rows[i].map(c=>String(c||'').toLowerCase());if(r.some(c=>c.includes('heat')||c.includes('gauge')||c.includes('mjs'))){hi=i;break;}}
   if(hi<0)return[];
   const h=rows[hi].map(c=>String(c||'').trim().toLowerCase());
-  const g=colIdx(h,'gauge'),w=colIdx(h,'width'),co=colIdx(h,'coating','coat'),hn=colIdx(h,'heat'),mt=h.findIndex(c=>c.includes('mjs')&&c.includes('tag')),lf=colIdx(h,'lf','lin'),wt=colIdx(h,'weight','lbs'),cd=colIdx(h,'cpl','date'),ud=colIdx(h,'use date','use_date','usedate'),pr=colIdx(h,'price'),tg=h.findIndex(c=>c.includes('tag')&&!c.includes('mjs'));
+  const g=colIdx(h,'gauge'),w=colIdx(h,'width'),co=colIdx(h,'coating','coat'),hn=colIdx(h,'heat'),mt=h.findIndex(c=>c.includes('mjs')&&c.includes('tag')),lf=colIdx(h,'lf','lin'),wt=colIdx(h,'weight','lbs'),cd=colIdx(h,'cpl','date'),ud=colIdx(h,'use date','use_date','usedate'),pr=colIdx(h,'price'),tg=h.findIndex(c=>c.includes('tag')&&!c.includes('mjs')),to=colIdx(h,'total','ext'),ex=h.findIndex(c=>c.includes('consign')||c.includes('exp'));
   const res=[];
   for(let i=hi+1;i<rows.length;i++){
     const row=rows[i];if(!row||row.every(c=>!c))continue;
@@ -719,9 +725,11 @@ function parseMJS(ws){
     if(ud>=0&&row[ud])continue;
     const heatNum=hn>=0?String(row[hn]||'').trim():'';
     const mjsTag=mt>=0?String(row[mt]||'').trim():'';
-    if(!heatNum&&!mjsTag)continue; // skip summary/total rows
+    if(!mjsTag&&!heatNum) continue; // skip summary/total rows with no identifier
     const bundleNum=mjsTag||heatNum||`mjs-${i}`;
-    res.push({gauge:g>=0?String(row[g]||'').trim():'',width:w>=0?String(row[w]||'').trim():'',coating:co>=0?String(row[co]||'').trim():'',heatNum,mjsTag,bundleNum,lf:lfv,weight:wtv,cplDate:cd>=0?String(row[cd]||'').trim():'',price:pr>=0?parseFloat(String(row[pr]||'').replace(/[$,]/g,''))||0:0,tag:tg>=0?String(row[tg]||'').trim():''});
+    const priceVal=pr>=0?parseFloat(String(row[pr]||'').replace(/[$,]/g,''))||0:0;
+    const totalVal=to>=0?parseFloat(String(row[to]||'').replace(/[$,]/g,''))||0:(priceVal?Math.round(wtv*priceVal)/100:0);
+    res.push({gauge:g>=0?String(row[g]||'').trim():'',width:w>=0?String(row[w]||'').trim():'',coating:co>=0?String(row[co]||'').trim():'',heatNum,mjsTag,bundleNum,lf:lfv,weight:wtv,cplDate:cd>=0?String(row[cd]||'').trim():'',price:priceVal,total:totalVal,tag:tg>=0?String(row[tg]||'').trim():'',expDate:ex>=0?String(row[ex]||'').trim():''});
   }
   return res;
 }
