@@ -180,8 +180,11 @@ async function sbGet(table,params=''){
   catch(e){return null;}
 }
 async function sbUpsert(table,body){
-  try{const r=await fetch(`${SB_URL}/rest/v1/${table}`,{method:'POST',headers:{...SB_HDR,'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(body)});return r.ok;}
-  catch(e){return false;}
+  try{
+    const r=await fetch(`${SB_URL}/rest/v1/${table}`,{method:'POST',headers:{...SB_HDR,'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(body)});
+    if(!r.ok){const txt=await r.text();console.error(`[sbUpsert] ${table} ${r.status}:`,txt);return false;}
+    return true;
+  }catch(e){console.error('[sbUpsert] exception:',e);return false;}
 }
 async function sbDelete(table,bundleNum){
   try{const r=await fetch(`${SB_URL}/rest/v1/${table}?bundle_num=eq.${encodeURIComponent(bundleNum)}`,{method:'DELETE',headers:{...SB_HDR,'Prefer':'return=minimal'}});return r.ok;}
@@ -225,11 +228,12 @@ async function reconcileImport(parsedData, fname){
   for(const [key,table] of Object.entries(SB_TABLES)){
     const newRows=parsedData[key]||[];
 
-    // Build lookup of new data by bundleNum
+    // Build lookup of new data by bundleNum — use desc as key for Elgen
     const newByBundle={};
-    for(const row of newRows){
-      const bn=String(row.bundleNum||row.heatNum||row.mjsTag||'').trim();
-      if(bn) newByBundle[bn]=row;
+    for(let ri=0;ri<newRows.length;ri++){
+      const row=newRows[ri];
+      const bn=String(row.bundleNum||row.mjsTag||row.heatNum||row.desc||'').trim()||`row-${ri}`;
+      newByBundle[bn]=row;
     }
 
     // Get existing rows from Supabase
@@ -239,17 +243,19 @@ async function reconcileImport(parsedData, fname){
 
     // Upsert all new/updated rows from Excel
     const upsertBatch=[];
-    for(const row of newRows){
-      const bn=String(row.bundleNum||row.heatNum||row.mjsTag||'').trim();
-      if(!bn) continue;
+    for(let ri=0;ri<newRows.length;ri++){
+      const row=newRows[ri];
+      const bn=String(row.bundleNum||row.mjsTag||row.heatNum||row.desc||'').trim()||`row-${ri}`;
       const qty=parseInt(row.pcs||row.coils||0)+(parseFloat(row.weight||row.lf||0));
       if(qty===0) continue; // skip zero rows from Excel
       upsertBatch.push({bundle_num:bn,data:row,updated_at:ts});
       if(existingByBundle[bn]) updated++; else added++;
     }
+    // Deduplicate batch by bundle_num (last write wins) before upsert
+    const deduped=Object.values(upsertBatch.reduce((m,r)=>{m[r.bundle_num]=r;return m;},{}));
     // Upsert in batches
-    for(let i=0;i<upsertBatch.length;i+=100){
-      await sbUpsert(table,upsertBatch.slice(i,i+100));
+    for(let i=0;i<deduped.length;i+=100){
+      await sbUpsert(table,deduped.slice(i,i+100));
     }
 
     // Archive bundles in Supabase not in new Excel
@@ -276,7 +282,7 @@ async function reconcileImport(parsedData, fname){
 // ── MANUAL PCS UPDATE ──
 async function updatePcs(key,bundleNum,newPcs){
   const table=SB_TABLES[key];
-  const row=state[key].find(r=>r.bundleNum===bundleNum||r.heatNum===bundleNum||r.mjsTag===bundleNum);
+  const row=state[key].find(r=>r.bundleNum===bundleNum||r.heatNum===bundleNum||r.mjsTag===bundleNum||r.desc===bundleNum);
   if(!row)return;
   const qty=parseInt(newPcs)||0;
   if(qty===0){
@@ -515,7 +521,7 @@ function renderElgen(){
     <td style="max-width:220px;white-space:normal;font-weight:500">${r.desc||'—'}</td>
     <td><span class="vendor-badge">${r.vendor||'—'}</span></td>
     <td class="td-num"><input class="pcs-input" type="number" min="0" value="${r.pcs??''}"
-      onchange="updatePcs('elgen','${r.bundleNum||''}',this.value)"
+      onchange="updatePcs('elgen','${r.desc||r.bundleNum||''}',this.value)"
       onblur="if(this.value==='')this.value='${r.pcs??0}'"></td>
     <td style="font-size:12px;color:var(--text-secondary)">${r.bundleNum||'—'}</td>
     <td style="font-size:12px;color:var(--text-muted)">${r.packaging||'—'}</td>
@@ -594,21 +600,24 @@ document.getElementById('file-input').addEventListener('change',async function(e
 });
 
 async function importFromWorkbook(wb,fname){
+  // Legacy hidden sheets to always exclude
+  const EXCLUDE=new Set(['Dashboard','Forecast','SlipDrive','Elgen','ALUM - STAIN','MJS Con','Dashboard.','Forecast.']);
+  const visibleNames=wb.SheetNames.filter(s=>!EXCLUDE.has(s));
   const findSheet=(...names)=>{
-    const all=wb.SheetNames.filter(s=>names.every(n=>s.toLowerCase().includes(n.toLowerCase())));
-    if(all.length===1)return wb.Sheets[all[0]];
-    if(all.length>1){
-      let best=null,bestR=0;
-      for(const s of all){const ws=wb.Sheets[s];const ref=ws['!ref'];if(!ref)continue;const r=parseInt(ref.split(':')[1].replace(/[A-Z]/g,''))||0;if(r>bestR){bestR=r;best=s;}}
-      return best?wb.Sheets[best]:wb.Sheets[all[0]];
+    // Try exact match first (shortest name = most specific)
+    const exact=visibleNames.filter(s=>names.every(n=>s.toLowerCase().includes(n.toLowerCase())));
+    if(exact.length===1)return wb.Sheets[exact[0]];
+    if(exact.length>1){
+      // Prefer shortest name (most specific, avoids legacy sheets with spaces)
+      const best=exact.sort((a,b)=>a.length-b.length)[0];
+      return wb.Sheets[best];
     }
+    // Fallback: single keyword match
     for(const n of names){
-      const matches=wb.SheetNames.filter(s=>s.toLowerCase().includes(n.toLowerCase()));
-      if(matches.length===1)return wb.Sheets[matches[0]];
-      if(matches.length>1){
-        let best=null,bestR=0;
-        for(const s of matches){const ws=wb.Sheets[s];const ref=ws['!ref'];if(!ref)continue;const r=parseInt(ref.split(':')[1].replace(/[A-Z]/g,''))||0;if(r>bestR){bestR=r;best=s;}}
-        if(best)return wb.Sheets[best];
+      const matches=visibleNames.filter(s=>s.toLowerCase().includes(n.toLowerCase()));
+      if(matches.length>=1){
+        const best=matches.sort((a,b)=>a.length-b.length)[0];
+        return wb.Sheets[best];
       }
     }
     return null;
@@ -623,6 +632,8 @@ async function importFromWorkbook(wb,fname){
   };
 
   const totalParsed=Object.values(parsed).reduce((s,a)=>s+a.length,0);
+  console.log('[import] parsed counts:',Object.entries(parsed).map(([k,v])=>k+':'+v.length).join(', '));
+  console.log('[import] sheet names:',wb.SheetNames);
   if(totalParsed===0){showToast('No data found in file','error');setSyncStatus('err');return;}
 
   await reconcileImport(parsed,fname);
@@ -681,14 +692,26 @@ function parseAlumStain(ws){
   if(hi<0)return[];
   const h=rows[hi].map(c=>String(c||'').trim().toLowerCase());
   const tp=colIdx(h,'type'),g=colIdx(h,'gauge'),sz=colIdx(h,'size'),vd=colIdx(h,'vendor','vndr'),pc=colIdx(h,'pcs','qty'),dc=colIdx(h,'desc'),bn=colIdx(h,'bundle'),plb=colIdx(h,'/lb','per lb'),pea=colIdx(h,'/ea','per ea','price ea'),to=colIdx(h,'total');
+  const TYPE_HEADERS=['ALUM','STAIN','PERF','DIAM','GVNL','GALV'];
   const res=[];let type='ALUM';
   for(let i=hi+1;i<rows.length;i++){
     const row=rows[i];if(!row||row.every(c=>!c))continue;
+    // Type header can be in dedicated type col OR in gauge col (when no type col exists)
     const tv=tp>=0?String(row[tp]||'').trim().toUpperCase():'';
-    if(tv&&(tv.includes('ALUM')||tv.includes('STAIN')||tv.includes('PERF')||tv.includes('DIAM')))type=tv;
-    const gv=g>=0?String(row[g]||'').trim():'';if(!gv)continue;
-    const bundleNum=bn>=0?String(row[bn]||'').trim():'';
-    res.push({type:tv||type,gauge:gv,size:sz>=0?String(row[sz]||'').trim():'',vendor:vd>=0?String(row[vd]||'').trim():'',pcs:pc>=0?parseInt(row[pc])||0:0,desc:dc>=0?String(row[dc]||'').trim():'',bundleNum,pricePerLb:plb>=0?parseFloat(String(row[plb]||'').replace(/[$,]/g,''))||0:0,priceEa:pea>=0?parseFloat(String(row[pea]||'').replace(/[$,]/g,''))||0:0,total:to>=0?parseFloat(String(row[to]||'').replace(/[$,]/g,''))||0:0});
+    const gRaw=g>=0?String(row[g]||'').trim():'';
+    const isTypeRow=tv&&TYPE_HEADERS.some(t=>tv.includes(t))||(gRaw&&isNaN(parseFloat(gRaw))&&TYPE_HEADERS.some(t=>gRaw.toUpperCase().includes(t)));
+    if(isTypeRow){type=tv||gRaw.toUpperCase();continue;}
+    const gv=gRaw;if(!gv||isNaN(parseFloat(gv)))continue;
+    const bnRaw=bn>=0?String(row[bn]||'').trim():'';
+    const szv=sz>=0?String(row[sz]||'').trim():'';
+    const bundleNum=bnRaw||(((tv||type)+'-'+gv+'-'+szv).toLowerCase().replace(/[^a-z0-9-]/g,'-').replace(/-+/g,'-'));
+    const pcsV=pc>=0?parseInt(row[pc])||0:0;
+    const plbV=plb>=0?parseFloat(String(row[plb]||'').replace(/[$,]/g,''))||0:0;
+    const peaV=pea>=0?parseFloat(String(row[pea]||'').replace(/[$,]/g,''))||0:0;
+    const excelTotal=to>=0?parseFloat(String(row[to]||'').replace(/[$,]/g,''))||0:0;
+    // Compute total ourselves — Excel total is a formula SheetJS may not read
+    const totalV=excelTotal||Math.round((plbV?pcsV*plbV:pcsV*peaV)*100)/100;
+    res.push({type:tv||type,gauge:gv,size:szv,vendor:vd>=0?String(row[vd]||'').trim():'',pcs:pcsV,desc:dc>=0?String(row[dc]||'').trim():'',bundleNum,pricePerLb:plbV,priceEa:peaV,total:totalV});
   }
   return res;
 }
@@ -714,21 +737,22 @@ function parseMJS(ws){
   for(let i=0;i<Math.min(15,rows.length);i++){const r=rows[i].map(c=>String(c||'').toLowerCase());if(r.some(c=>c.includes('heat')||c.includes('gauge')||c.includes('mjs'))){hi=i;break;}}
   if(hi<0)return[];
   const h=rows[hi].map(c=>String(c||'').trim().toLowerCase());
-  const g=colIdx(h,'gauge'),w=colIdx(h,'width'),co=colIdx(h,'coating','coat'),hn=colIdx(h,'heat'),mt=h.findIndex(c=>c.includes('mjs')&&c.includes('tag')),lf=colIdx(h,'lf','lin'),wt=colIdx(h,'weight','lbs'),cd=colIdx(h,'cpl','date'),ud=colIdx(h,'use date','use_date','usedate'),pr=colIdx(h,'price'),tg=h.findIndex(c=>c.includes('tag')&&!c.includes('mjs')),to=colIdx(h,'total','ext'),ex=h.findIndex(c=>c.includes('consign')||c.includes('exp'));
+  const g=colIdx(h,'gauge'),w=colIdx(h,'width'),co=colIdx(h,'coating','coat'),hn=colIdx(h,'heat'),mt=h.findIndex(c=>c.includes('mjs')&&c.includes('tag')),lf=colIdx(h,'lf','lin'),wt=colIdx(h,'weight','lbs'),cd=h.findIndex(c=>c.includes('cpl')),ud=h.findIndex(c=>c.includes('use')&&c.includes('date')),pr=colIdx(h,'price'),tg=h.findIndex(c=>c.includes('tag')&&!c.includes('mjs')),to=h.findIndex(c=>c==='total'||c.includes('ext')),ex=h.findIndex(c=>c.includes('consign')||c.includes('exp'));
   const res=[];
   for(let i=hi+1;i<rows.length;i++){
+    if(i<1903)continue; // skip all historical data before Excel row 1904
     const row=rows[i];if(!row||row.every(c=>!c))continue;
     const wtv=wt>=0?parseFloat(String(row[wt]||'').replace(/,/g,''))||0:0;
     const lfv=lf>=0?parseFloat(String(row[lf]||'').replace(/,/g,''))||0:0;
     if(!wtv&&!lfv)continue;
-    // Skip rows with a use date — those coils have been consumed and moved to Inv-Sheets
-    if(ud>=0&&row[ud])continue;
+    const priceVal=pr>=0?parseFloat(String(row[pr]||'').replace(/[$,]/g,''))||0:0;
+    const useDate=ud>=0?String(row[ud]||'').trim():'';
+    if(!priceVal||useDate)continue; // consumed = price cleared or use date entered
     const heatNum=hn>=0?String(row[hn]||'').trim():'';
     const mjsTag=mt>=0?String(row[mt]||'').trim():'';
     if(!mjsTag&&!heatNum) continue; // skip summary/total rows with no identifier
     const bundleNum=mjsTag||heatNum||`mjs-${i}`;
-    const priceVal=pr>=0?parseFloat(String(row[pr]||'').replace(/[$,]/g,''))||0:0;
-    const totalVal=to>=0?parseFloat(String(row[to]||'').replace(/[$,]/g,''))||0:(priceVal?Math.round(wtv*priceVal)/100:0);
+    const totalVal=Math.round(priceVal*wtv*100)/100;
     res.push({gauge:g>=0?String(row[g]||'').trim():'',width:w>=0?String(row[w]||'').trim():'',coating:co>=0?String(row[co]||'').trim():'',heatNum,mjsTag,bundleNum,lf:lfv,weight:wtv,cplDate:cd>=0?String(row[cd]||'').trim():'',price:priceVal,total:totalVal,tag:tg>=0?String(row[tg]||'').trim():'',expDate:ex>=0?String(row[ex]||'').trim():''});
   }
   return res;
