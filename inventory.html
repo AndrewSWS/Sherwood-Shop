@@ -370,32 +370,46 @@ function renderInvSheets(){
         lastSec=r.section;
       }
       const bn=r.bundleNum||'';
+      const isCoil=!(r.size||'').includes('x');
+      const pcsCell=isCoil
+        ?`<td class="td-num" style="color:var(--text-secondary);font-size:11px;white-space:nowrap">${r.pcs?fmtNum(r.pcs)+' lb':'—'}</td>`
+        :`<td class="td-num"><input class="pcs-input" type="number" min="0" value="${r.pcs??''}"
+          onchange="updatePcs('invSheets','${bn}',this.value)"
+          onblur="if(this.value==='')this.value='${r.pcs??0}'"></td>`;
+      const priceCell=isCoil
+        ?`<td class="td-money">${r.price?'$'+parseFloat(r.price).toFixed(3)+'/lb':'—'}</td>`
+        :`<td class="td-money">${fmt$(r.price)}</td>`;
       tbody+=`<tr>
         <td><span class="gauge-chip">${r.gauge||'—'}</span></td>
         <td>${r.size||'—'}</td>
         <td><span class="vendor-badge">${r.vendor||'—'}</span></td>
-        <td class="td-num"><input class="pcs-input" type="number" min="0" value="${r.pcs??''}"
-          onchange="updatePcs('invSheets','${bn}',this.value)"
-          onblur="if(this.value==='')this.value='${r.pcs??0}'"></td>
+        ${pcsCell}
         <td>${r.bundle||'—'}</td>
         <td style="font-family:monospace;font-size:12px">${bn}</td>
-        <td class="td-money">${fmt$(r.price)}</td>
+        ${priceCell}
         <td class="td-total">${fmt$(r.total)}</td>
         <td></td></tr>`;
     });
   }else{
     sorted.forEach(r=>{
       const bn=r.bundleNum||'';
+      const isCoil=!(r.size||'').includes('x');
+      const pcsCell=isCoil
+        ?`<td class="td-num" style="color:var(--text-secondary);font-size:11px;white-space:nowrap">${r.pcs?fmtNum(r.pcs)+' lb':'—'}</td>`
+        :`<td class="td-num"><input class="pcs-input" type="number" min="0" value="${r.pcs??''}"
+          onchange="updatePcs('invSheets','${bn}',this.value)"
+          onblur="if(this.value==='')this.value='${r.pcs??0}'"></td>`;
+      const priceCell=isCoil
+        ?`<td class="td-money">${r.price?'$'+parseFloat(r.price).toFixed(3)+'/lb':'—'}</td>`
+        :`<td class="td-money">${fmt$(r.price)}</td>`;
       tbody+=`<tr>
         <td><span class="gauge-chip">${r.gauge||'—'}</span></td>
         <td>${r.size||'—'}</td>
         <td><span class="vendor-badge">${r.vendor||'—'}</span></td>
-        <td class="td-num"><input class="pcs-input" type="number" min="0" value="${r.pcs??''}"
-          onchange="updatePcs('invSheets','${bn}',this.value)"
-          onblur="if(this.value==='')this.value='${r.pcs??0}'"></td>
+        ${pcsCell}
         <td>${r.bundle||'—'}</td>
         <td style="font-family:monospace;font-size:12px">${bn}</td>
-        <td class="td-money">${fmt$(r.price)}</td>
+        ${priceCell}
         <td class="td-total">${fmt$(r.total)}</td>
         <td></td></tr>`;
     });
@@ -667,7 +681,7 @@ function parseInvSheets(ws){
       bundleNum=`${gv}-${(sz>=0?String(row[sz]||''):'')+''}-${vd>=0?String(row[vd]||''):''}`.replace(/\s+/g,'-').replace(/[^a-zA-Z0-9-]/g,'').toLowerCase()+'-nobundle';
       if(!bundleNum||bundleNum==='-nobundle')continue;
     }
-    res.push({section:sec,gauge:gv,size:sz>=0?String(row[sz]||'').trim():'',vendor:vd>=0?String(row[vd]||'').trim():'',pcs:parseInt(pv)||0,bundle:String(row[bn]||'').trim(),bundleNum,price:pr>=0?parseFloat(String(row[pr]||'').replace(/[$,]/g,''))||0:0,total:to>=0?parseFloat(String(row[to]||'').replace(/[$,]/g,''))||0:0});
+    res.push({section:sec,gauge:gv,size:sz>=0?String(row[sz]||'').trim():'',vendor:vd>=0?String(row[vd]||'').trim():'',pcs:parseFloat(String(pv||'').replace(/,/g,''))||0,bundle:String(row[bn]||'').trim(),bundleNum,price:pr>=0?parseFloat(String(row[pr]||'').replace(/[$,]/g,''))||0:0,total:to>=0?parseFloat(String(row[to]||'').replace(/[$,]/g,''))||0:0});
   }
   return res;
 }
