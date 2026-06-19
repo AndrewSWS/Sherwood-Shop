@@ -4759,7 +4759,7 @@ function renderQueue(c){
             item.assignee?`<span class="badge badge-blue">${item.assignee}</span>`:'<span class="badge badge-red">Unassigned</span>'}
         </div>
         ${item.notes?`<div style="font-size:11px;color:var(--text3);margin-top:2px">📝 ${item.notes}</div>`:''}
-        ${item.waitingVendor?`<div style="display:flex;align-items:center;gap:8px;margin-top:4px"><div style="font-size:11px;font-weight:700;color:#e05555;background:#1a0505;border-radius:4px;padding:3px 8px;display:inline-block">⏳ Waiting on: ${escHtml(item.waitingVendor)}</div><button onclick="clearWaiting(${wo.id},'${item.id}')" style="font-size:11px;font-weight:700;background:#0a2a0a;color:#4caf50;border:1px solid #2a5a2a;border-radius:4px;padding:2px 8px;cursor:pointer">✓ Received</button></div>`:''}
+        ${item.waitingVendor?`<div style="display:flex;align-items:center;gap:8px;margin-top:4px"><div style="font-size:11px;font-weight:700;color:#e05555;background:#1a0505;border-radius:4px;padding:3px 8px;display:inline-block">⏳ Waiting on: ${escHtml(item.waitingVendor)}</div><button onclick="clearWaiting(${item.woId},'${item.id}')" style="font-size:11px;font-weight:700;background:#0a2a0a;color:#4caf50;border:1px solid #2a5a2a;border-radius:4px;padding:2px 8px;cursor:pointer">✓ Received</button></div>`:''}
         ${item.isDual?renderQueueDualSteps(item):''}
       </div>
       <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex-shrink:0">
