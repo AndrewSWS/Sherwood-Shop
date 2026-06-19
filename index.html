@@ -1297,7 +1297,8 @@ async function sbUpdateLI(woId, itemId, fields) {
     weight:'weight', qty:'qty', delivery:'delivery', bundle:'bundle',
     coilNum:'coil_num', skidSplits:'skid_splits', station:'station',
     productCat:'product_cat', gauge:'gauge', size:'size', type:'type',
-    waitingVendor:'waiting_vendor'
+    waitingVendor:'waiting_vendor',
+    wtUnit:'wt_unit'
   };
   for (const [k,v] of Object.entries(fields)) {
     if (fieldMap[k]) {
@@ -1448,6 +1449,8 @@ async function sbLoadState() {
             case 'mgmt_users':       state.adminConfig.mgmtUsers = val; break;
             case 'rain_start_hour':  state.adminConfig.rainStartHour = val; break;
             case 'acknowledged_gaps': state.adminConfig.acknowledgedGaps = val; break;
+            case 'linear_weights': if(val&&typeof val==='object'){Object.assign(LINEAR_WEIGHTS,val);} break;
+            case 'sheet_weights':  if(val&&typeof val==='object'){Object.assign(SHEET_WEIGHTS,val);} break;
           }
         } catch(e) {}
       });
@@ -2441,6 +2444,14 @@ function liWtUnitChange(n, val){
   const srcEl=document.getElementById(`li-wt-src-${n}`);
   if(srcEl){srcEl.textContent=val?'manual':'auto';srcEl.style.color=val?'var(--amber)':'var(--text3)';}
   liRecalcWeight(n);
+  // Auto-save weight per unit to Supabase
+  const el=document.getElementById('li-'+n);
+  if(!el)return;
+  const woId=parseInt(el.dataset.woId);
+  const itemId=el.dataset.itemId;
+  if(!woId||!itemId)return;
+  const totalWt=parseFloat(el.querySelector('.li-weight')?.value)||0;
+  sbUpdateLI(woId,itemId,{wtUnit:parseFloat(val)||null,weight:totalWt||null}).catch(e=>console.warn('saveWt error',e));
 }
 
 function liQtyChange(n, qty){liRecalcWeight(n);}
@@ -8441,12 +8452,15 @@ function renderWeightRows(cat, g, sizes, isFlatSheet, safecat){
     const curBundle = isFlatSheet ? '' : (LINEAR_WEIGHTS[wtKey]?LINEAR_WEIGHTS[wtKey].bundle:'');
     const safeG = g.replace(/\W/g,'');
     const bundleInput = !isFlatSheet
-      ? '<input type="number" value="'+curBundle+'" placeholder="bdl" style="width:50px;font-size:11px;padding:2px 4px;border:1px solid var(--border);border-radius:4px" id="bndl-'+safecat+'-'+safeG+'-'+si+'">'
+      ? '<input type="number" value="'+curBundle+'" placeholder="bdl" style="width:50px;font-size:11px;padding:2px 4px;border:1px solid var(--border);border-radius:4px"'
+        +' id="bndl-'+safecat+'-'+safeG+'-'+si+'"'
+        +' onchange="updateProductWeight(\'' +cat+ '\',\'' +g+ '\',\'' +s+ '\',document.getElementById(\'wt-'+safecat+'-'+safeG+'-'+si+'\')?.value||0,this.value)">'
       : '';
     return '<tr style="border-bottom:1px solid var(--border)">'
       +'<td style="padding:4px 6px;font-size:11px">'+s+'</td>'
       +'<td style="padding:4px 6px;text-align:right">'
       +'<input type="number" value="'+(curWt||'')+'" step="0.001" placeholder="lbs/pc"'
+      +' id="wt-'+safecat+'-'+safeG+'-'+si+'"'
       +' style="width:72px;font-size:11px;padding:2px 4px;border:1px solid var(--border);border-radius:4px;text-align:right"'
       +' onchange="updateProductWeight(\'' +cat+ '\',\'' +g+ '\',\'' +s+ '\',this.value'
       +(!isFlatSheet ? (',document.getElementById(\'bndl-'+safecat+'-'+safeG+'-'+si+'\').value') : '')+')"></td>'
@@ -8473,6 +8487,8 @@ function updateProductWeight(cat, gauge, size, wtVal, bundleVal){
     if(wt>0) LINEAR_WEIGHTS[key]={wt, bundle:bundle||LINEAR_WEIGHTS[key]?.bundle||0};
     else delete LINEAR_WEIGHTS[key];
   }
+  sbSaveAdminConfig('linear_weights', LINEAR_WEIGHTS);
+  sbSaveAdminConfig('sheet_weights', SHEET_WEIGHTS);
   toast('✓ Weight updated — '+gauge+' '+size+': '+(wt||'removed')+' lbs/pc');
 }
 
