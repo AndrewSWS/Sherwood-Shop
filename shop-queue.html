@@ -104,6 +104,7 @@
   .chip.green { background: #1a3a25; color: var(--green); }
   .chip.amber { background: #2a2000; color: var(--amber); }
   .chip.blue  { background: #1a2540; color: var(--blue); }
+  .chip.red   { background: #2a0a0a; color: var(--red); }
   .tile-notes {
     font-size: 12px; color: var(--amber); background: #1e1800;
     border-radius: var(--radius-sm); padding: 6px 10px; margin-bottom: 10px;
@@ -479,6 +480,7 @@ async function loadData() {
         bundle:      li.bundle || '',
         coilNum:     li.coil_num || '',
         skidSplits:  li.skid_splits ? (typeof li.skid_splits === 'string' ? JSON.parse(li.skid_splits) : li.skid_splits) : [],
+        waitingVendor: li.waiting_vendor || '',
         assignee:    li.assignee || '',
         status:      li.status || 'Pending',
         completedBy: li.completed_by || '',
@@ -645,6 +647,7 @@ function renderTile(item) {
     item.assignee ? `<span class="chip blue">👤 ${item.assignee}</span>` : '',
     done && item.completedBy ? `<span class="chip green">✓ ${item.completedBy}</span>` : '',
     inProg ? `<span class="chip amber">▶ In Progress</span>` : '',
+    item.waitingVendor ? `<span class="chip red">⏳ Waiting: ${escHtml(item.waitingVendor)}</span><button onclick="updateWaitingVendor(${item._dbId},'')" style="font-size:11px;font-weight:700;background:#0a2a0a;color:#4caf50;border:1px solid #2a5a2a;border-radius:4px;padding:2px 8px;cursor:pointer;margin-left:4px">✓ Received</button>` : '',
   ].filter(Boolean).join('');
 
   const notes = item.notes ? `<div class="tile-notes">📝 ${escHtml(item.notes)}</div>` : '';
@@ -696,6 +699,23 @@ function renderTile(item) {
       </select>
     </div>` : '';
 
+  // Waiting on material control
+  const waitingHtml = !done ? `
+    <div class="tile-assign" style="margin-top:8px;align-items:flex-start;flex-direction:column;gap:4px">
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase">
+        <input type="checkbox" style="accent-color:var(--red)" ${item.waitingVendor?'checked':''} onchange="
+          const inp=this.closest('.tile-assign').querySelector('.wv-inp');
+          inp.style.display=this.checked?'block':'none';
+          if(!this.checked){inp.value='';updateWaitingVendor(${item._dbId},'');}
+        ">
+        Waiting on Material
+      </label>
+      <input class="wv-inp assign-select" type="text" placeholder="Vendor name..." value="${escAttr(item.waitingVendor||'')}"
+        style="display:${item.waitingVendor?'block':'none'};background:#1a0a0a;border-color:var(--red);color:#f88;width:100%"
+        onchange="updateWaitingVendor(${item._dbId},this.value.trim())"
+        onblur="updateWaitingVendor(${item._dbId},this.value.trim())">
+    </div>` : '';
+
   // Action buttons
   const actions = renderActions(item);
 
@@ -713,6 +733,7 @@ function renderTile(item) {
     ${item.isDual ? renderDualSteps(item) : ''}
     ${stationChange}
     ${assignSel}
+    ${waitingHtml}
     ${actions}
   </div>`;
 }
@@ -963,6 +984,14 @@ async function updateStation(dbId, woId, newStation, el) {
     renderTiles();
     toast('⚠ Sync failed');
   }
+}
+
+async function updateWaitingVendor(dbId, vendor) {
+  const item = allItems.find(i => i._dbId == dbId);
+  if (!item) return;
+  item.waitingVendor = vendor || '';
+  await sbPatch('line_items', { id: dbId }, { waiting_vendor: vendor || null });
+  renderQueue();
 }
 
 async function updateAssignee(dbId, woId, assignee, el) {

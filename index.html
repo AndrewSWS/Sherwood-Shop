@@ -4759,7 +4759,7 @@ function renderQueue(c){
             item.assignee?`<span class="badge badge-blue">${item.assignee}</span>`:'<span class="badge badge-red">Unassigned</span>'}
         </div>
         ${item.notes?`<div style="font-size:11px;color:var(--text3);margin-top:2px">📝 ${item.notes}</div>`:''}
-        ${item.waitingVendor?`<div style="font-size:11px;font-weight:700;color:#e05555;background:#1a0505;border-radius:4px;padding:3px 8px;margin-top:4px;display:inline-block">⏳ Waiting on: ${escHtml(item.waitingVendor)}</div>`:''}
+        ${item.waitingVendor?`<div style="display:flex;align-items:center;gap:8px;margin-top:4px"><div style="font-size:11px;font-weight:700;color:#e05555;background:#1a0505;border-radius:4px;padding:3px 8px;display:inline-block">⏳ Waiting on: ${escHtml(item.waitingVendor)}</div><button onclick="clearWaiting(${wo.id},'${item.id}')" style="font-size:11px;font-weight:700;background:#0a2a0a;color:#4caf50;border:1px solid #2a5a2a;border-radius:4px;padding:2px 8px;cursor:pointer">✓ Received</button></div>`:''}
         ${item.isDual?renderQueueDualSteps(item):''}
       </div>
       <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex-shrink:0">
@@ -5195,6 +5195,16 @@ function switchQStation(s,el){
 }
 
 function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function clearWaiting(woId, itemId){
+  const wo=state.wos.find(w=>w.id===woId);
+  if(!wo)return;
+  const item=wo.items.find(i=>String(i.id)===String(itemId));
+  if(!item)return;
+  item.waitingVendor='';
+  saveState();updateBadges();renderQueue();
+  sbUpdateLI(woId,item.id,{waitingVendor:''}).catch(e=>console.warn('clearWaiting error',e));
+}
+
 function showWaitingModal(){
   const allItems=[];
   state.wos.forEach(wo=>{
@@ -5210,7 +5220,10 @@ function showWaitingModal(){
         <div style="font-size:12px;color:#5B9BD5;margin-top:1px">${[i.gauge,i.size||i.productCat].filter(Boolean).join(' · ')||'—'}${i.qty?' × '+i.qty:''}</div>
         <div style="font-size:11px;color:#888;margin-top:1px">WO #${i.woNum}${i.station?' · '+i.station:''}${i.delivery?' · '+fmtDate(i.delivery):''}</div>
       </div>
-      <div style="background:#2a0a0a;border:1px solid #5a1a1a;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700;color:#e05555;white-space:nowrap">⏳ ${escHtml(i.waitingVendor)}</div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+        <div style="background:#2a0a0a;border:1px solid #5a1a1a;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700;color:#e05555;white-space:nowrap">⏳ ${escHtml(i.waitingVendor)}</div>
+        <button onclick="clearWaiting(${i.woId},'${i.id}');this.closest('[style*=fixed]').remove();renderQueue()" style="font-size:11px;font-weight:700;background:#0a2a0a;color:#4caf50;border:1px solid #2a5a2a;border-radius:4px;padding:2px 10px;cursor:pointer;white-space:nowrap">✓ Received</button>
+      </div>
     </div>`).join(''):'<div style="color:#555;padding:20px 0;text-align:center">No items waiting on material</div>';
   const modal=document.createElement('div');
   modal.style.cssText='position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;padding:20px';
