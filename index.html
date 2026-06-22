@@ -3457,28 +3457,47 @@ function saveEditWO(id){
   window._editingWOId=null;
   saveState();updateBadges();
   sbUpdateWO(wo).catch(e=>console.warn('sbUpdateWO error',e));
-  // Sync each line item to Supabase — captures notes, gauge, size, category changes
+  // Sync each line item to Supabase
   newItems.forEach(item=>{
-    sbUpdateLI(wo.id, item.id, {
-      notes:      item.notes||null,
-      assignee:   item.assignee||null,
-      station:    item.station||null,
-      qty:        item.qty||null,
-      weight:     item.weight||null,
-      bundle:     item.bundle||null,
-      delivery:   item.delivery||wo.delivery||null,
-      status:     item.status||'Pending',
-      completedBy: item.completedBy||null,
-      completedAt: item.completedAt||null,
-      priority:   item.priority||null,
-      skidSplits: item.skidSplits||null,
-      coilNum:    item.coilNum||null,
-      productCat: item.productCat||null,
-      type:       item.type||null,
-      gauge:      item.gauge||null,
-      size:       item.size||null,
-      wtUnit:     item.wtUnit||null
-    }).catch(e=>console.warn('saveEditWO sbUpdateLI error',e));
+    const isNew = !item._dbId;  // no _dbId = was added during this edit, not yet in DB
+    if(isNew){
+      // INSERT — brand new line item added during edit
+      _sbPost('line_items',{
+        wo_id:wo.id, wo_num:wo.woNum, customer:wo.customer,
+        product_cat:item.productCat||null, type:item.type||null,
+        gauge:item.gauge||null, size:item.size||null, qty:item.qty||null,
+        weight:item.weight||null, station:item.station||null,
+        notes:item.notes||null, status:item.status||'Pending',
+        delivery:item.delivery||wo.delivery||null,
+        assignee:item.assignee||null, priority:item.priority||null,
+        wt_unit:item.wtUnit||null
+      }).then(rows=>{
+        // Store the new DB id so future patches work
+        if(rows&&rows[0]) item._dbId=rows[0].id;
+      }).catch(e=>console.warn('saveEditWO insert new LI error',e));
+    } else {
+      // UPDATE — existing line item
+      sbUpdateLI(wo.id, item.id, {
+        notes:      item.notes||null,
+        assignee:   item.assignee||null,
+        station:    item.station||null,
+        qty:        item.qty||null,
+        weight:     item.weight||null,
+        bundle:     item.bundle||null,
+        delivery:   item.delivery||wo.delivery||null,
+        status:     item.status||'Pending',
+        completedBy: item.completedBy||null,
+        completedAt: item.completedAt||null,
+        priority:   item.priority||null,
+        skidSplits: item.skidSplits||null,
+        coilNum:    item.coilNum||null,
+        productCat: item.productCat||null,
+        type:       item.type||null,
+        gauge:      item.gauge||null,
+        size:       item.size||null,
+        wtUnit:     item.wtUnit||null
+      }).catch(e=>console.warn('saveEditWO sbUpdateLI error',e));
+    }
   });
   toast('WO #'+wo.woNum+' updated');
   nav('assign',document.querySelector('.nav-item[onclick*=assign]'));
