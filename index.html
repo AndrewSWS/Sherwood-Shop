@@ -2200,19 +2200,32 @@ function saveWO(){
 
 // ── DUPLICATE WO DETECTION ────────────────────────────────────────────────
 function showDupWOModal(existing, incoming){
-  // Match by QTY only — category/gauge/size may have been changed in system
-  // This is consistent with the review-needed check
+  // Match by QTY using pools — handles multiple items with the same qty correctly
   const qtyKey = i=>String(i.qty).trim();
-  const existingByQty = {};
-  existing.items.forEach(i=>{ existingByQty[qtyKey(i)] = i; });
 
-  const newItems = incoming.items.filter(i=>!existingByQty[qtyKey(i)]);
-  const qtyChanges = []; // can't have qty changes if we match by qty
+  // Build pools (qty → array of items)
+  const existingPool = {};
+  existing.items.forEach(i=>{ const q=qtyKey(i); (existingPool[q]||(existingPool[q]=[])).push(i); });
+  const incomingPool = {};
+  incoming.items.forEach(i=>{ const q=qtyKey(i); (incomingPool[q]||(incomingPool[q]=[])).push(i); });
 
-  // Items in system but NOT in QB (by qty)
-  const incomingByQty = {};
-  incoming.items.forEach(i=>{ incomingByQty[qtyKey(i)] = i; });
-  const removedItems = existing.items.filter(i=>!incomingByQty[qtyKey(i)]);
+  // New items: QB has more of a given qty than system
+  const newItems = [];
+  Object.entries(incomingPool).forEach(([q, arr])=>{
+    const sysCount = (existingPool[q]||[]).length;
+    const extra = arr.length - sysCount;
+    for(let i=0;i<extra;i++) newItems.push(arr[i]);
+  });
+
+  const qtyChanges = [];
+
+  // Removed items: system has more of a given qty than QB
+  const removedItems = [];
+  Object.entries(existingPool).forEach(([q, arr])=>{
+    const qbCount = (incomingPool[q]||[]).length;
+    const extra = arr.length - qbCount;
+    for(let i=0;i<extra;i++) removedItems.push(arr[i]);
+  });
 
   // Match notes by QB item code (e.g. GlvSht:263696) — survives category/size edits
   // Two-pass: first lock exact qty+code matches, then flag genuine changes.
@@ -2375,7 +2388,7 @@ function removeDupItem(woId, itemId){
   updateQBPillCount();
 }
 
-function mergeDupWO(existingId){
+async function mergeDupWO(existingId){
   const existing = state.wos.find(w=>w.id===existingId);
   const incoming = window._dupIncomingWO;
   if(!existing||!incoming) return;
@@ -2420,10 +2433,18 @@ function mergeDupWO(existingId){
   // Apply preserved fields back to existing WO (in case anything was blanked)
   Object.assign(existing, preservedFields);
 
-  // Add new items
-  newItems.forEach(item=>{
-    existing.items.push(item);
-    _sbPost('line_items',{
+  // Add new items — but first reload current DB rows to avoid double-inserts
+  // if user clicks "Import Anyway" multiple times before the poll refreshes state
+  if (newItems.length) {
+    const dbRows = await _sbGet('line_items', `wo_id=eq.${existing.id}&select=id,qty,status&order=id.asc`).catch(()=>null);
+    const dbQtyPool = (dbRows||[]).map(r=>String(r.qty||'').trim());
+    const dbUsed = new Set();
+    newItems.forEach(item=>{
+      const q = String(item.qty||'').trim();
+      const idx = dbQtyPool.findIndex((dq,i)=>dq===q && !dbUsed.has(i));
+      if(idx !== -1){ dbUsed.add(idx); return; } // already exists in DB — skip
+      existing.items.push(item);
+      _sbPost('line_items',{
       wo_id:existing.id, wo_num:existing.woNum, customer:existing.customer,
       product_cat:item.productCat||null, type:item.type||null,
       gauge:item.gauge||null, size:item.size||null, qty:item.qty||null,
@@ -2432,6 +2453,7 @@ function mergeDupWO(existingId){
       status:'Pending', delivery:existing.delivery||null
     }).catch(e=>console.warn('merge new item error',e));
   });
+  }
 
   // Update notes on existing items — skip any QB item that was a new addition
   // (new items already have their note set correctly from QB; updating would corrupt old items)
