@@ -1092,6 +1092,7 @@ function startSBPoll() {
       const overlay = document.getElementById('board-overlay');
       // Refresh board view if active
       if (overlay && overlay.classList.contains('active')) {
+        sbLoadStockNeeds().catch(()=>{});  // keep stock needs badge live
         renderBoardView();
         return;
       }
