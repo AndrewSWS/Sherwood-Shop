@@ -3547,7 +3547,38 @@ function printQueueList(station){
   const isIOWA = station === 'IOWA';
   const printTitle = station + filterLabel + ' Queue';
 
+  const isSHEAR = station === 'SHEAR' || station === 'IOWA → SHEAR' || station === 'SHEAR → BREAK';
+
   function renderPrintItem(item, i){
+    if(isSHEAR){
+      return `
+    <div class="task-row shear-row">
+      <div class="shear-top">
+        <div class="shear-num-badge">${i}</div>
+        <div class="shear-customer">${item.customer}</div>
+        <div class="shear-meta">
+          <span class="shear-wo">WO #${item.woNum}</span>
+          ${item.delivery ? `<span class="delivery">📅 ${fmtDate(item.delivery)}</span>` : ''}
+          <span class="assignee">${item.assignee || '<i style="color:#c0392b">Unassigned</i>'}</span>
+        </div>
+      </div>
+      ${item.notes ? `<div class="shear-qbnote">📋 ${item.notes}</div>` : '<div class="shear-qbnote shear-qbnote-empty">No QB note</div>'}
+      <div class="shear-qty-bar">
+        <span class="shear-qty-label">QTY</span>
+        <span class="shear-qty-val">${item.qty||'—'}</span>
+      </div>
+      <div class="task-fields" style="margin-top:0">
+        <div class="field-group"><span class="flabel">Product</span><span class="fval">${item.productCat||item.type||'—'}</span></div>
+        <div class="field-group"><span class="flabel">Gauge / Mic.</span><span class="fval">${item.gauge||'—'}</span></div>
+        <div class="field-group"><span class="flabel">Size</span><span class="fval">${item.size||'—'}</span></div>
+      </div>
+      <div class="task-footer">
+        <span>Bundle / Skid #: _______________________</span>
+        <span>Initials: ___________</span>
+        <span>☐ Complete</span>
+      </div>
+    </div>`;
+    }
     return `
     <div class="task-row">
       <div class="task-header">
@@ -3699,6 +3730,20 @@ function printQueueList(station){
   .skid-table { width: 100%; border-collapse: collapse; font-size: 12px; }
   .skid-table th { background: #eee; padding: 5px 8px; text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing:.04em; }
   .skid-table td { padding: 5px 8px; border-bottom: 1px solid #eee; }
+  /* SHEAR-specific styles */
+  .shear-row { border: 2px solid #1565c0; border-radius: 8px; padding: 0; margin-bottom: 12px; overflow: hidden; page-break-inside: avoid; }
+  .shear-top { display: flex; align-items: center; gap: 12px; padding: 10px 14px 8px 14px; background: #f0f6ff; border-bottom: 1px solid #c5d8f0; flex-wrap: wrap; }
+  .shear-num-badge { background:#1565c0;color:#fff;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0; }
+  .shear-customer { font-size: 22px; font-weight: 800; color: #0d3c6e; flex: 1; line-height: 1.1; }
+  .shear-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; flex-shrink: 0; }
+  .shear-wo { font-size: 12px; font-weight: 600; color: #555; background: #ddd; padding: 2px 8px; border-radius: 4px; }
+  .shear-qbnote { font-size: 18px; font-weight: 700; color: #7a4a00; background: #fff8e1; border-left: 5px solid #f0a500; padding: 10px 14px; line-height: 1.3; }
+  .shear-qbnote-empty { font-size: 14px; font-weight: 400; color: #aaa; font-style: italic; }
+  .shear-qty-bar { display: flex; align-items: center; gap: 12px; background: #1b5e20; color: #fff; padding: 8px 14px; }
+  .shear-qty-label { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; opacity: .8; }
+  .shear-qty-val { font-size: 28px; font-weight: 900; line-height: 1; }
+  .shear-row .task-fields { padding: 8px 14px 4px 14px; }
+  .shear-row .task-footer { padding: 0 14px 10px 14px; }
   @media print { body { margin: 12px; } }
 </style>
 </head>
