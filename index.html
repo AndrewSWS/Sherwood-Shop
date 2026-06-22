@@ -3295,7 +3295,13 @@ function assignTruck(woId){
 // Always compute weight live from WO items — never cache it in the stop
 function getWOWeight(woId){
   const wo=state.wos.find(w=>w.id===woId);
-  return wo?wo.items.reduce((s,i)=>s+(parseFloat(i.weight)||0),0):0;
+  if(!wo) return 0;
+  return wo.items.reduce((s,i)=>{
+    const w = parseFloat(i.weight)||0;
+    if(w) return s+w;
+    // Fall back to estimated weight from product/gauge/size when not set
+    return s+(getProductWeight(i.productCat||i.type,i.gauge,i.size,i.qty)||0);
+  },0);
 }
 
 // Stoplight urgency based on delivery date vs today
@@ -5720,7 +5726,7 @@ function renderTruckCard(t, filterDay){
     <div id="stop-detail-${t.id}-${s.woId}" style="display:none;padding:10px 12px;background:var(--surface);border-top:1px solid var(--border);font-size:12px;border-radius:0 0 var(--rad) var(--rad)">
       <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:8px">
         <div><span style="color:var(--text3)">Weight:</span><br><strong>${getWOWeight(s.woId).toLocaleString()} lbs</strong></div>
-        <div><span style="color:var(--text3)">Status:</span><br><strong>${wo ? (wo.status||'Open') : '—'}</strong></div>
+        <div><span style="color:var(--text3)">Status:</span><br><strong style="${s.delivered?'color:var(--green-m)':''}">${s.delivered?'✓ Delivered':'Open'}</strong></div>
         <div><span style="color:var(--text3)">Notes:</span><br><strong>${wo ? (wo.notes||'—') : '—'}</strong></div>
       </div>
       ${wo ? (
