@@ -1805,6 +1805,7 @@ function addLI(data){
   const div=document.createElement('div');
   div.className='li-block mb8';div.id=`li-${n}`;if(data){div.dataset.woId=data.woId||'';div.dataset.itemId=data.id||'';}
   if(data&&data.id) div.dataset.liId=String(data.id);
+  if(data&&data._dbId) div.dataset.liDbId=String(data._dbId);
   const catOpts=Object.keys(PRODUCT_CATS).map(c=>`<option${data&&data.productCat===c?' selected':''}>${c}</option>`).join('');
   const initCat=data?data.productCat||'Flat Sheet':'Flat Sheet';
   const initGauge=data?data.gauge||'':'';
@@ -2133,6 +2134,7 @@ function getLIs(){
     const step2Op=el.querySelector('.li-step2-op');
     items.push({
       id:el.dataset.liId||Date.now()+idx+Math.random(),
+      _dbId:el.dataset.liDbId||null,
       productCat:el.querySelector('.li-cat').value,
       type:el.querySelector('.li-type').value,
       gauge:el.querySelector('.li-gauge').value,
