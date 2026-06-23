@@ -758,6 +758,7 @@ function _woToRow(wo) {
     notes: wo.notes||null, is_pickup: wo.isPickup||false,
     pickup_date: wo.pickupDate||null, delivered: wo.delivered||false,
     delivered_at: wo.deliveredAt||null, delivered_by: wo.deliveredBy||null,
+    ready_for_pickup: wo.readyForPickup||false,
     created_at: wo.created||new Date().toISOString()
   };
 }
@@ -807,6 +808,7 @@ function _rowToWO(row, items=[]) {
     notes: row.notes||'', isPickup: row.is_pickup||false,
     pickupDate: row.pickup_date||'', delivered: row.delivered||false,
     deliveredAt: row.delivered_at||'', deliveredBy: row.delivered_by||'',
+    readyForPickup: row.ready_for_pickup||false,
     created: row.created_at, items
   };
 }
@@ -1094,6 +1096,7 @@ function startSBPoll() {
       if (overlay && overlay.classList.contains('active')) {
         sbLoadStockNeeds().catch(()=>{});  // keep stock needs badge live
         renderBoardView();
+        renderBoardPickups();
         return;
       }
       // Refresh whichever regular view is currently showing
@@ -2649,6 +2652,17 @@ function toggleWO(id){
 }
 
 function renderWODetail(wo){
+  const pickupBtn = wo.isPickup && !wo.pickupDate ? `
+    <div style="margin-top:14px;padding:12px 14px;background:${wo.readyForPickup?'#1a2e1a':'#1a1a2e'};border:2px solid ${wo.readyForPickup?'#4CAF7D':'#5B9BD5'};border-radius:8px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <div style="flex:1">
+        <div style="font-size:12px;font-weight:800;color:${wo.readyForPickup?'#4CAF7D':'#5B9BD5'};text-transform:uppercase;letter-spacing:.06em">${wo.readyForPickup?'✓ Ready for Pick Up':'🏪 Pick Up Order'}</div>
+        ${wo.readyForPickup?'<div style="font-size:11px;color:#888;margin-top:2px">Customer has been notified — waiting for pickup</div>':'<div style="font-size:11px;color:#888;margin-top:2px">Mark ready when order is pulled and staged</div>'}
+      </div>
+      ${wo.readyForPickup
+        ? `<button class="btn btn-sm" style="background:#333;color:#aaa" onclick="setPickupReady(${wo.id},false);event.stopPropagation()">↩ Undo</button>`
+        : `<button class="btn btn-sm btn-primary" style="background:#4CAF7D;color:#000;font-weight:800" onclick="setPickupReady(${wo.id},true);event.stopPropagation()">✓ Mark Ready for Pick Up</button>`
+      }
+    </div>` : '';
   return`<div style="margin-top:12px">
   <div class="section-head">Line Items — assign station, operator, priority</div>
   ${wo.items.map((item,idx)=>renderLIDetail(wo,item,idx)).join('')}
@@ -2659,6 +2673,7 @@ function renderWODetail(wo){
     </select>
     <button class="btn btn-sm btn-primary" onclick="assignTruck(${wo.id})">Assign Truck</button>
   </div>
+  ${pickupBtn}
   ${wo.notes?`<div style="margin-top:10px;padding:8px 12px;background:var(--amber-l);border-radius:var(--rad);font-size:12px;border-left:3px solid var(--amber)"><strong>Notes:</strong> ${wo.notes}</div>`:''}
   </div>`;
 }
@@ -3208,24 +3223,117 @@ function renderBoardPickups(){
     const status = woStatus(wo);
     const grp = getCustGroup(wo.customer);
     const color = grp ? grp.color : '#888';
-    const statusColor = status==='Complete' ? '#4CAF7D' : status==='In Process' ? '#f0a500' : '#888';
-    const statusLabel = status==='Complete' ? '✓ Ready' : status==='In Process' ? '⚡ In Process' : '⏳ Pending';
-    const pickupDate = wo.pickupDate ? fmtDate(wo.pickupDate) : '';
-    return `<div style="
-      background:#222;
-      border:1px solid ${color};
-      border-left:3px solid ${color};
+    const statusColor = wo.readyForPickup ? '#4CAF7D' : status==='In Process' ? '#f0a500' : '#888';
+    const statusLabel = wo.readyForPickup ? '✓ READY' : status==='In Process' ? '⚡ In Process' : '⏳ Pending';
+    const borderColor = wo.readyForPickup ? '#4CAF7D' : (grp ? grp.color : '#888');
+    return `<div onclick="showPickupModal(${wo.id})" style="
+      background:${wo.readyForPickup?'#1a2e1a':'#222'};
+      border:1px solid ${borderColor};
+      border-left:3px solid ${borderColor};
       border-radius:4px;
       padding:4px 10px;
       white-space:nowrap;
       flex-shrink:0;
-    ">
+      cursor:pointer;
+    " title="Click to mark picked up">
       <span style="font-size:12px;font-weight:700;color:#fff">${wo.customer}</span>
       <span style="font-size:10px;color:#888;margin-left:6px">WO #${wo.woNum}</span>
-      ${pickupDate ? `<span style="font-size:10px;color:#aaa;margin-left:6px">📅 ${pickupDate}</span>` : ''}
       <span style="font-size:10px;font-weight:700;color:${statusColor};margin-left:8px">${statusLabel}</span>
+      ${!wo.readyForPickup?'<span style="font-size:9px;color:#555;margin-left:4px">not ready</span>':'<span style="font-size:9px;color:#4CAF7D;margin-left:4px">tap to clear</span>'}
     </div>`;
   }).join('');
+}
+
+function setPickupReady(woId, ready){
+  const wo = state.wos.find(w=>w.id===woId);
+  if(!wo) return;
+  wo.readyForPickup = ready;
+  saveState();
+  sbUpdateWO(wo).catch(e=>console.warn('setPickupReady error',e));
+  // Refresh the WO detail panel
+  const det = document.getElementById('wo-detail-'+woId);
+  if(det && det.style.display!=='none') det.innerHTML = renderWODetail(wo);
+  // Refresh the board pickup bar if board is open
+  renderBoardPickups();
+  toast(ready ? '✓ Order marked ready for pick up' : 'Pick up ready status cleared');
+}
+
+function showPickupModal(woId){
+  const wo = state.wos.find(w=>w.id===woId);
+  if(!wo) return;
+  document.getElementById('board-pickup-modal')?.remove();
+
+  const today = new Date().toISOString().slice(0,10);
+  const modal = document.createElement('div');
+  modal.id = 'board-pickup-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:10002;background:rgba(0,0,0,.8);display:flex;align-items:center;justify-content:center;padding:20px';
+
+  if(!wo.readyForPickup){
+    // Step 1 — warehouse marks order pulled & staged
+    modal.innerHTML = `
+      <div style="background:#1a1a1a;border:2px solid #5B9BD5;border-radius:12px;padding:28px;max-width:420px;width:100%;box-shadow:0 8px 40px rgba(0,0,0,.9)">
+        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#5B9BD5;margin-bottom:10px">🏪 Pick Up Order</div>
+        <div style="font-size:20px;font-weight:800;color:#fff;margin-bottom:4px">${wo.customer}</div>
+        <div style="font-size:13px;color:#888;margin-bottom:20px">WO #${wo.woNum}${wo.address?' · '+wo.address:''}</div>
+        <div style="font-size:13px;color:#aaa;margin-bottom:20px;padding:10px 14px;background:#111;border-radius:6px;border-left:3px solid #5B9BD5">
+          Order has been pulled and staged for customer pickup
+        </div>
+        <div style="display:flex;gap:10px">
+          <button onclick="boardSetPickupReady(${wo.id})" style="flex:1;background:#4CAF7D;color:#000;border:none;border-radius:8px;padding:14px;font-size:16px;font-weight:800;cursor:pointer">✓ Mark Ready for Pick Up</button>
+          <button onclick="document.getElementById('board-pickup-modal').remove()" style="background:#333;color:#aaa;border:none;border-radius:8px;padding:14px 18px;font-size:14px;cursor:pointer">Cancel</button>
+        </div>
+      </div>`;
+  } else {
+    // Step 2 — customer arrived, enter date and clear
+    modal.innerHTML = `
+      <div style="background:#1a1a1a;border:2px solid #4CAF7D;border-radius:12px;padding:28px;max-width:420px;width:100%;box-shadow:0 8px 40px rgba(0,0,0,.9)">
+        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#4CAF7D;margin-bottom:10px">✓ Ready for Pick Up</div>
+        <div style="font-size:20px;font-weight:800;color:#fff;margin-bottom:4px">${wo.customer}</div>
+        <div style="font-size:13px;color:#888;margin-bottom:20px">WO #${wo.woNum}${wo.address?' · '+wo.address:''}</div>
+        <div style="margin-bottom:20px">
+          <label style="font-size:11px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">Pick Up Date</label>
+          <input type="date" id="pickup-date-input" value="${today}" style="width:100%;box-sizing:border-box;background:#2a2a2a;border:1px solid #444;border-radius:6px;color:#fff;padding:10px 12px;font-size:15px;outline:none">
+        </div>
+        <div style="display:flex;gap:10px">
+          <button onclick="confirmPickup(${wo.id})" style="flex:1;background:#f0a500;color:#000;border:none;border-radius:8px;padding:14px;font-size:16px;font-weight:800;cursor:pointer">🚚 Customer Picked Up</button>
+          <button onclick="document.getElementById('board-pickup-modal').remove()" style="background:#333;color:#aaa;border:none;border-radius:8px;padding:14px 18px;font-size:14px;cursor:pointer">Cancel</button>
+        </div>
+      </div>`;
+    setTimeout(()=>document.getElementById('pickup-date-input')?.focus(), 50);
+  }
+
+  modal.addEventListener('click', e=>{ if(e.target===modal) modal.remove(); });
+  document.body.appendChild(modal);
+}
+
+function boardSetPickupReady(woId){
+  const wo = state.wos.find(w=>w.id===woId);
+  if(!wo) return;
+  wo.readyForPickup = true;
+  saveState();
+  sbUpdateWO(wo).catch(e=>console.warn('boardSetPickupReady error',e));
+  document.getElementById('board-pickup-modal')?.remove();
+  renderBoardPickups();
+  toast('✓ '+wo.customer+' marked ready for pick up');
+}
+
+function confirmPickup(woId){
+  const wo = state.wos.find(w=>w.id===woId);
+  if(!wo) return;
+  const dateVal = document.getElementById('pickup-date-input')?.value || new Date().toISOString().slice(0,10);
+
+  wo.pickupDate = dateVal;
+  wo.delivered = true;
+  wo.readyForPickup = false;
+  wo.deliveredAt = new Date().toISOString();
+  wo.deliveredBy = state.currentUser||'';
+
+  saveState();
+  sbUpdateWO(wo).catch(e=>console.warn('confirmPickup sbUpdateWO error',e));
+
+  document.getElementById('board-pickup-modal')?.remove();
+  renderBoardPickups();
+  toast(`✓ ${wo.customer} marked as picked up`);
 }
 
 // Exit board view on Escape key
