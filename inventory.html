@@ -179,6 +179,14 @@ async function sbGet(table,params=''){
   try{const r=await fetch(`${SB_URL}/rest/v1/${table}${params?'?'+params:''}`,{headers:SB_HDR});if(!r.ok)return null;return await r.json();}
   catch(e){return null;}
 }
+async function sbInsert(table,body){
+  try{
+    const r=await fetch(`${SB_URL}/rest/v1/${table}`,{method:'POST',headers:{...SB_HDR,'Prefer':'return=minimal'},body:JSON.stringify(body)});
+    if(!r.ok){const txt=await r.text();console.error(`[sbInsert] ${table} ${r.status}:`,txt);return false;}
+    return true;
+  }catch(e){console.error('[sbInsert] exception:',e);return false;}
+}
+
 async function sbUpsert(table,body){
   try{
     const r=await fetch(`${SB_URL}/rest/v1/${table}`,{method:'POST',headers:{...SB_HDR,'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(body)});
@@ -243,19 +251,39 @@ async function reconcileImport(parsedData, fname){
 
     // Upsert all new/updated rows from Excel
     const upsertBatch=[];
+    const auditAddBatch=[];
     for(let ri=0;ri<newRows.length;ri++){
       const row=newRows[ri];
       const bn=String(row.bundleNum||row.mjsTag||row.heatNum||row.desc||'').trim()||`row-${ri}`;
       const qty=parseInt(row.pcs||row.coils||0)+(parseFloat(row.weight||row.lf||0));
       if(qty===0) continue; // skip zero rows from Excel
+      const isUpdate=!!existingByBundle[bn];
       upsertBatch.push({bundle_num:bn,data:row,updated_at:ts});
-      if(existingByBundle[bn]) updated++; else added++;
+      if(isUpdate){
+        // Only audit if data actually changed
+        const prev=existingByBundle[bn];
+        const prevStr=JSON.stringify({pcs:prev.pcs,price:prev.price,total:prev.total});
+        const newStr=JSON.stringify({pcs:row.pcs,price:row.price,total:row.total});
+        if(prevStr!==newStr){
+          auditAddBatch.push({tab:key,bundle_num:bn,data:{...row,_prev:{pcs:prev.pcs,price:prev.price,total:prev.total}},reason:'import_updated',archived_at:ts});
+        }
+        updated++;
+      } else {
+        auditAddBatch.push({tab:key,bundle_num:bn,data:row,reason:'import_added',archived_at:ts});
+        added++;
+      }
     }
     // Deduplicate batch by bundle_num (last write wins) before upsert
     const deduped=Object.values(upsertBatch.reduce((m,r)=>{m[r.bundle_num]=r;return m;},{}));
     // Upsert in batches
     for(let i=0;i<deduped.length;i+=100){
       await sbUpsert(table,deduped.slice(i,i+100));
+    }
+    // Write add/update audit entries to append-only log
+    if(auditAddBatch.length>0){
+      for(let i=0;i<auditAddBatch.length;i+=100){
+        await sbInsert('inventory_audit_log',auditAddBatch.slice(i,i+100));
+      }
     }
 
     // Archive bundles in Supabase not in new Excel
@@ -267,7 +295,10 @@ async function reconcileImport(parsedData, fname){
         archived++;
       }
     }
-    if(auditBatch.length>0) await sbUpsert('inventory_audit',auditBatch);
+    if(auditBatch.length>0){
+      await sbUpsert('inventory_audit',auditBatch); // keep existing for removal tracking
+      await sbInsert('inventory_audit_log',auditBatch); // also log to history
+    }
   }
 
   // Reload state from Supabase
