@@ -6471,8 +6471,6 @@ function renderDashboard(c){
   const unscheduled=state.wos.filter(w=>!w.delivery&&!w.isPickup);
   const pickups=state.wos.filter(w=>{
     if(!w.isPickup) return false;
-    if(woStatus(w)==='Complete') return false;
-    // Hide if pickup date has been set (already picked up or scheduled)
     if(w.pickupDate) return false;
     return true;
   });
@@ -9624,7 +9622,7 @@ function exitOfficeBoardView(){
 function _obRender(){_obGrid();_obPickups();}
 function _obPickups(){
   const bar=document.getElementById('ob-pickup-bar');if(!bar)return;
-  const pickups=state.wos.filter(w=>w.isPickup&&woStatus(w)!=='Complete');
+  const pickups=state.wos.filter(w=>w.isPickup&&!w.pickupDate);
   bar.style.display=pickups.length?'flex':'none';
   if(!pickups.length)return;
   const chips=bar.querySelectorAll('.ob-pchip');
