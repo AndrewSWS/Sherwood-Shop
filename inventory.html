@@ -332,7 +332,8 @@ async function updatePcs(key,bundleNum,newPcs){
     await sbPatch(table,bundleNum,{data:row,updated_at:new Date().toISOString()});
     // Write audit log entry for manual pcs change
     const ts=new Date().toISOString();
-    await sbInsert('inventory_audit_log',[{tab:key,bundle_num:bundleNum,data:{...row,_prev:{pcs:prevPcs,total:prevTotal}},reason:'manual_updated',archived_at:ts}]);
+    const auditOk=await sbInsert('inventory_audit_log',[{tab:key,bundle_num:bundleNum,data:{...row,_prev:{pcs:prevPcs,total:prevTotal}},reason:'manual_updated',archived_at:ts}]);
+    console.log('[updatePcs] audit insert result:',auditOk,'bundle:',bundleNum,'prev:',prevPcs,'new:',qty);
     showToast(`Bundle ${bundleNum} updated to ${qty} pcs`,'success');
   }
   updateBadges();
