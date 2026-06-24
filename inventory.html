@@ -320,13 +320,19 @@ async function updatePcs(key,bundleNum,newPcs){
     // Archive and remove
     const ts=new Date().toISOString();
     await sbUpsert('inventory_audit',[{tab:key,bundle_num:bundleNum,data:{...row,pcs:0},reason:'manual_zero',archived_at:ts}]);
+    await sbInsert('inventory_audit_log',[{tab:key,bundle_num:bundleNum,data:{...row,_prev:{pcs:row.pcs},pcs:0},reason:'manual_removed',archived_at:ts}]);
     await sbDelete(table,bundleNum);
     state[key]=state[key].filter(r=>(r.bundleNum||r.heatNum||r.mjsTag)!==bundleNum);
     showToast(`Bundle ${bundleNum} archived (0 pcs)`,'success');
   } else {
+    const prevPcs=row.pcs;
+    const prevTotal=row.total;
     row.pcs=qty;
     if(row.price) row.total=Math.round(qty*row.price*100)/100;
     await sbPatch(table,bundleNum,{data:row,updated_at:new Date().toISOString()});
+    // Write audit log entry for manual pcs change
+    const ts=new Date().toISOString();
+    await sbInsert('inventory_audit_log',[{tab:key,bundle_num:bundleNum,data:{...row,_prev:{pcs:prevPcs,total:prevTotal}},reason:'manual_updated',archived_at:ts}]);
     showToast(`Bundle ${bundleNum} updated to ${qty} pcs`,'success');
   }
   updateBadges();
