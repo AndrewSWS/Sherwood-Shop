@@ -415,7 +415,7 @@ function renderInvSheets(){
         ?`<td class="td-num" style="color:var(--text-secondary);font-size:11px;white-space:nowrap">${r.pcs?fmtNum(r.pcs)+' lb':'—'}</td>`
         :`<td class="td-num"><input class="pcs-input" type="number" min="0" value="${r.pcs??''}"
           onchange="updatePcs('invSheets','${bn}',this.value)"
-          onblur="if(this.value==='')this.value='${r.pcs??0}'"></td>`;
+          onblur="updatePcs('invSheets','${bn}',this.value||'${r.pcs??0}')"></td>`;
       const priceCell=isCoil
         ?`<td class="td-money">${r.price?'$'+parseFloat(r.price).toFixed(3)+'/lb':'<span style="color:#b07800;font-weight:700;font-size:11px">MJS Consign</span>'}</td>`
         :`<td class="td-money">${fmt$(r.price)}</td>`;
@@ -440,7 +440,7 @@ function renderInvSheets(){
         ?`<td class="td-num" style="color:var(--text-secondary);font-size:11px;white-space:nowrap">${r.pcs?fmtNum(r.pcs)+' lb':'—'}</td>`
         :`<td class="td-num"><input class="pcs-input" type="number" min="0" value="${r.pcs??''}"
           onchange="updatePcs('invSheets','${bn}',this.value)"
-          onblur="if(this.value==='')this.value='${r.pcs??0}'"></td>`;
+          onblur="updatePcs('invSheets','${bn}',this.value||'${r.pcs??0}')"></td>`;
       const priceCell=isCoil
         ?`<td class="td-money">${r.price?'$'+parseFloat(r.price).toFixed(3)+'/lb':'<span style="color:#b07800;font-weight:700;font-size:11px">MJS Consign</span>'}</td>`
         :`<td class="td-money">${fmt$(r.price)}</td>`;
