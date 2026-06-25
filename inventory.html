@@ -72,8 +72,7 @@
   tbody tr{border-bottom:1px solid var(--border);}
   tbody tr:nth-child(even){background:var(--row-alt);}
   tbody tr:hover{background:var(--row-hover);}
-  tbody tr.section-header{background:#E8F0E8;}
-  tbody tr.section-header td{font-weight:700;color:var(--forest);font-size:12px;padding:8px 12px 6px;border-bottom:2px solid var(--border-dark);}
+  tbody tr.section-header td{font-weight:700;font-size:12px;padding:8px 12px 6px;border-bottom:2px solid var(--border-dark);}
   tbody td{padding:9px 12px;white-space:nowrap;}
   .td-num{text-align:right;font-variant-numeric:tabular-nums;}
   .td-money{text-align:right;font-variant-numeric:tabular-nums;color:var(--forest);font-weight:600;}
@@ -397,16 +396,23 @@ function renderInvSheets(){
   const sheetRows=rows.filter(r=>(r.size||'').includes('x'));
   const coilRows=rows.filter(r=>!(r.size||'').includes('x'));
   const useGrouped=!state.sortState[tid]?.col&&!search&&!gaugeF&&!vendorF&&!typeF;
-  // Default sort: gauge (numeric) → size → bundle type (G90 last)
+  // Default sort: gauge (numeric) → coils before sheets → width (numeric) → height (numeric) → bundle type (G90 last)
+  const parseDims=(s)=>{
+    // For sheets "48 x 96" → [48, 96]; for coils "60" → [60, 0]
+    const parts=String(s||'').split(/x/i).map(p=>parseFloat(p.trim())||0);
+    return [parts[0]||0, parts[1]||0];
+  };
   const defaultSort=(arr)=>[...arr].sort((a,b)=>{
     const ga=parseFloat(a.gauge)||0, gb=parseFloat(b.gauge)||0;
     if(ga!==gb)return ga-gb;
-    // Size: coils (no 'x') before sheets, then alpha
+    // Coils (no 'x') before sheets
     const ac=!(a.size||'').includes('x'), bc=!(b.size||'').includes('x');
     if(ac!==bc)return ac?-1:1;
-    const sc=String(a.size||'').localeCompare(String(b.size||''));
-    if(sc!==0)return sc;
-    // Bundle type: G90 last, others first
+    // Size: compare width then height numerically
+    const [aw,ah]=parseDims(a.size), [bw,bh]=parseDims(b.size);
+    if(aw!==bw)return aw-bw;
+    if(ah!==bh)return ah-bh;
+    // Bundle type: G90 last
     const ab=String(a.bundle||''), bb=String(b.bundle||'');
     const ag=ab.toUpperCase().includes('G90'), bg=bb.toUpperCase().includes('G90');
     if(ag!==bg)return ag?1:-1;
@@ -414,34 +420,51 @@ function renderInvSheets(){
   });
   let tbody='';
   if(useGrouped){
-    let lastSec=null;
-    defaultSort(sorted).forEach(r=>{
-      if(r.section!==lastSec){
-        const sRows=state.invSheets.filter(x=>x.section===r.section);
-        tbody+=`<tr class="section-header"><td colspan="9">${r.section} <span style="font-weight:400;color:var(--text-secondary);font-size:11px;margin-left:8px">${sRows.length} items · ${fmt$(sumField(sRows,'total'))}</span></td></tr>`;
-        lastSec=r.section;
+    const sortedRows=defaultSort(sorted);
+    // Group by gauge, within each gauge: sheets first then coils, each with own header
+    const gaugeList=[...new Set(sortedRows.map(r=>r.gauge))].sort((a,b)=>parseFloat(a)-parseFloat(b));
+    gaugeList.forEach(gauge=>{
+      const gaugeSheets=sortedRows.filter(r=>r.gauge===gauge&&(r.size||'').includes('x'));
+      const gaugeCoils=sortedRows.filter(r=>r.gauge===gauge&&!(r.size||'').includes('x'));
+      if(gaugeSheets.length){
+        tbody+=`<tr class="section-header" style="background:#1a1a2a"><td colspan="9" style="color:#a0a8c8">📋 ${gauge} Ga — Sheets <span style="font-weight:400;color:#6a6a9a;font-size:11px;margin-left:8px">${gaugeSheets.length} items · ${fmt$(sumField(gaugeSheets,'total'))}</span></td></tr>`;
+        gaugeSheets.forEach(r=>{
+          const bn=r.bundleNum||'';
+          const pcsCell=`<td class="td-num"><input class="pcs-input" type="number" min="0" value="${r.pcs??''}"
+            onblur="updatePcs('invSheets','${bn}',this.value||'${r.pcs??0}')"></td>`;
+          const priceCell=`<td class="td-money">${fmt$(r.price)}</td>`;
+          tbody+=`<tr>
+            <td><span class="gauge-chip">${r.gauge||'—'}</span></td>
+            <td>${r.size||'—'}</td>
+            <td><span class="vendor-badge">${r.vendor||'—'}</span></td>
+            ${pcsCell}
+            <td>${r.bundle||'—'}</td>
+            <td style="font-family:monospace;font-size:12px">${bn}</td>
+            ${priceCell}
+            <td class="td-total">${fmt$(r.total)}</td>
+            <td></td></tr>`;
+        });
       }
-      const bn=r.bundleNum||'';
-      const isCoil=!(r.size||'').includes('x');
-      const isConsign=isCoil&&!r.price;
-      const rowStyle=isConsign?'background:#fffbe6;':'';
-      const pcsCell=isCoil
-        ?`<td class="td-num" style="color:var(--text-secondary);font-size:11px;white-space:nowrap">${r.pcs?fmtNum(r.pcs)+' lb':'—'}</td>`
-        :`<td class="td-num"><input class="pcs-input" type="number" min="0" value="${r.pcs??''}"
-          onblur="updatePcs('invSheets','${bn}',this.value||'${r.pcs??0}')"></td>`;
-      const priceCell=isCoil
-        ?`<td class="td-money">${r.price?'$'+parseFloat(r.price).toFixed(3)+'/lb':'<span style="color:#b07800;font-weight:700;font-size:11px">MJS Consign</span>'}</td>`
-        :`<td class="td-money">${fmt$(r.price)}</td>`;
-      tbody+=`<tr style="${rowStyle}">
-        <td><span class="gauge-chip">${r.gauge||'—'}</span></td>
-        <td>${r.size||'—'}</td>
-        <td><span class="vendor-badge">${r.vendor||'—'}</span></td>
-        ${pcsCell}
-        <td>${r.bundle||'—'}</td>
-        <td style="font-family:monospace;font-size:12px">${bn}</td>
-        ${priceCell}
-        <td class="td-total">${fmt$(r.total)}</td>
-        <td></td></tr>`;
+      if(gaugeCoils.length){
+        tbody+=`<tr class="section-header" style="background:#1a2a1a"><td colspan="9" style="color:#a0c8a0">🔩 ${gauge} Ga — Coils <span style="font-weight:400;color:#6a9a6a;font-size:11px;margin-left:8px">${gaugeCoils.length} coils · ${fmt$(sumField(gaugeCoils,'total'))}</span></td></tr>`;
+        gaugeCoils.forEach(r=>{
+          const bn=r.bundleNum||'';
+          const isConsign=!r.price;
+          const rowStyle=isConsign?'background:#fffbe6;':'';
+          const pcsCell=`<td class="td-num" style="color:var(--text-secondary);font-size:11px;white-space:nowrap">${r.pcs?fmtNum(r.pcs)+' lb':'—'}</td>`;
+          const priceCell=r.price?`<td class="td-money">$${parseFloat(r.price).toFixed(3)}/lb</td>`:`<td class="td-money"><span style="color:#b07800;font-weight:700;font-size:11px">MJS Consign</span></td>`;
+          tbody+=`<tr style="${rowStyle}">
+            <td><span class="gauge-chip">${r.gauge||'—'}</span></td>
+            <td>${r.size||'—'}</td>
+            <td><span class="vendor-badge">${r.vendor||'—'}</span></td>
+            ${pcsCell}
+            <td>${r.bundle||'—'}</td>
+            <td style="font-family:monospace;font-size:12px">${bn}</td>
+            ${priceCell}
+            <td class="td-total">${fmt$(r.total)}</td>
+            <td></td></tr>`;
+        });
+      }
     });
   }else{
     defaultSort(sorted).forEach(r=>{
