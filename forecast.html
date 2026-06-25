@@ -493,6 +493,9 @@ function renderDashboard(){
       <td>${g.label}</td>
       <td class="r${isTheo?' theo-cell':''}">${fN(g.D_total)}</td>
       <td class="r${isTheo?' theo-cell':''}">${fN(g.F_total)}</td>
+      <td class="r" style="color:var(--amber)">${g.H_total?fN(g.H_total):'—'}</td>
+      <td class="r">${g.J_total?fN(g.J_total):'—'}</td>
+      <td class="r">${g.K_total?fN(g.K_total):'—'}</td>
       <td>
         <div class="mbar-wrap">
           <div class="mbar-bg"><div class="mbar-fill ${bc}" style="width:${bp}%"></div></div>
@@ -530,6 +533,9 @@ function renderDashboard(){
           <th>#</th><th>Gauge</th><th>Product Group</th>
           <th class="r${isTheo?' theo-hdr':''}">Lbs/Mo${isTheo?' (T)':''}</th>
           <th class="r${isTheo?' theo-hdr':''}">Lbs in Stk${isTheo?' (T)':''}</th>
+          <th class="r" style="color:var(--amber)">MJS</th>
+          <th class="r">MJ OO</th>
+          <th class="r">Other OO</th>
           <th>Inv. Months</th>
           <th class="r${isTheo?' theo-hdr':''}">Target Wt${isTheo?' (T)':''}</th>
           <th class="r">Net to Order</th>
@@ -540,6 +546,9 @@ function renderDashboard(){
           <td colspan="3">TOTALS</td>
           <td class="r">${fN(totalD)}</td>
           <td class="r">${fN(computed.reduce((s,g)=>s+g.F_total,0))}</td>
+          <td class="r" style="color:var(--amber)">${fN(computed.reduce((s,g)=>s+g.H_total,0))}</td>
+          <td class="r">${fN(computed.reduce((s,g)=>s+g.J_total,0))}</td>
+          <td class="r">${fN(computed.reduce((s,g)=>s+g.K_total,0))}</td>
           <td>${fM(avgMo)}</td>
           <td class="r">${fN(totalN)}</td>
           <td class="r" style="${totalO>0?'color:var(--rust)':'color:var(--green-ok)'};font-weight:700">${fSign(totalO)}</td>
