@@ -194,6 +194,17 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--cream);color:v
   </div>
 </div>
 
+<!-- Excel Import -->
+<div id="import-bar" style="background:var(--forest-mid);padding:8px 20px;display:flex;align-items:center;gap:12px;font-size:13px;color:rgba(255,255,255,0.85)">
+  <span style="font-weight:700;color:var(--sage)">📥 Import from Excel</span>
+  <span style="opacity:0.7">Upload Forecast Excel to sync manual entries (C, D, J, K)</span>
+  <label style="margin-left:auto;background:var(--sage);color:var(--forest);font-weight:700;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px">
+    Choose File
+    <input type="file" accept=".xlsx,.xls" style="display:none" onchange="importFromExcel(this)">
+  </label>
+  <span id="import-status" style="font-size:12px;opacity:0.8"></span>
+</div>
+
 <main class="main" id="app-main" style="display:none">
   <div id="pane-dashboard"></div>
   <div id="pane-forecast" style="display:none"></div>
@@ -201,6 +212,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--cream);color:v
 
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 <script>
 // ── CONFIG ──
 const SB_URL='https://ecndvwmbycyppqkbvuzs.supabase.co';
@@ -409,7 +421,9 @@ function computeGroup(g){
       row._F=parseFloat(row.F)||0;
     }else{
       const w=getWeight(row.wkey);
-      row._D=(parseFloat(row.C)||0)*w;
+      const calcD=(parseFloat(row.C)||0)*w;
+      // If C=0 and a manual D is set, use manual D (allows direct lbs/mo entry)
+      row._D=calcD>0?calcD:(parseFloat(row.D)||0);
       row._F=(parseFloat(row.E)||0)*w;
       row._W=w; // store weight used for display
     }
@@ -590,7 +604,7 @@ function renderForecast(){
           <td>${g.gauge}</td>
           <td style="color:var(--text-secondary)">${row.size}</td>
           <td class="r calc-cell" style="color:var(--text-muted)">—</td>
-          <td class="r calc-cell">${fN(row._D)}</td>
+          <td class="r">${inp(g.id,row.r,'D',row.D||0)}</td>
           <td class="r calc-cell" style="color:var(--text-muted)">—</td>
           <td class="r calc-cell">${fN(row._F)}</td>
           <td class="r calc-cell" style="color:var(--amber);font-weight:700">${row.H?fN(row.H):'—'}</td>
@@ -612,7 +626,7 @@ function renderForecast(){
           <td>${g.gauge}</td>
           <td>${row.size}</td>
           <td class="r">${inp(g.id,row.r,'C',row.C)}</td>
-          <td class="r ${isTheo?'theo-cell':'calc-cell'}">${fN(row._D)}</td>
+          <td class="r ${isTheo?'theo-cell':((parseFloat(row.C)||0)===0?'':'calc-cell')}">${(parseFloat(row.C)||0)===0?inp(g.id,row.r,'D',row.D||0):fN(row._D)}</td>
           <td class="r calc-cell">${fN(parseFloat(row.E)||0)}</td>
           <td class="r ${isTheo?'theo-cell':'calc-cell'}">${fN(row._F)}</td>
           <td class="r calc-cell" style="color:var(--text-muted)">—</td>
@@ -636,7 +650,7 @@ function renderForecast(){
       <td class="r">${fN(comp.D_total/Math.max(1,g.rows.filter(r=>!r.is_coil).reduce((s,r)=>s+(getWeight(r.wkey)?1:0),0)))}</td>
       <td class="r ${isTheo?'theo-cell':''}">${fN(comp.D_total)}</td>
       <td class="r calc-cell">—</td>
-      <td class="r ${isTheo?'theo-cell':''}" style="background:var(--forest);color:#fff;padding:6px 8px;border-radius:4px">${fN(comp.F_total+comp.H_total)}</td>
+      <td class="r ${isTheo?'theo-cell':''}" style="background:var(--forest);color:#fff;padding:6px 8px;border-radius:4px">${fN(comp.F_total)}</td>
       <td class="r" style="color:var(--amber);font-weight:700">${comp.H_total?fN(comp.H_total):'—'}</td>
       <td class="r calc-cell">—</td>
       <td class="r" style="background:${iColor};color:#fff;padding:6px 8px;border-radius:4px;font-size:15px">${fM(comp.I_months)}</td>
@@ -747,6 +761,74 @@ function showToast(msg,type=''){
   const t=document.getElementById('toast');
   t.textContent=msg; t.className='toast'+(type?' '+type:'');
   t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3200);
+}
+
+// ── EXCEL IMPORT ──
+const EXCEL_MAP={
+  1:{C:[3],D:4,J:4,K:4},2:{C:[7],D:8,J:8,K:8},3:{C:[11],D:12,J:12,K:12},
+  4:{C:[15,16],D:17,J:17,K:17},5:{C:[20,21],D:22,J:22,K:22},
+  6:{C:[25],D:26,J:26,K:26},7:{C:[29],D:30,J:30,K:30},
+  8:{C:[40],D:41,J:41,K:41},9:{C:[44,45],D:46,J:46,K:46},
+  10:{C:[49,50],D:51,J:51,K:51},11:{C:[54],D:55,J:55,K:55},
+  12:{C:[58],D:59,J:59,K:59},13:{C:[77,78],D:79,J:79,K:79},
+  14:{C:[82,83],D:84,J:84,K:84},15:{C:[87],D:88,J:88,K:88},
+  16:{C:[91],D:92,J:92,K:92},17:{C:[95,96],D:97,J:97,K:97},
+  18:{C:[100],D:101,J:101,K:101},19:{C:[113,114],D:115,J:115,K:115},
+  20:{C:[118],D:119,J:119,K:119},21:{C:[122],D:123,J:123,K:123},
+  22:{C:[126],D:127,J:127,K:127},23:{C:[148,149],D:150,J:150,K:150},
+  24:{C:[153],D:154,J:154,K:154},25:{C:[157],D:158,J:158,K:158},
+  26:{C:[162,163],D:164,J:164,K:164},
+  30:{C:[],D:181,J:181,K:181},31:{C:[],D:184,J:184,K:184},
+  32:{C:[],D:187,J:187,K:187},33:{C:[],D:190,J:190,K:190},
+};
+
+function importFromExcel(input){
+  const file=input.files[0];
+  if(!file) return;
+  const status=document.getElementById('import-status');
+  status.textContent='Reading…';
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const wb=XLSX.read(e.target.result,{type:'array',cellFormula:false});
+      const ws=wb.Sheets['Forecast.'];
+      if(!ws){status.textContent='⚠ Sheet "Forecast." not found';return;}
+      const cv=(col,row)=>{
+        const cell=ws[col+row];
+        if(!cell) return 0;
+        const v=parseFloat(cell.v);
+        return isNaN(v)?0:v;
+      };
+      // Target months
+      const newTarget=cv('M',2);
+      if(newTarget>0) targetMonths=newTarget;
+      // Update groups
+      let updated=0;
+      groups.forEach(g=>{
+        const map=EXCEL_MAP[g.id];
+        if(!map) return;
+        const sheetRows=g.rows.filter(r=>!r.is_coil);
+        map.C.forEach((excelRow,idx)=>{
+          if(sheetRows[idx]) sheetRows[idx].C=cv('C',excelRow);
+        });
+        const coilRow=g.rows.find(r=>r.is_coil);
+        if(coilRow){
+          if(map.D!=null) coilRow.D=cv('D',map.D);
+          if(map.J!=null) coilRow.J=cv('J',map.J);
+          if(map.K!=null) coilRow.K=cv('K',map.K);
+        }
+        updated++;
+      });
+      markDirty();
+      renderAll();
+      status.textContent=`✓ Imported ${updated} groups — review then Save to Supabase`;
+      input.value='';
+    }catch(err){
+      status.textContent='⚠ Error: '+err.message;
+      console.error('Excel import error:',err);
+    }
+  };
+  reader.readAsArrayBuffer(file);
 }
 
 // ── BOOT ──
