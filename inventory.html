@@ -332,8 +332,7 @@ async function updatePcs(key,bundleNum,newPcs){
     await sbPatch(table,bundleNum,{data:row,updated_at:new Date().toISOString()});
     // Write audit log entry for manual pcs change
     const ts=new Date().toISOString();
-    const auditOk=await sbInsert('inventory_audit_log',[{tab:key,bundle_num:bundleNum,data:{...row,_prev:{pcs:prevPcs,total:prevTotal}},reason:'manual_updated',archived_at:ts}]);
-    console.log('[updatePcs] audit insert result:',auditOk,'bundle:',bundleNum,'prev:',prevPcs,'new:',qty);
+    await sbInsert('inventory_audit_log',[{tab:key,bundle_num:bundleNum,data:{...row,_prev:{pcs:prevPcs,total:prevTotal}},reason:'manual_updated',archived_at:ts}]);
     showToast(`Bundle ${bundleNum} updated to ${qty} pcs`,'success');
   }
   updateBadges();
@@ -398,10 +397,25 @@ function renderInvSheets(){
   const sheetRows=rows.filter(r=>(r.size||'').includes('x'));
   const coilRows=rows.filter(r=>!(r.size||'').includes('x'));
   const useGrouped=!state.sortState[tid]?.col&&!search&&!gaugeF&&!vendorF&&!typeF;
+  // Default sort: gauge (numeric) → size → bundle type (G90 last)
+  const defaultSort=(arr)=>[...arr].sort((a,b)=>{
+    const ga=parseFloat(a.gauge)||0, gb=parseFloat(b.gauge)||0;
+    if(ga!==gb)return ga-gb;
+    // Size: coils (no 'x') before sheets, then alpha
+    const ac=!(a.size||'').includes('x'), bc=!(b.size||'').includes('x');
+    if(ac!==bc)return ac?-1:1;
+    const sc=String(a.size||'').localeCompare(String(b.size||''));
+    if(sc!==0)return sc;
+    // Bundle type: G90 last, others first
+    const ab=String(a.bundle||''), bb=String(b.bundle||'');
+    const ag=ab.toUpperCase().includes('G90'), bg=bb.toUpperCase().includes('G90');
+    if(ag!==bg)return ag?1:-1;
+    return ab.localeCompare(bb);
+  });
   let tbody='';
   if(useGrouped){
     let lastSec=null;
-    sorted.forEach(r=>{
+    defaultSort(sorted).forEach(r=>{
       if(r.section!==lastSec){
         const sRows=state.invSheets.filter(x=>x.section===r.section);
         tbody+=`<tr class="section-header"><td colspan="9">${r.section} <span style="font-weight:400;color:var(--text-secondary);font-size:11px;margin-left:8px">${sRows.length} items · ${fmt$(sumField(sRows,'total'))}</span></td></tr>`;
@@ -414,7 +428,6 @@ function renderInvSheets(){
       const pcsCell=isCoil
         ?`<td class="td-num" style="color:var(--text-secondary);font-size:11px;white-space:nowrap">${r.pcs?fmtNum(r.pcs)+' lb':'—'}</td>`
         :`<td class="td-num"><input class="pcs-input" type="number" min="0" value="${r.pcs??''}"
-          onchange="updatePcs('invSheets','${bn}',this.value)"
           onblur="updatePcs('invSheets','${bn}',this.value||'${r.pcs??0}')"></td>`;
       const priceCell=isCoil
         ?`<td class="td-money">${r.price?'$'+parseFloat(r.price).toFixed(3)+'/lb':'<span style="color:#b07800;font-weight:700;font-size:11px">MJS Consign</span>'}</td>`
@@ -431,7 +444,7 @@ function renderInvSheets(){
         <td></td></tr>`;
     });
   }else{
-    sorted.forEach(r=>{
+    defaultSort(sorted).forEach(r=>{
       const bn=r.bundleNum||'';
       const isCoil=!(r.size||'').includes('x');
       const isConsign=isCoil&&!r.price;
@@ -439,7 +452,6 @@ function renderInvSheets(){
       const pcsCell=isCoil
         ?`<td class="td-num" style="color:var(--text-secondary);font-size:11px;white-space:nowrap">${r.pcs?fmtNum(r.pcs)+' lb':'—'}</td>`
         :`<td class="td-num"><input class="pcs-input" type="number" min="0" value="${r.pcs??''}"
-          onchange="updatePcs('invSheets','${bn}',this.value)"
           onblur="updatePcs('invSheets','${bn}',this.value||'${r.pcs??0}')"></td>`;
       const priceCell=isCoil
         ?`<td class="td-money">${r.price?'$'+parseFloat(r.price).toFixed(3)+'/lb':'<span style="color:#b07800;font-weight:700;font-size:11px">MJS Consign</span>'}</td>`
