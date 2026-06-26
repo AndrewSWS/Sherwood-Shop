@@ -557,8 +557,7 @@ function renderSlipDrive(){
     <td><span class="gauge-chip">${r.gauge||'—'}</span></td><td>${r.size||'—'}</td>
     <td><span class="vendor-badge">${r.vendor||'—'}</span></td>
     <td class="td-num"><input class="pcs-input" type="number" min="0" value="${r.coils??''}"
-      onchange="updatePcs('slipDrive','${r.bundleNum||''}',this.value)"
-      onblur="if(this.value==='')this.value='${r.coils??0}'"></td>
+      onblur="updatePcs('slipDrive','${r.bundleNum||''}',this.value||'${r.coils??0}')"></td>
     <td style="font-family:monospace;font-size:12px">${r.bundleNum||'—'}</td>
     <td class="td-num">${r.weight?fmtNum(r.weight)+' lb':'—'}</td>
     <td class="td-money">${fmt$(r.price)}/lb</td><td class="td-total">${fmt$(r.total)}</td></tr>`).join('');
@@ -596,8 +595,7 @@ function renderAlumSS(){
       <td><span class="vendor-badge" style="${tc}">${r.type||'—'}</span></td><td>${r.gauge||'—'}</td><td>${r.size||'—'}</td>
       <td><span class="vendor-badge">${r.vendor||'—'}</span></td>
       <td class="td-num"><input class="pcs-input" type="number" min="0" value="${r.pcs??''}"
-        onchange="updatePcs('alumStain','${r.bundleNum||''}',this.value)"
-        onblur="if(this.value==='')this.value='${r.pcs??0}'"></td>
+        onblur="updatePcs('alumStain','${r.bundleNum||''}',this.value||'${r.pcs??0}')"></td>
       <td>${r.desc||'—'}</td><td style="font-size:11px;color:var(--text-muted)">${r.bundleNum||'—'}</td>
       <td class="td-money">${r.pricePerLb?fmt$(r.pricePerLb)+'/lb':r.priceEa?fmt$(r.priceEa)+'/ea':'—'}</td>
       <td class="td-total">${fmt$(r.total)}</td></tr>`;
@@ -632,8 +630,7 @@ function renderElgen(){
     <td style="max-width:220px;white-space:normal;font-weight:500">${r.desc||'—'}</td>
     <td><span class="vendor-badge">${r.vendor||'—'}</span></td>
     <td class="td-num"><input class="pcs-input" type="number" min="0" value="${r.pcs??''}"
-      onchange="updatePcs('elgen','${r.desc||r.bundleNum||''}',this.value)"
-      onblur="if(this.value==='')this.value='${r.pcs??0}'"></td>
+      onblur="updatePcs('elgen','${r.desc||r.bundleNum||''}',this.value||'${r.pcs??0}')"></td>
     <td style="font-size:12px;color:var(--text-secondary)">${r.bundleNum||'—'}</td>
     <td style="font-size:12px;color:var(--text-muted)">${r.packaging||'—'}</td>
     <td style="font-size:12px">${r.loc||'—'}</td>

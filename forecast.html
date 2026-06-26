@@ -692,9 +692,9 @@ function inp(gid,rowR,field,val){
   return `<input class="einput${v===0?' zero':''}" type="number" min="0"
     value="${v}"
     oninput="updateField(${gid},${rowR},'${field}',this.value)"
-    onchange="commitField(${gid},${rowR},'${field}',this.value)"
+    onkeydown="if(event.key==='Enter'){commitField(${gid},${rowR},'${field}',this.value);this.blur();}"
     onfocus="this.select();this.classList.remove('zero')"
-    onblur="if(!parseFloat(this.value))this.classList.add('zero')"
+    onblur="commitField(${gid},${rowR},'${field}',this.value);if(!parseFloat(this.value))this.classList.add('zero')"
     title="Enter ${field} value">`;
 }
 
