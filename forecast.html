@@ -530,7 +530,9 @@ function renderDashboard(){
       <div class="target-ctrl">
         <label>Desired Inventory:</label>
         <input type="number" id="tgt-input" value="${targetMonths}" min="1" max="24" step="0.5"
-          oninput="updateTarget(this.value)">
+          oninput="updateTargetSilent(this.value)"
+          onblur="commitTarget(this.value)"
+          onkeydown="if(event.key==='Enter'){commitTarget(this.value);this.blur();}">
         <span>months</span>
       </div>
     </div>
@@ -572,6 +574,18 @@ function renderDashboard(){
     </div>`;
 }
 
+function updateTargetSilent(v){
+  const n=parseFloat(v);
+  if(isNaN(n)||n<=0)return;
+  targetMonths=n;
+}
+function commitTarget(v){
+  const n=parseFloat(v);
+  if(isNaN(n)||n<=0)return;
+  targetMonths=n;
+  markDirty();
+  renderTab();
+}
 function updateTarget(v){
   const n=parseFloat(v);
   if(isNaN(n)||n<=0)return;
