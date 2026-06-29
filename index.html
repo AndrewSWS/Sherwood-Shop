@@ -3792,7 +3792,7 @@ function printQueueList(station){
         <div class="shear-customer">${item.customer}</div>
         <div class="shear-meta">
           <span class="shear-wo">WO #${item.woNum}</span>
-          ${item.delivery ? `<span class="delivery">📅 ${fmtDate(item.delivery)}</span>` : ''}
+          <span class="delivery" style="font-size:15px;font-weight:800;padding:3px 10px;border-radius:4px;${item.delivery ? 'background:#1C2E1C;color:#fff' : 'background:#f0f0f0;color:#888;font-style:italic'}">📅 ${item.delivery ? fmtDate(item.delivery) : 'Unscheduled'}</span>
           <span class="assignee">${item.assignee || '<i style="color:#c0392b">Unassigned</i>'}</span>
         </div>
       </div>
@@ -3819,7 +3819,7 @@ function printQueueList(station){
         <span class="row-num">${i}</span>
         <span class="wo-num">WO #${item.woNum}</span>
         <span class="customer">${item.customer}</span>
-        ${item.delivery ? `<span class="delivery">📅 ${fmtDate(item.delivery)}</span>` : ''}
+        <span class="delivery" style="font-size:15px;font-weight:800;padding:3px 10px;border-radius:4px;${item.delivery ? 'background:#1C2E1C;color:#fff' : 'background:#f0f0f0;color:#888;font-style:italic'}">📅 ${item.delivery ? fmtDate(item.delivery) : 'Unscheduled'}</span>
         <span class="assignee">${item.assignee || '<i style="color:#c0392b">Unassigned</i>'}</span>
         ${isIOWA && item.coilNum ? `<span class="coil-badge">🪙 Coil #${item.coilNum}</span>` : ''}
       </div>
@@ -5517,7 +5517,7 @@ function printQueueSlip(woId,itemId){
   <div class="header-grid">
     <div class="fld"><label>Customer</label><span>${wo.customer}</span></div>
     <div class="fld"><label>PO #</label><span>${wo.po||'—'}</span></div>
-    <div class="fld"><label>Delivery</label><span>${wo.isPickup?(wo.pickupDate?'🏪 Picked up '+fmtDate(wo.pickupDate):'🏪 Pick Up Order'):wo.delivery?new Date(wo.delivery+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'TBD'}</span></div>
+    <div class="fld"><label>Delivery</label><span style="${wo.delivery||wo.isPickup?'':'color:#c0392b;font-style:italic'}">${wo.isPickup?(wo.pickupDate?'🏪 Picked up '+fmtDate(wo.pickupDate):'🏪 Pick Up Order'):wo.delivery?new Date(wo.delivery+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'}):'Unscheduled'}</span></div>
   </div>
   <div class="item-box">
     <div class="item-title">Line Item ${itemIdx} — ${item.station||'Station TBD'} &nbsp; Priority: P${item.priority||'—'} &nbsp; Assigned: ${item.assignee||'—'}</div>
