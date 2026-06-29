@@ -702,7 +702,8 @@ let state = {
   currentUser: '',
   activeView: 'create',
   liCounter: 0,
-  vendors: []
+  vendors: [],
+  unassignedPickups: []
 };
 
 // ══════════════════════════════════════════════════════
@@ -992,7 +993,18 @@ async function sbLoadState() {
 
     // Build trucks with stops
     const stopsByTruck = {};
+    const unassignedPickups = [];
     (stopsRaw||[]).forEach(s => {
+      if(s.type==='pickup' && !s.truck_id){
+        unassignedPickups.push({
+          id: s.id, seq: s.seq,
+          woId: null, woNum: null, customer: s.customer,
+          address: s.address, cityst: s.cityst, zone: s.zone,
+          delivery: s.delivery||'', notes: s.notes||'', delivered: s.delivered||false,
+          type: 'pickup', vendorId: s.vendor_id||null, pickupNote: s.pickup_note||''
+        });
+        return;
+      }
       if (!stopsByTruck[s.truck_id]) stopsByTruck[s.truck_id] = [];
       stopsByTruck[s.truck_id].push({
         id: s.id, seq: s.seq,
@@ -1011,6 +1023,7 @@ async function sbLoadState() {
     // Apply WOs and trucks to state
     if (wos.length) state.wos = wos;
     if (trucks.length) state.trucks = trucks;
+    state.unassignedPickups = unassignedPickups;
     if (Array.isArray(vendorsRaw)) state.vendors = vendorsRaw;
 
     // Load admin config from DB
@@ -3229,7 +3242,25 @@ function renderBoardView(){
           }).join('')
           +truckSection('⚠ UNASSIGNED','#FAC775',ntWOs)
         :'<div style="padding:20px;text-align:center;color:#444;font-size:12px">No deliveries</div>')
-      +'</div>';
+      
+      +(()=>{
+        const dayPickups = [
+          ...state.trucks.flatMap(t=>t.stops.filter(s=>s.type==='pickup'&&s.delivery===day.iso&&!s.delivered)),
+          ...(state.unassignedPickups||[]).filter(s=>s.delivery===day.iso&&!s.delivered)
+        ];
+        if(!dayPickups.length) return '';
+        return '<div style="border-top:2px solid #e8a000;margin-top:4px;padding-top:4px">'
+          +dayPickups.map(s=>{
+            const vendor=(state.vendors||[]).find(v=>v.id===s.vendorId);
+            const vName=vendor?vendor.name:(s.customer||'Vendor Pickup');
+            return '<div style="background:#2a1f00;border:1px solid #e8a000;border-left:3px solid #e8a000;border-radius:4px;padding:5px 8px;margin-bottom:3px">'
+              +'<div style="font-size:10px;font-weight:800;color:#e8a000;text-transform:uppercase;letter-spacing:.08em">🛻 VENDOR PICKUP</div>'
+              +'<div style="font-size:13px;font-weight:700;color:#fff;margin-top:1px">'+vName+'</div>'
+              +(s.pickupNote?'<div style="font-size:10px;color:#b37300;font-style:italic">'+s.pickupNote+'</div>':'')
+              +'</div>';
+          }).join('')
+          +'</div>';
+      })()+'</div>';
   }).join('');
 
   // Auto-scale: measure natural height then scale to fit
@@ -5889,7 +5920,7 @@ function renderTruckCard(t, filterDay){
         const vendor=(state.vendors||[]).find(v=>v.id===s.vendorId);
         const vName=vendor?vendor.name:(s.customer||'Vendor Pickup');
         const pickupDone=s.delivered||false;
-        return sep+`<div class="truck-stop" style="border-left:3px solid #e8a000;padding-left:8px;background:${pickupDone?'#fff8e6':'#fffbf0'};${pickupDone?'opacity:0.75;':''}">
+        return `<div class="truck-stop" style="border-left:3px solid #e8a000;padding-left:8px;background:${pickupDone?'#fff8e6':'#fffbf0'};${pickupDone?'opacity:0.75;':''}">
         <div class="stop-num" style="background:${pickupDone?'#e8a000':'#fff8e6'};color:${pickupDone?'#fff':'#b37300'};border-color:#e8a000">
           ${pickupDone?'✓':i+1}
         </div>
@@ -6678,7 +6709,27 @@ function renderDashboard(c){
           const tWOs=dayWOs.filter(w=>getWOTruckId(w.id)===String(t.id));
           return tWOs.length?divider(_tIcons[i%4]+' '+t.name,_tColors[i%4])+tWOs.map(renderChip).join(''):'';
         }).join('')
-             + (nt.length?divider('⚠ No Truck','#BA7517')+nt.map(renderChip).join(''):'' );      })():`<div style="text-align:center;padding:12px 0;font-size:11px;color:var(--text3)">Drop here</div>`}
+             + (nt.length?divider('⚠ No Truck','#BA7517')+nt.map(renderChip).join(''):'' );
+
+      })():`<div style="text-align:center;padding:12px 0;font-size:11px;color:var(--text3)">Drop here</div>`}
+      ${(()=>{
+        // Vendor pickup chips for this day
+        const allPickupStops = [
+          ...state.trucks.flatMap(t=>t.stops.filter(s=>s.type==='pickup'&&s.delivery===iso&&!s.delivered)),
+          ...(state.unassignedPickups||[]).filter(s=>s.delivery===iso&&!s.delivered)
+        ];
+        if(!allPickupStops.length) return '';
+        return allPickupStops.map(s=>{
+          const vendor=(state.vendors||[]).find(v=>v.id===s.vendorId);
+          const vName=vendor?vendor.name:(s.customer||'Vendor Pickup');
+          return `<div style="background:#fff8e6;border:2px solid #e8a000;border-left:4px solid #e8a000;border-radius:var(--rad);padding:6px 8px;margin-top:4px">
+            <div style="font-size:9px;font-weight:800;color:#b37300;text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px">🛻 VENDOR PICKUP</div>
+            <div style="font-weight:700;color:#7a4f00;font-size:12px">${vName}</div>
+            ${s.pickupNote?`<div style="color:#b37300;font-size:11px;font-style:italic">${s.pickupNote}</div>`:''}
+            <button onclick="event.stopPropagation();editVendorPickup('${s.id}')" style="margin-top:3px;font-size:9px;padding:2px 6px;border-radius:3px;border:1px solid #e8a000;background:#e8a000;color:#fff;cursor:pointer;font-weight:700">✏ Edit</button>
+          </div>`;
+        }).join('');
+      })()}
       ${isToday?'<div style="font-size:10px;text-align:center;color:var(--blue);margin-top:4px;font-weight:600">▼ click for details</div>':''}
     </div>`;
   }).join('');
@@ -7468,14 +7519,17 @@ function schedulePickup(woId, dateVal){
 }
 
 function renderVendorPickupSection(){
-  // Get all vendor pickup stops across all trucks, not yet delivered
+  // Only show pickups with NO date — once dated they move to delivery schedule
   const vendorStops = [];
   state.trucks.forEach(t=>{
     t.stops.forEach(s=>{
-      if(s.type==='pickup' && !s.delivered){
+      if(s.type==='pickup' && !s.delivered && !s.delivery){
         vendorStops.push({...s, truckName: t.name, truckId: t.id});
       }
     });
+  });
+  (state.unassignedPickups||[]).forEach(s=>{
+    if(!s.delivered && !s.delivery) vendorStops.push({...s, truckName: null, truckId: null});
   });
 
   const cards = vendorStops.map(s=>{
@@ -7484,12 +7538,13 @@ function renderVendorPickupSection(){
     const vAddr = vendor ? [vendor.address, vendor.city, vendor.state].filter(Boolean).join(', ') : '';
     const truck = state.trucks.find(t=>t.id===s.truckId);
     const dateStr = s.delivery ? fmtDate(s.delivery) : 'No date set';
-    return '<div style="background:#fff;border:1px solid #e8a000;border-left:4px solid #e8a000;border-radius:var(--rad);padding:10px 14px;min-width:200px;max-width:280px">'
-      +'<div style="font-size:10px;font-weight:700;color:#b37300;text-transform:uppercase;margin-bottom:4px">🛻 Vendor Pickup</div>'
+    const truckLabel = truck ? ' · '+truck.name.split(' ').slice(0,2).join(' ') : ' · <span style="color:#c0392b;font-style:italic">No truck assigned</span>';
+    return '<div style="background:#fff;border:1px solid #e8a000;border-left:4px solid '+(truck?'#e8a000':'#c0392b')+';border-radius:var(--rad);padding:10px 14px;min-width:200px;max-width:280px">'
+      +'<div style="font-size:10px;font-weight:700;color:#b37300;text-transform:uppercase;margin-bottom:4px">🛻 Vendor Pickup'+(truck?'':' <span style="color:#c0392b">— UNSCHEDULED</span>')+'</div>'
       +'<div style="font-weight:700;font-size:13px;color:var(--text)">'+vName+'</div>'
       +(vAddr?'<div style="font-size:11px;color:var(--text2);margin-bottom:4px">📍 '+vAddr+'</div>':'')
       +(s.pickupNote?'<div style="font-size:12px;color:var(--text2);margin:4px 0;font-style:italic">'+s.pickupNote+'</div>':'')
-      +'<div style="font-size:11px;color:#b37300;margin-top:4px">📅 '+dateStr+(truck?' · '+truck.name.split(' ').slice(0,2).join(' '):'')+'</div>'
+      +'<div style="font-size:11px;color:#b37300;margin-top:4px">📅 '+dateStr+truckLabel+'</div>'
       +'<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">'
       +'<button class="btn btn-xs" style="background:#fff8e6;border-color:#e8a000;color:#b37300" onclick="editVendorPickup(\''+s.id+'\')">✏ Edit</button>'
       +'<button class="btn btn-xs" style="background:#e8f5e9;border-color:#4caf50;color:#2e7d32" onclick="markVendorPickupDone(\''+s.id+'\')">✓ Picked Up</button>'
@@ -7514,15 +7569,11 @@ async function showAddPickupModal(editStop){
   const existing = document.getElementById('vendor-pickup-modal');
   if(existing) existing.remove();
 
-  // Fetch vendors fresh if not loaded yet
-  if(!state.vendors || !state.vendors.length){
-    try{ state.vendors = await _sbGet('vendors','order=name.asc') || []; }catch(e){ console.warn('vendors fetch error',e); }
-    if(!state.vendors.length) console.warn('vendors table returned empty — check RLS on vendors table');
-  }
+  // Always refresh vendors from Supabase when opening modal
+  try{ state.vendors = await _sbGet('vendors','order=name.asc') || []; }catch(e){ console.warn('vendors fetch error',e); }
 
   const vendors = state.vendors||[];
   const trucks  = state.trucks||[];
-  const today   = localISO(new Date());
 
   const vendorOpts = vendors.map(v=>`<option value="${v.id}"${editStop&&editStop.vendorId===v.id?' selected':''}>${v.name}</option>`).join('');
   const truckOpts  = trucks.map(t=>`<option value="${t.id}"${editStop&&editStop.truckId===t.id?' selected':''}>${t.name.split('—')[0].trim()}</option>`).join('');
@@ -7553,7 +7604,7 @@ async function showAddPickupModal(editStop){
       <div style="display:flex;gap:12px;margin-bottom:14px">
         <div style="flex:1">
           <label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px">Date</label>
-          <input id="vp-date" type="date" value="${editStop?editStop.delivery:today}"
+          <input id="vp-date" type="date" value="${editStop?editStop.delivery:''}"
             style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--rad);background:var(--page);color:var(--text);font-size:13px;box-sizing:border-box">
         </div>
         <div style="flex:1">
@@ -7567,6 +7618,7 @@ async function showAddPickupModal(editStop){
 
       <div style="display:flex;gap:8px;margin-top:4px">
         <button class="btn" style="flex:1" onclick="document.getElementById('vendor-pickup-modal').remove()">Cancel</button>
+        ${editStop?`<button class="btn" style="flex:1;color:var(--red);border-color:var(--red)" onclick="document.getElementById('vendor-pickup-modal').remove();deleteVendorPickup('${editStop.id}')">✕ Delete</button>`:''}
         <button class="btn btn-primary" style="flex:1;background:#e8a000;border-color:#e8a000" onclick="saveVendorPickup(${editStop?`'${editStop.id}'`:'null'})">
           ${editStop?'Save Changes':'Add Pickup'}
         </button>
@@ -7588,9 +7640,6 @@ async function saveVendorPickup(editId){
   const date   = document.getElementById('vp-date').value;
   const truckId= document.getElementById('vp-truck').value;
 
-  if(!date){ toast('⚠ Please set a date'); return; }
-  if(!truckId){ toast('⚠ Please assign a truck'); return; }
-
   // Create new vendor if needed
   if(vendorId==='__new__'){
     const newName = document.getElementById('vp-new-vendor-name').value.trim();
@@ -7606,15 +7655,14 @@ async function saveVendorPickup(editId){
 
   if(!vendorId){ toast('⚠ Please select a vendor'); return; }
 
-  const truck = state.trucks.find(t=>String(t.id)===String(truckId));
   const vendor = (state.vendors||[]).find(v=>v.id===vendorId);
 
   const payload = {
     type: 'pickup',
     vendor_id: vendorId,
     pickup_note: note,
-    delivery: date,
-    truck_id: parseInt(truckId),
+    delivery: date || null,
+    truck_id: truckId ? parseInt(truckId) : null,
     customer: vendor ? vendor.name : 'Vendor Pickup',
     address: vendor ? vendor.address||'' : '',
     cityst: vendor ? [vendor.city, vendor.state].filter(Boolean).join(', ') : '',
@@ -7625,22 +7673,30 @@ async function saveVendorPickup(editId){
   };
 
   try{
+    let result;
     if(editId){
-      await _sbPatch('truck_stops', {id: editId}, payload);
+      result = await _sbPatch('truck_stops', {id: editId}, payload);
     } else {
-      await _sbPost('truck_stops', payload);
+      result = await _sbPost('truck_stops', payload);
+    }
+    if(result === null){
+      toast('⚠ Failed to save — check console for details');
+      return;
     }
     document.getElementById('vendor-pickup-modal')?.remove();
     toast('✓ Vendor pickup '+(editId?'updated':'added'));
     const ok = await sbLoadState();
     if(ok) renderDashboard(document.getElementById('content'));
-  }catch(e){ toast('⚠ Failed: '+e.message); }
+  }catch(e){ 
+    console.error('saveVendorPickup error:', e);
+    toast('⚠ Failed: '+e.message); 
+  }
 }
 
 async function editVendorPickup(stopId){
-  // Find the stop across all trucks
   let found = null;
   state.trucks.forEach(t=>{ t.stops.forEach(s=>{ if(String(s.id)===String(stopId)) found={...s,truckId:t.id}; }); });
+  if(!found) found = (state.unassignedPickups||[]).find(s=>String(s.id)===String(stopId));
   if(!found){ toast('⚠ Stop not found'); return; }
   showAddPickupModal(found);
 }

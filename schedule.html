@@ -315,13 +315,16 @@ async function loadStops() {
       return;
     }
 
-    const woIds = [...new Set(rawStops.map(s => s.wo_id))].join(',');
-    const [woRes, liRes] = await Promise.all([
-      fetch(`${SB_URL}/rest/v1/work_orders?id=in.(${woIds})`, { headers: HDR }),
-      fetch(`${SB_URL}/rest/v1/line_items?wo_id=in.(${woIds})&order=id`, { headers: HDR })
-    ]);
-    const wos  = await woRes.json();
-    const lis  = await liRes.json();
+    const woIds = [...new Set(rawStops.map(s => s.wo_id).filter(Boolean))].join(',');
+    let wos = [], lis = [];
+    if(woIds){
+      const [woRes, liRes] = await Promise.all([
+        fetch(`${SB_URL}/rest/v1/work_orders?id=in.(${woIds})`, { headers: HDR }),
+        fetch(`${SB_URL}/rest/v1/line_items?wo_id=in.(${woIds})&order=id`, { headers: HDR })
+      ]);
+      wos = await woRes.json();
+      lis  = await liRes.json();
+    }
 
     // Merge everything
     const woMap = {};
@@ -342,6 +345,16 @@ async function loadStops() {
     }
 
     stops = rawStops.map(s => {
+      // For vendor pickup stops, skip WO/customer lookup
+      if(s.type === 'pickup'){
+        return {
+          ...s,
+          address: s.address || '',
+          cityst: s.cityst || '',
+          wo: {},
+          items: []
+        };
+      }
       const wo   = woMap[s.wo_id] || {};
       const cust = custMap[s.customer] || {};
       // If customer name contains a location variant (e.g. "APR Supply — Southampton")
@@ -411,6 +424,49 @@ function renderStops() {
 }
 
 function renderStopCard(stop, idx) {
+  // ── Vendor Pickup Stop ──
+  if(stop.type === 'pickup'){
+    const isPickedUp = !!stop.delivered;
+    const statusClass = isPickedUp ? 'delivered' : '';
+    const badgeText   = isPickedUp ? '✓ Picked Up' : 'Pending Pickup';
+    const badgeStyle  = isPickedUp
+      ? 'background:#4caf50;color:#fff;border-radius:12px;padding:3px 10px;font-size:11px;font-weight:700'
+      : 'background:#e8a000;color:#fff;border-radius:12px;padding:3px 10px;font-size:11px;font-weight:700';
+    const note = stop.pickup_note || stop.notes || '';
+    const addr = [stop.address, stop.cityst].filter(Boolean).join(', ');
+    const mapsUrl = addr ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}` : '';
+
+    const today = new Date().toISOString().split('T')[0];
+    const isFuture = activeDate > today;
+    let actionsHtml = '';
+    if(!isFuture && !isPickedUp){
+      actionsHtml = `<div class="stop-actions">
+        <button class="btn-action" style="background:#e8a000;color:#fff" onclick="markVendorPickedUp('${stop.id}');event.stopPropagation()">🛻 Mark Picked Up</button>
+      </div>`;
+    } else if(isPickedUp){
+      actionsHtml = `<div class="stop-actions">
+        <button class="btn-action btn-undo" onclick="undoVendorPickedUp('${stop.id}');event.stopPropagation()">↩ Undo Picked Up</button>
+      </div>`;
+    }
+
+    return `<div class="stop-card ${statusClass}" id="stop-${stop.id}" style="border-left:4px solid #e8a000;background:${isPickedUp?'#fff8e6':'#fffbf0'}">
+      <div class="stop-header" onclick="toggleDetail('${stop.id}')">
+        <div class="stop-num-badge" style="background:#e8a000;color:#fff">${idx + 1}</div>
+        <div class="stop-info">
+          <div style="font-size:10px;font-weight:800;color:#b37300;text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px;background:#fff3cd;padding:2px 6px;border-radius:3px;display:inline-block">🛻 VENDOR PICKUP</div>
+          <div class="stop-customer">${stop.customer || 'Vendor'}</div>
+          ${mapsUrl
+            ? `<a href="${mapsUrl}" target="_blank" rel="noopener" class="stop-address-link"><span class="maps-icon">📍</span><span class="maps-text">${addr}</span><span class="maps-arrow">›</span></a>`
+            : `<div class="stop-address">📍 ${stop.cityst || 'No address on file'}</div>`
+          }
+          ${note ? `<div class="stop-meta">${note}</div>` : ''}
+        </div>
+        <div class="stop-status-badge" style="${badgeStyle}">${badgeText}</div>
+      </div>
+      ${actionsHtml}
+    </div>`;
+  }
+
   const isDelivered = !!stop.delivered;
   const isArrived   = !!stop.arrived_at && !isDelivered;
   const statusClass = isDelivered ? 'delivered' : isArrived ? 'arrived' : '';
@@ -570,6 +626,23 @@ async function undoDelivered(stopId) {
     showToast('↩ Delivery undone');
     loadStops();
   } catch(e) { showToast('⚠ Failed to save'); }
+}
+
+async function markVendorPickedUp(stopId) {
+  try {
+    await sbPatch(stopId, { delivered: true, delivered_at: new Date().toISOString(), driver_name: driverName });
+    showToast('🛻 Marked as picked up');
+    loadStops();
+  } catch(e) { showToast('⚠ Failed: ' + e.message); }
+}
+
+async function undoVendorPickedUp(stopId) {
+  if (!confirm('Undo this pickup?')) return;
+  try {
+    await sbPatch(stopId, { delivered: false, delivered_at: null });
+    showToast('↩ Pickup undone');
+    loadStops();
+  } catch(e) { showToast('⚠ Failed: ' + e.message); }
 }
 
 async function sbPatch(stopId, body) {
