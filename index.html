@@ -1529,7 +1529,7 @@ const VIEWS = {
   bundlelog:{title:'Bundle Usage History',actions:'<div class="flex gap8"><button class="btn btn-sm" onclick="exportBundleCSV()">⬇ Export CSV</button></div>'},
   stockneeds:{title:'Stock Needs',actions:''},
   assign:{title:'Assign & Manage WOs',actions:'<div class="flex gap8" style="align-items:center"><input type="text" id="assign-search" placeholder="Search WO, customer..." oninput="filterAssignInPlace(this.value)" style="width:200px;padding:6px 10px;font-size:13px"><button id="assign-toggle" class="btn btn-sm" onclick="showAllAssign=!showAllAssign;updateAssignToggle();renderAssign(document.getElementById(\'assign-search\').value)">Show All</button></div>'},
-  queue:{title:'Shop Queue — Unassigned',actions:'<div class="flex gap8"><button id="queue-toggle" class="btn btn-sm" onclick="showAllQueue=!showAllQueue;updateQueueToggle();renderQueue()">Show All</button><button class="btn btn-sm" onclick="resetQueuePriorities()" title="Clear manual priorities — revert to delivery date order">↺ Reset Order</button><button class="btn btn-sm" style="background:#2a0a0a;color:#e05555;border:1px solid #5a1a1a;position:relative" onclick="showWaitingModal()">⏳ Waiting <span id="badge-waiting" style="background:#e05555;color:#fff;border-radius:10px;padding:1px 6px;font-size:11px;font-weight:700;margin-left:4px">0</span></button></div>'},
+  queue:{title:'Shop Queue — Unassigned',actions:'<div class="flex gap8"><button id="queue-toggle" class="btn btn-sm" onclick="showAllQueue=!showAllQueue;updateQueueToggle();scheduleRenderQueue()">Show All</button><button class="btn btn-sm" onclick="resetQueuePriorities()" title="Clear manual priorities — revert to delivery date order">↺ Reset Order</button><button class="btn btn-sm" style="background:#2a0a0a;color:#e05555;border:1px solid #5a1a1a;position:relative" onclick="showWaitingModal()">⏳ Waiting <span id="badge-waiting" style="background:#e05555;color:#fff;border-radius:10px;padding:1px 6px;font-size:11px;font-weight:700;margin-left:4px">0</span></button></div>'},
   myview:{title:'My Tasks',actions:''},
   truck:{title:'Truck Planner',actions:'<button class="btn btn-primary no-print" onclick="printTruck()">🖨 Print Load Sheet</button> <a href="https://app03.linxup.com/ng/portal/index.html" target="_blank" rel="noopener" class="btn no-print" style="text-decoration:none">📡 Linxup Tracking</a>'},
   dashboard:{title:'Master Dashboard',actions:'<button class="btn" onclick="enterBoardView()" style="background:#1C2E1C;color:#fff;border:none">📺 Board View</button> <button class="btn" onclick="enterOfficeBoardView()" style="background:#0f1f3f;color:#A8D5A8;border:1px solid #2D6A2D">🖥 Office Board</button>'},
@@ -4519,7 +4519,17 @@ function exportBundleCSV() {
 // ══════════════════════════════════════════════════════════════════════════════
 function toggleQueueProductFilter(prod){
   _queueProductFilter = _queueProductFilter === prod ? null : prod;
-  renderQueue();
+  scheduleRenderQueue();
+}
+
+let _renderQueuePending = false;
+function scheduleRenderQueue(){
+  if(_renderQueuePending) return;
+  _renderQueuePending = true;
+  requestAnimationFrame(()=>{
+    _renderQueuePending = false;
+    renderQueue();
+  });
 }
 
 function renderQueue(c){
@@ -4577,7 +4587,7 @@ function renderQueue(c){
       return key === _queueProductFilter;
     });
   }
-  const hiddenNote=hiddenWOs?`<div style="font-size:12px;color:var(--text3);padding:6px 10px;background:var(--gray-l);border-radius:var(--rad);margin-bottom:8px">${hiddenWOs} past WO${hiddenWOs!==1?'s':''} hidden · <button class="btn btn-xs" onclick="showAllQueue=true;updateQueueToggle();renderQueue()">Show All</button></div>`:'';
+  const hiddenNote=hiddenWOs?`<div style="font-size:12px;color:var(--text3);padding:6px 10px;background:var(--gray-l);border-radius:var(--rad);margin-bottom:8px">${hiddenWOs} past WO${hiddenWOs!==1?'s':''} hidden · <button class="btn btn-xs" onclick="showAllQueue=true;updateQueueToggle();scheduleRenderQueue()">Show All</button></div>`:'';
   // IOWA: group by coil number
   const isIOWA = activeQStation === 'IOWA';
 
@@ -5053,7 +5063,7 @@ function switchQStation(s,el){
   activeQStation=s;
   document.querySelectorAll('.stab').forEach(x=>x.classList.remove('active'));
   el.classList.add('active');
-  renderQueue(document.getElementById('content'));
+  scheduleRenderQueue();
   updateQueueToggle();
 }
 
