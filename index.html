@@ -5931,8 +5931,8 @@ function renderTruckCard(t, filterDay){
         </div>
         <div class="flex gap6" style="flex-direction:column;align-items:flex-end;gap:4px">
           <div class="flex gap4">
-            <button class="btn btn-xs" onclick="moveStop(${t.id},${globalIdx},-1)" ${globalIdx===0?'disabled':''}>↑</button>
-            <button class="btn btn-xs" onclick="moveStop(${t.id},${globalIdx},1)" ${globalIdx===t.stops.length-1?'disabled':''}>↓</button>
+            <button class="btn btn-xs" onclick="moveStop(${t.id},${globalIdx},-1)" ${i===0?'disabled':''}>↑</button>
+            <button class="btn btn-xs" onclick="moveStop(${t.id},${globalIdx},1)" ${i===dayStops.length-1?'disabled':''}>↓</button>
             <button class="btn btn-xs" style="background:#fff8e6;border-color:#e8a000;color:#b37300" onclick="editVendorPickup('${s.id}')">✏</button>
             <button class="btn btn-xs btn-danger" onclick="removeVendorPickupStop('${s.id}',${t.id})">✕</button>
           </div>
@@ -5961,6 +5961,8 @@ function renderTruckCard(t, filterDay){
       const woDelivered = wo ? (wo.delivered||false) : (s.delivered||false);
       const stopBg = woDelivered ? 'background:#f0faf0;' : '';
       const stopOpacity = woDelivered ? 'opacity:0.75;' : '';
+      const dayIdxArr=dayStops.map((_,di)=>di);
+      const dayPos=i;
       return sep+`<div class="truck-stop" style="border-left:3px solid ${bc};padding-left:8px;${stopBg}${stopOpacity}">
       <div class="stop-num" style="${woDelivered?'background:var(--green-m);color:#fff;':''}">
         ${woDelivered?'✓':i+1}
@@ -5976,8 +5978,8 @@ function renderTruckCard(t, filterDay){
       </div>
       <div class="flex gap6" style="flex-direction:column;align-items:flex-end;gap:4px">
         <div class="flex gap4">
-          <button class="btn btn-xs" onclick="moveStop(${t.id},${globalIdx},-1)" ${globalIdx===0?'disabled':''}>↑</button>
-          <button class="btn btn-xs" onclick="moveStop(${t.id},${globalIdx},1)" ${globalIdx===t.stops.length-1?'disabled':''}>↓</button>
+          <button class="btn btn-xs" onclick="moveStop(${t.id},${globalIdx},-1)" ${dayPos===0?'disabled':''}>↑</button>
+          <button class="btn btn-xs" onclick="moveStop(${t.id},${globalIdx},1)" ${dayPos===dayStops.length-1?'disabled':''}>↓</button>
           <button class="btn btn-xs btn-danger" onclick="removeStop(${t.id},'${s.woId}')">✕</button>
         </div>
         <button class="btn btn-xs" style="${woDelivered?'background:var(--green-m);color:#fff;border-color:var(--green-m)':'background:#fff;border:1px solid var(--green-m);color:var(--green-m)'}"
@@ -6206,7 +6208,17 @@ async function removeVendorPickupStop(stopId, truckId){
 
 function moveStop(tid,idx,dir){
   const t=state.trucks.find(x=>x.id===tid);if(!t)return;
-  const ni=idx+dir;if(ni<0||ni>=t.stops.length)return;
+  // Find the day this stop belongs to
+  const stop=t.stops[idx];
+  if(!stop)return;
+  const day=stop.delivery||'';
+  // Get indices of all stops on the same day, in order
+  const dayIndices=t.stops.map((s,i)=>s.delivery===day?i:-1).filter(i=>i>=0);
+  const pos=dayIndices.indexOf(idx);
+  if(pos<0)return;
+  const newPos=pos+dir;
+  if(newPos<0||newPos>=dayIndices.length)return;
+  const ni=dayIndices[newPos];
   [t.stops[idx],t.stops[ni]]=[t.stops[ni],t.stops[idx]];
   saveState();renderTruck(document.getElementById('content'));
   // Sync updated sequence to Supabase
