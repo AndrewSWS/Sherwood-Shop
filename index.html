@@ -1043,6 +1043,7 @@ async function sbLoadState() {
             case 'acknowledged_gaps': state.adminConfig.acknowledgedGaps = val; break;
             case 'linear_weights': {const lw=typeof val==='string'?JSON.parse(val):val;if(lw&&typeof lw==='object'){Object.assign(LINEAR_WEIGHTS,lw);console.log('[adminConfig] loaded linear_weights, keys:',Object.keys(lw).length);}} break;
             case 'sheet_weights':  {const sw=typeof val==='string'?JSON.parse(val):val;if(sw&&typeof sw==='object')Object.assign(SHEET_WEIGHTS,sw);} break;
+            case 'weatherGeocodeCache': {const wgc=typeof val==='string'?JSON.parse(val):val;if(wgc&&typeof wgc==='object'){if(!state.adminConfig)state.adminConfig={};state.adminConfig.weatherGeocodeCache=wgc;}} break;
           }
         } catch(e) {}
       });
@@ -1068,21 +1069,11 @@ async function sbLoadState() {
       if (newFromDB.length) {
         state.adminConfig.customers = [...snapCusts, ...newFromDB];
       }
-      // Always let Supabase's zone win over the hardcoded snapshot when DB
-      // has a non-empty zone — NOT just when the snapshot is missing one.
-      // The snapshot is a static baseline baked into the page source; once
-      // someone edits a customer's zone in Customer Admin, that edit is
-      // persisted to Supabase via saveCustMeta's _sbPatch call, and from then
-      // on the DB row is the only thing that should be trusted for that
-      // customer's zone. The previous "only fill in if missing" check meant
-      // any customer whose snapshot already had a (possibly outdated) zone
-      // baked in would never pick up a corrected zone from the DB — the edit
-      // would silently succeed in Supabase but appear to "not save" on every
-      // reload, because the stale hardcoded value kept winning the merge.
+      // Also update zone for existing customers if DB has a zone set
       custsRaw.forEach(r => {
         if (!r.zone) return;
         const existing = (state.adminConfig.customers||[]).find(c => c.name.toLowerCase() === (r.name||'').toLowerCase());
-        if (existing) existing.zone = r.zone;
+        if (existing && !existing.zone) existing.zone = r.zone;
       });
     }
 
@@ -2706,7 +2697,7 @@ function renderWOCard(wo){
         <span class="wo-cust">${wo.customer}</span>
         <span class="wo-num" style="color:var(--text3);font-size:12px;font-weight:600">WO #${wo.woNum}</span>
         ${wo.po?`<span class="badge badge-gray">PO: ${wo.po}</span>`:''}
-        ${getCustZone(wo.customer,wo.zone)?`<span class="badge badge-blue">${getCustZone(wo.customer,wo.zone)}</span>`:''}
+        ${wo.zone?`<span class="badge badge-blue">${wo.zone}</span>`:''}
         ${wo.isPickup?'<span class="badge" style="background:#EEF4FB;color:#185FA5;border:1px solid #5B9BD5">🏪 Pick Up</span>':wo.delivery?`<span class="badge badge-amber">📅 ${fmtDate(wo.delivery)}</span>`:''}
         ${getWOTruckId(wo.id)?`<span class="badge badge-teal">🚚 ${truckName(getWOTruckId(wo.id))}</span>`:''}
       </div>
@@ -5982,7 +5973,7 @@ function renderTruckCard(t, filterDay){
           ${s.customer} <span style="font-size:10px;color:var(--text3)">▾</span>
         </div>
         <div style="font-size:11px;color:var(--text2)">WO #${s.woNum}</div>
-        <div class="stop-zone" style="margin-top:2px">${getCustZone(s.customer,s.zone)} · ${s.cityst||s.address||''}</div>
+        <div class="stop-zone" style="margin-top:2px">${s.zone||''} · ${s.cityst||s.address||''}</div>
         <div style="font-size:12px;font-weight:600;color:var(--blue);margin-top:2px">${getWOWeight(s.woId)?getWOWeight(s.woId).toLocaleString()+' lbs':''}</div>
         ${s.notes?`<div class="stop-zone">📝 ${s.notes}</div>`:''}
       </div>
@@ -6470,23 +6461,59 @@ function unschDrop(e){
 // Uses Open-Meteo (free, no API key needed)
 let _weatherCache = {}; // { date: { precip_prob, description } }
 let _weatherFetched = false;
+let _weatherLastError = null;
 
-function getWeatherZip(){ return state.adminConfig?.weatherZip || '19020'; } // Default: Bensalem PA
+// Primary shop location — Bensalem, PA 19020. Hardcoded so the normal,
+// default case never needs to call Nominatim at all. Service area for
+// reference: deliveries run roughly New York down to Delaware (~110mi N,
+// ~70mi S/W, ~60mi E of this point) — the radius itself doesn't change
+// which coordinates get queried, it's just documented in Settings so
+// anyone configuring this knows the coverage area this single weather
+// point is meant to represent.
+const BENSALEM_LAT = 40.1059;
+const BENSALEM_LON = -74.9494;
+const DEFAULT_WEATHER_ZIP = '19020';
+
+function getWeatherZip(){ return state.adminConfig?.weatherZip || DEFAULT_WEATHER_ZIP; } // Default: Bensalem PA
 function getRainThreshold(){ return parseInt(state.adminConfig?.rainThreshold || 40); }
 
+// Resolve a zip to lat/lon. For the default Bensalem zip, skip geocoding
+// entirely. For any custom zip, geocode once via Nominatim and cache the
+// result in adminConfig (synced like everything else) so it's a one-time
+// lookup rather than re-geocoding on every single fetchWeather() call —
+// this was the main source of weather data silently going blank, since
+// Nominatim's usage policy caps requests and flags repeated identical
+// queries as faulty/blocked, which is exactly what re-geocoding the same
+// zip on every page load across multiple devices looks like to them.
+async function resolveWeatherCoords(zip){
+  if(zip === DEFAULT_WEATHER_ZIP){
+    return { lat: BENSALEM_LAT, lon: BENSALEM_LON };
+  }
+  const cache = state.adminConfig?.weatherGeocodeCache || {};
+  if(cache[zip]) return cache[zip];
+  const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?postalcode=${zip}&country=US&format=json&limit=1`);
+  const geoData = await geoRes.json();
+  if(!geoData.length) throw new Error('No geocode result for zip '+zip);
+  const coords = { lat: parseFloat(geoData[0].lat), lon: parseFloat(geoData[0].lon) };
+  if(!state.adminConfig) state.adminConfig = {};
+  if(!state.adminConfig.weatherGeocodeCache) state.adminConfig.weatherGeocodeCache = {};
+  state.adminConfig.weatherGeocodeCache[zip] = coords;
+  saveState();
+  sbSaveAdminConfig('weatherGeocodeCache', state.adminConfig.weatherGeocodeCache)
+    .catch(e=>console.warn('weatherGeocodeCache save error',e));
+  return coords;
+}
+
 async function fetchWeather(){
+  _weatherLastError = null;
   try {
     const zip = getWeatherZip();
-    // Geocode zip to lat/lon using nominatim
-    const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?postalcode=${zip}&country=US&format=json&limit=1`);
-    const geoData = await geoRes.json();
-    if(!geoData.length) return;
-    const lat = parseFloat(geoData[0].lat);
-    const lon = parseFloat(geoData[0].lon);
+    const { lat, lon } = await resolveWeatherCoords(zip);
     // Fetch 7-day hourly forecast from Open-Meteo (4am-5pm window)
     const wxRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=precipitation_probability&daily=weathercode&timezone=America%2FNew_York&forecast_days=7`);
+    if(!wxRes.ok) throw new Error('Open-Meteo HTTP '+wxRes.status);
     const wx = await wxRes.json();
-    if(!wx.hourly) return;
+    if(!wx.hourly) throw new Error('Open-Meteo response missing hourly data');
     _weatherCache = {};
     // Group hourly data by date, filter to 4am-5pm EST (hours 4-17)
     const times = wx.hourly.time;
@@ -6509,6 +6536,7 @@ async function fetchWeather(){
     });
     _weatherFetched = true;
   } catch(e){
+    _weatherLastError = (e && e.message) ? e.message : String(e);
     console.warn('Weather fetch failed:', e);
   }
 }
@@ -6552,7 +6580,8 @@ function getWeatherBadge(iso){
 
   // No weather data loaded and no manual override and not Monday — show warning
   if(!_weatherFetched && !monday && override === null){
-    return `<div style="margin-top:4px;display:inline-flex;align-items:center;gap:4px;background:#fff8e6;border:1px solid #FAC775;border-radius:4px;padding:2px 7px;font-size:11px;font-weight:600;color:#b8860b">
+    const tip = _weatherLastError ? ` title="${String(_weatherLastError).replace(/"/g,'&quot;')}"` : '';
+    return `<div${tip} style="margin-top:4px;display:inline-flex;align-items:center;gap:4px;background:#fff8e6;border:1px solid #FAC775;border-radius:4px;padding:2px 7px;font-size:11px;font-weight:600;color:#b8860b">
       ⚠ No weather data
     </div>`;
   }
@@ -6583,7 +6612,8 @@ function getBoardWeatherBadge(iso){
 
   // No weather data and no override and not Monday
   if(!_weatherFetched && !monday && override === null){
-    return `<span style="margin-left:8px;background:#b8860b;color:#fff;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:700">⚠ no wx</span>`;
+    const tip = _weatherLastError ? ` title="${String(_weatherLastError).replace(/"/g,'&quot;')}"` : '';
+    return `<span${tip} style="margin-left:8px;background:#b8860b;color:#fff;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:700">⚠ no wx</span>`;
   }
 
   if(!wrap){
@@ -6835,6 +6865,9 @@ function renderDashboard(c){
         onchange="state.adminConfig=state.adminConfig||{};state.adminConfig.rainEndHour=parseInt(this.value);saveState();fetchWeather().then(()=>renderDashboard())" title="Rain window end hour (0-23)">
       <span>hr</span>
     </div>
+    <div style="font-size:11px;color:var(--text3);margin-top:4px">
+      📍 Weather source: Bensalem, PA (zip ${DEFAULT_WEATHER_ZIP}) · service area ~110mi N (NY) to ~70mi S/W (DE) · single forecast point used for the whole board, not per-region
+    </div>
   </div>
   <div class="week-grid mb8">${weekCols}</div>
   <div id="day-detail-panel" style="margin-bottom:20px"></div>
@@ -6964,7 +6997,7 @@ function toggleDayDetail(iso, forceOpen=false){
             ${stoplightDot(wo)}<span style="font-weight:700;font-size:14px">WO #${wo.woNum}</span>
             <span style="color:var(--blue);font-size:13px">${wo.customer}</span>
             ${wo.po?`<span class="badge badge-gray">PO: ${wo.po}</span>`:''}
-            ${getCustZone(wo.customer,wo.zone)?`<span class="badge badge-blue">${getCustZone(wo.customer,wo.zone)}</span>`:''}
+            ${wo.zone?`<span class="badge badge-blue">${wo.zone}</span>`:''}
           </div>
           <div class="flex gap6" style="align-items:center;flex-wrap:wrap">
             ${statusPill(st)}
@@ -7080,7 +7113,7 @@ function printWO(id){
     <div class="fld"><label>Customer</label><span>${wo.customer}</span></div>
     <div class="fld"><label>PO #</label><span>${wo.po||'—'}</span></div>
     <div class="fld"><label>Address</label><span>${wo.address||'—'}</span></div>
-    <div class="fld"><label>Zone</label><span>${getCustZone(wo.customer,wo.zone)||'—'}</span></div>
+    <div class="fld"><label>Zone</label><span>${wo.zone||'—'}</span></div>
   </div>
   ${wo.notes?`<div style="padding:8px 12px;background:#fffbf0;border-left:4px solid #BA7517;margin-bottom:16px;border-radius:4px"><strong>Notes:</strong> ${wo.notes}</div>`:''}
   <table>
@@ -7136,7 +7169,7 @@ function printTruck(truckId, filterDay){
         <td style="padding:8px;font-weight:900;font-size:16px;vertical-align:top;width:28px;border-bottom:2px solid #2D6A2D">${i+1}</td>
         <td colspan="3" style="padding:8px;border-bottom:2px solid #2D6A2D;vertical-align:top">
           <div style="font-size:15px;font-weight:900;margin-bottom:2px">${s.customer}</div>
-          <div style="font-size:11px;color:#555;margin-bottom:2px">📍 ${[s.address,s.cityst].filter(Boolean).join(', ')||'No address'} ${getCustZone(s.customer,s.zone)?'· '+getCustZone(s.customer,s.zone):''}</div>
+          <div style="font-size:11px;color:#555;margin-bottom:2px">📍 ${[s.address,s.cityst].filter(Boolean).join(', ')||'No address'} ${s.zone?'· '+s.zone:''}</div>
           <div style="font-size:11px;color:#666">WO #${s.woNum} · ${getWOWeight(s.woId).toLocaleString()} lbs ${s.notes?'· 📝 '+s.notes:''}</div>
         </td>
       </tr>
@@ -7226,20 +7259,6 @@ function getCustMeta(name){
   return state.customerMeta[name]||{phone:'',email:'',contact:'',notify:false,groupId:'',notes:''};
 }
 
-// Live zone lookup by customer name — always reflects the customer's CURRENT
-// zone from Customer Admin, never a stale snapshot. Use this instead of
-// reading wo.zone directly anywhere a zone is displayed to the user, so that
-// editing a customer's zone updates every existing WO's display immediately
-// rather than only affecting newly created WOs. wo.zone itself is left
-// untouched as a stored field (still used as a fallback below for WOs whose
-// customer no longer exists in the customer list, e.g. one-off/deleted
-// customers, so we don't lose the zone entirely in that edge case).
-function getCustZone(custName, fallbackZone){
-  const cust = getCustomers().find(c=>c.name===custName);
-  if(cust && cust.zone) return cust.zone;
-  return fallbackZone || '';
-}
-
 function getCustGroup(custName){
   const meta=getCustMeta(custName);
   if(meta.groupId){
@@ -7249,24 +7268,16 @@ function getCustGroup(custName){
   // Fall back to zone-based group
   const cust=getCustomers().find(c=>c.name===custName);
   if(cust&&cust.zone){
-    // First try the EXACT zone → group id map (e.g. "NJ North" → g-nj-north).
-    // This must run before any loose substring matching, because a substring
-    // check like name.includes("nj") matches "NJ South Run", "NJ Central Run",
-    // and "NJ North Run" all at once — Array.find() then silently grabs
-    // whichever of those happens to be listed first, which previously caused
-    // every NJ customer (regardless of actual zone) to be misgrouped into
-    // whatever NJ run was first in state.deliveryGroups.
-    const gid=ZONE_TO_GROUP[cust.zone];
-    const g2=state.deliveryGroups.find(g=>g.id===gid);
-    if(g2)return g2;
-    // Last-resort fallback for custom/renamed groups not present in
-    // ZONE_TO_GROUP — match on the FULL zone name only (no truncated
-    // first-word match), so "NJ North" can't accidentally match a group
-    // named "NJ South Run".
+    // First try zone-based group from state.deliveryGroups
     const g=state.deliveryGroups.find(g=>
+      g.name.toLowerCase().includes(cust.zone.toLowerCase().split(' ')[0]) ||
       g.name.toLowerCase().includes(cust.zone.toLowerCase())
     );
     if(g)return g;
+    // Then try ZONE_TO_GROUP map
+    const gid=ZONE_TO_GROUP[cust.zone];
+    const g2=state.deliveryGroups.find(g=>g.id===gid);
+    if(g2)return g2;
   }
   return null;
 }
@@ -7844,7 +7855,7 @@ function renderUnscheduledGrouped(unscheduled){
           <div style="font-size:10px;color:var(--text3);margin-bottom:3px">↔ drag to schedule</div>
           <div style="font-weight:700;font-size:13px;cursor:pointer" onclick="event.stopPropagation();openDashWOPopout(${wo.id})">${wo.customer}</div>
           <div style="font-size:11px;color:var(--text2);margin:2px 0;cursor:pointer" onclick="event.stopPropagation();openDashWOPopout(${wo.id})">${stoplightDot(wo)} WO #${wo.woNum}</div>
-          <div style="font-size:11px;color:var(--text3)">${getWOWeight(wo.id)?getWOWeight(wo.id).toLocaleString()+' lbs':''} ${getCustZone(wo.customer,wo.zone)}</div>
+          <div style="font-size:11px;color:var(--text3)">${getWOWeight(wo.id)?getWOWeight(wo.id).toLocaleString()+' lbs':''} ${wo.zone||''}</div>
           <div style="margin-top:6px"><input type="date" onclick="event.stopPropagation()" onchange="setDeliveryFromCard(${wo.id},this.value)"
             style="font-size:11px;padding:3px 6px;width:100%;border:1px solid ${grp?grp.color:'#FAC775'};border-radius:4px;background:#fff" placeholder="Pick a date"></div>
           <div style="margin-top:5px">
