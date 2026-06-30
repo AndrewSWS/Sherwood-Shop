@@ -10021,6 +10021,7 @@ function enterOfficeBoardView(){
   _obRender();
   _obSetSync(true); // show initial sync time immediately on entry
   _obTimer=setInterval(async()=>{
+    const ok = await sbLoadState();
     if(ok){try{localStorage.setItem('kzn_state',JSON.stringify(state));}catch(e){}}else{try{const s=localStorage.getItem('kzn_state');if(s){const p=JSON.parse(s);state.wos=p.wos||state.wos;state.trucks=p.trucks||state.trucks;}}catch(e){}}
     _obRender();
     _obSetSync(ok);
