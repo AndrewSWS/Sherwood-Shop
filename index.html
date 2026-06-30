@@ -626,12 +626,15 @@ const PRODUCT_CATS = {
     sizes: {'16':['1x120'],'18':['1x120'],'20':['1x120'],'22':['1x120'],'24':['1x120']}
   },
   'Plenums': {
-    gauges: ['26','24','22','20'],
+    gauges: ['26'],
     sizes: {
-      '26':['13x20x36 Plenum Kit','13x20x48 Plenum Kit','Custom'],
-      '24':['13x20x36 Plenum Kit','13x20x48 Plenum Kit','Custom'],
-      '22':['Custom'],
-      '20':['Custom']
+      '26':[
+        '13x20x36','16.5x20x36','20x20x36','23.5x20x36',
+        '13x20x30','16.5x20x30','23.5x20x30',
+        '12.5x24x30','16x24x30','18.5x24x30','22x24x30',
+        '20x20x40',
+        'Custom'
+      ]
     }
   },
   'Other / Hardware': {
@@ -961,7 +964,7 @@ const _liDbIdMap = {};
 // ── SUPABASE: Load full state from DB ──
 async function sbLoadState() {
   try {
-    const [wosRaw, lisRaw, trucksRaw, stopsRaw, coilsRaw, configRaw, custsRaw, vendorsRaw] = await Promise.all([
+    const [wosRaw, lisRaw, trucksRaw, stopsRaw, coilsRaw, configRaw, custsRaw, vendorsRaw, catalogRaw] = await Promise.all([
       _sbGet('work_orders', 'order=created_at.asc&limit=500'),
       _sbGet('line_items', 'order=id.asc&limit=5000'),
       _sbGet('trucks', 'order=id.asc'),
@@ -969,7 +972,8 @@ async function sbLoadState() {
       _sbGet('coil_records', 'order=priority.asc&limit=500'),
       _sbGet('admin_config', 'select=key,value'),
       _sbGet('customers', 'order=name.asc&limit=2000'),
-      _sbGet('vendors', 'order=name.asc').catch(()=>[])
+      _sbGet('vendors', 'order=name.asc').catch(()=>[]),
+      _sbGet('product_catalog', 'order=category.asc,gauge.asc,sort_order.asc').catch(()=>[])
     ]);
     if (!wosRaw) return false; // offline
 
@@ -1048,6 +1052,40 @@ async function sbLoadState() {
       });
     }
 
+    // Load product catalog (gauges/sizes for dropdowns) from Supabase as the
+    // source of truth. REPLACE each category's gauges/sizes entirely on every
+    // load — do NOT merge — so that deletions made on one device (e.g. removing
+    // an old Plenum gauge) actually clear stale options on every other open
+    // screen, rather than leaving them re-appear via Object.assign-style merge.
+    // Skipped while someone has the Settings → Products editor open, same as
+    // the WO edit-form guard, so a mid-edit poll can't yank rows out from
+    // under an in-progress add/remove.
+    if (Array.isArray(catalogRaw) && catalogRaw.length && !window._editingProductCatalog) {
+      const byCat = {};
+      catalogRaw.forEach(row => {
+        const cat = row.category;
+        if (!byCat[cat]) byCat[cat] = { gauges: [], sizes: {} };
+        if (!byCat[cat].gauges.includes(row.gauge)) byCat[cat].gauges.push(row.gauge);
+        if (!byCat[cat].sizes[row.gauge]) byCat[cat].sizes[row.gauge] = [];
+        byCat[cat].sizes[row.gauge].push(row.size);
+        // Register weight directly into the existing weight tables so manual
+        // entry and QB import both see it, same as before.
+        if (row.weight != null && row.weight > 0) {
+          if (cat === 'Flat Sheet') {
+            SHEET_WEIGHTS[`${row.gauge}|${row.size.replace(' x ','x').replace('×','x')}`] = row.weight;
+          } else {
+            LINEAR_WEIGHTS[`${row.gauge}|${row.size}`] = { wt: row.weight, bundle: row.bundle_qty || 1 };
+          }
+        }
+      });
+      // Full replace per category that has DB rows — categories with zero DB
+      // rows fall back to whatever PRODUCT_CATS already had (the hardcoded
+      // seed), so an empty/not-yet-migrated table never wipes the UI.
+      Object.keys(byCat).forEach(cat => {
+        PRODUCT_CATS[cat] = byCat[cat];
+      });
+    }
+
     // Merge customers from DB — Supabase is the source of truth for new additions,
     // but the hardcoded snap list is the baseline. We merge: snap first, then
     // any DB customer not already in snap gets added.
@@ -1112,7 +1150,7 @@ function startSBPoll() {
   if (_sbPollTimer) return;
   _sbPollTimer = setInterval(async () => {
     // Skip entire poll cycle if user is actively editing — don't overwrite state
-    const editingNow = !!window._editingWOId || !!document.querySelector('#e-wonum') || !!document.querySelector('.wo-edit-form');
+    const editingNow = !!window._editingWOId || !!document.querySelector('#e-wonum') || !!document.querySelector('.wo-edit-form') || !!window._editingProductCatalog;
     if(editingNow){ updateBadges(); return; }
     const ok = await sbLoadState();
     if (ok) {
@@ -1571,6 +1609,11 @@ function updateQueueToggle(){
 }
 
 function nav(view,el){
+  // Safety net: clear the product-catalog edit lock on any navigation, in case
+  // someone leaves the Settings → Products panel open via a sidebar click
+  // instead of the explicit Close button — otherwise the poll would stay
+  // paused indefinitely.
+  if(view!=='settings') { window._editingProductCatalog=false; settingsProdCat=null; }
   state.activeView=view;
   document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));
   if(el)el.classList.add('active');
@@ -2968,10 +3011,8 @@ function setLIStatus(woId,itemId,status){
 // ══════════════════════════════════════════════════════
 let _boardTimer = null;
 let _boardClockTimer = null;
-let _boardScaleFingerprint = null;
 
 function enterBoardView(){
-  _boardScaleFingerprint = null; // force a fresh scale measurement on open
   document.getElementById('board-overlay').classList.add('active');
   if(document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(()=>{});
   renderBoardView();
@@ -3265,12 +3306,7 @@ function renderBoardView(){
       })()+'</div>';
   }).join('');
 
-  // Auto-scale: measure natural height OFF-SCREEN (hidden clone) then apply
-  // a single scale to the live grid. This avoids the old approach of resetting
-  // the visible grid to full size, forcing a reflow, then snapping it back down —
-  // which on large 4K TVs produced a very visible "resize flash" on every
-  // 15s board refresh. We also skip the whole measure/scale pass entirely if
-  // the rendered content hasn't actually changed since last time.
+  // Auto-scale: measure natural height then scale to fit
   setTimeout(()=>{
     const overlay = document.getElementById('board-overlay');
     const header = overlay ? overlay.querySelector('.board-header') : null;
@@ -3278,57 +3314,44 @@ function renderBoardView(){
     const scaler = document.getElementById('board-scaler');
     if(!grid || !overlay || !scaler) return;
 
-    // Skip re-measuring/rescaling if nothing actually changed (same HTML +
-    // same viewport size as last successful scale). This is what stops the
-    // visible "snap" on routine 15s polls when the board content is identical.
-    const contentKey = grid.innerHTML.length + ':' + grid.children.length;
-    const viewportKey = overlay.offsetWidth + 'x' + overlay.offsetHeight;
-    const fingerprint = contentKey + '|' + viewportKey;
-    if(_boardScaleFingerprint === fingerprint){
-      renderBoardPickups();
-      return;
-    }
-
     const headerH = header ? header.offsetHeight : 60;
     const pickupBarH = pickupBar ? pickupBar.offsetHeight : 36;
     const availH = overlay.offsetHeight - headerH - pickupBarH - 4;
 
-    // Measure natural height using a hidden off-screen clone instead of
-    // resetting the live, on-screen grid — this is what eliminates the
-    // visible resize/flash on every refresh.
-    const measureEl = grid.cloneNode(true);
-    measureEl.style.transform = 'none';
-    measureEl.style.width = grid.parentElement ? grid.parentElement.offsetWidth + 'px' : '100%';
-    measureEl.style.height = 'auto';
-    measureEl.style.position = 'absolute';
-    measureEl.style.visibility = 'hidden';
-    measureEl.style.pointerEvents = 'none';
-    measureEl.style.left = '-99999px';
-    measureEl.style.top = '0';
-    document.body.appendChild(measureEl);
-    const naturalH = measureEl.scrollHeight;
-    document.body.removeChild(measureEl);
+    // Step 1: reset all transforms on grid and scaler
+    scaler.style.height = 'auto';
+    scaler.style.overflow = 'visible';
+    grid.style.transform = 'none';
+    grid.style.width = '100%';
+    grid.style.height = 'auto';
+    grid.style.overflow = 'visible';
+    const cols = grid.querySelectorAll('.board-day');
+    cols.forEach(col=>{
+      col.style.height = 'auto';
+      col.style.overflow = 'visible';
+    });
 
-    // Apply scale directly to the live grid — no intermediate full-size flash.
+    // Step 2: force browser to recalculate layout
+    void overlay.offsetHeight;
+
+    // Step 3: measure the natural rendered height of the grid
+    const naturalH = grid.scrollHeight;
+
+    // Step 4: scale if needed
     if(naturalH > availH && naturalH > 0){
       const scale = availH / naturalH;
       grid.style.transform = `scale(${scale})`;
       grid.style.transformOrigin = 'top left';
       grid.style.width = `${+(100/scale).toFixed(4)}%`;
-      grid.style.height = 'auto';
-      grid.style.overflow = 'visible';
+      // Scaler contains the scaled grid — set its height to the post-scale height
       scaler.style.height = `${Math.round(naturalH * scale)}px`;
       scaler.style.overflow = 'hidden';
-    } else {
-      grid.style.transform = 'none';
-      grid.style.width = '100%';
-      grid.style.height = 'auto';
       grid.style.overflow = 'visible';
+    } else {
       scaler.style.height = availH + 'px';
       scaler.style.overflow = 'hidden';
     }
 
-    _boardScaleFingerprint = fingerprint;
     renderBoardPickups();
   }, 400);
 }
@@ -8567,7 +8590,7 @@ function renderSettingsProducts(){
         const gaugeCount=pc.gauges.length;
         const sizeCount=Object.values(pc.sizes||{}).flat().length;
         return`<div class="card card-sm" style="cursor:pointer;border-color:${settingsProdCat===cat?'var(--blue)':'var(--border)'};background:${settingsProdCat===cat?'var(--blue-l)':''};"
-          onclick="settingsProdCat='${cat}';renderSettings(document.getElementById('content'))">
+          onclick="window._editingProductCatalog=true;settingsProdCat='${cat}';renderSettings(document.getElementById('content'))">
           <div style="font-weight:600;font-size:13px;margin-bottom:4px">${cat}</div>
           <div style="font-size:11px;color:var(--text3)">${gaugeCount} gauge${gaugeCount!==1?'s':''} · ${sizeCount} size${sizeCount!==1?'s':''}</div>
         </div>`;
@@ -8591,7 +8614,7 @@ function renderProductCatEditor(){
   return`<div class="card">
   <div class="flex-between mb12">
     <div class="section-head" style="margin:0">${cat} — Catalog Editor</div>
-    <button class="btn btn-sm" onclick="settingsProdCat=null;renderSettings(document.getElementById('content'))">✕ Close</button>
+    <button class="btn btn-sm" onclick="window._editingProductCatalog=false;settingsProdCat=null;renderSettings(document.getElementById('content'))">✕ Close</button>
   </div>
 
   ${isHardware?renderHardwareEditor(pc):renderStructuredEditor(pc,cat)}
@@ -8717,32 +8740,76 @@ function updateProductWeight(cat, gauge, size, wtVal, bundleVal){
   toast('✓ Weight updated — '+gauge+' '+size+': '+(wt||'removed')+' lbs/pc');
 }
 
+// ── Product Catalog: Supabase-backed mutators ──────────────────────────
+// Each mutator sets window._editingProductCatalog while its DB write is in
+// flight, which pauses the 15-90s poll cycle entirely (see startSBPoll's
+// editingNow check) so a concurrent poll can never overwrite PRODUCT_CATS
+// mid-edit. The in-memory PRODUCT_CATS object is updated immediately for
+// instant UI feedback; the DB write happens in the background and the lock
+// clears once it settles (success or failure — failure just means the next
+// poll will resync from whatever's actually in Supabase, same recovery
+// behavior as everywhere else in the app).
+
+async function sbInsertCatalogRow(category, gauge, size, weight, bundleQty){
+  try{
+    const r = await fetch(`${_SB_URL}/rest/v1/product_catalog`, {
+      method: 'POST',
+      headers: { ..._SB_HDR, 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ category, gauge, size, weight: weight||null, bundle_qty: bundleQty||null })
+    });
+    if(!r.ok) console.warn('sbInsertCatalogRow error', await r.text());
+  } catch(e){ console.warn('sbInsertCatalogRow error', e); }
+}
+
+async function sbDeleteCatalogRows(category, gauge, size){
+  try{
+    let q = `category=eq.${encodeURIComponent(category)}&gauge=eq.${encodeURIComponent(gauge)}`;
+    if(size != null) q += `&size=eq.${encodeURIComponent(size)}`;
+    const r = await fetch(`${_SB_URL}/rest/v1/product_catalog?${q}`, {
+      method: 'DELETE',
+      headers: _SB_HDR
+    });
+    if(!r.ok) console.warn('sbDeleteCatalogRows error', await r.text());
+  } catch(e){ console.warn('sbDeleteCatalogRows error', e); }
+}
+
 function addCatGauge(cat){
   const safeId=cat.replace(/\W/g,'');
   const inp=document.getElementById('new-gauge-'+safeId);
   const val=inp?inp.value.trim():'';
   if(!val)return;
   if(PRODUCT_CATS[cat].gauges.includes(val)){toast('Gauge already exists');return;}
+  window._editingProductCatalog = true;
   PRODUCT_CATS[cat].gauges.push(val);
   if(!PRODUCT_CATS[cat].sizes[val])PRODUCT_CATS[cat].sizes[val]=[];
   toast(`✓ ${val} added to ${cat}`);
   renderSettings(document.getElementById('content'));
+  // A bare gauge with no size yet has nothing to insert until a size is
+  // added — addCatSize is what actually creates rows for this gauge.
+  window._editingProductCatalog = false;
 }
 
-function removeCatGauge(cat,gauge){
+async function removeCatGauge(cat,gauge){
   if(!confirm(`Remove gauge ${gauge} and all its sizes from ${cat}?`))return;
+  window._editingProductCatalog = true;
   PRODUCT_CATS[cat].gauges=PRODUCT_CATS[cat].gauges.filter(g=>g!==gauge);
   delete PRODUCT_CATS[cat].sizes[gauge];
   renderSettings(document.getElementById('content'));
+  try{
+    await sbDeleteCatalogRows(cat, gauge, null);
+  } finally {
+    window._editingProductCatalog = false;
+  }
 }
 
-function addCatSize(cat,gauge){
+async function addCatSize(cat,gauge){
   const safeId=cat.replace(/\W/g,'');
   const sizeInp=document.getElementById(`new-size-${safeId}-${gauge}`);
   const wtInp=document.getElementById(`new-wt-${safeId}-${gauge}`);
   const size=sizeInp?sizeInp.value.trim():'';
   const wt=wtInp?parseFloat(wtInp.value)||0:0;
   if(!size)return;
+  window._editingProductCatalog = true;
   if(!PRODUCT_CATS[cat].sizes[gauge])PRODUCT_CATS[cat].sizes[gauge]=[];
   PRODUCT_CATS[cat].sizes[gauge].push(size);
   // Register weight if provided
@@ -8756,32 +8823,56 @@ function addCatSize(cat,gauge){
   }
   toast(`✓ ${size} added`);
   renderSettings(document.getElementById('content'));
+  try{
+    await sbInsertCatalogRow(cat, gauge, size, wt>0?wt:null, 1);
+  } finally {
+    window._editingProductCatalog = false;
+  }
 }
 
-function removeCatSize(cat,gauge,idx){
+async function removeCatSize(cat,gauge,idx){
+  const size = PRODUCT_CATS[cat].sizes[gauge][idx];
+  window._editingProductCatalog = true;
   PRODUCT_CATS[cat].sizes[gauge].splice(idx,1);
   renderSettings(document.getElementById('content'));
+  try{
+    if(size != null) await sbDeleteCatalogRows(cat, gauge, size);
+  } finally {
+    window._editingProductCatalog = false;
+  }
 }
 
-function addHardwareItem(){
+async function addHardwareItem(){
   const nameInp=document.getElementById('new-hw-item');
   const pkgInp=document.getElementById('new-hw-pkg');
   const name=nameInp?nameInp.value.trim():'';
   const pkg=pkgInp?pkgInp.value.trim():'';
   if(!name)return;
+  window._editingProductCatalog = true;
   if(!PRODUCT_CATS['Other / Hardware'].sizes['—'])PRODUCT_CATS['Other / Hardware'].sizes['—']=[];
   PRODUCT_CATS['Other / Hardware'].sizes['—'].push(name);
   if(pkg)HARDWARE_PACKAGING[name]=pkg;
   toast(`✓ ${name} added`);
   renderSettings(document.getElementById('content'));
+  try{
+    await sbInsertCatalogRow('Other / Hardware', '—', name, null, null);
+  } finally {
+    window._editingProductCatalog = false;
+  }
 }
 
-function removeHardwareItem(i){
+async function removeHardwareItem(i){
   const items=PRODUCT_CATS['Other / Hardware'].sizes['—']||[];
   const name=items[i];
+  window._editingProductCatalog = true;
   items.splice(i,1);
   if(name)delete HARDWARE_PACKAGING[name];
   renderSettings(document.getElementById('content'));
+  try{
+    if(name) await sbDeleteCatalogRows('Other / Hardware', '—', name);
+  } finally {
+    window._editingProductCatalog = false;
+  }
 }
 
 
