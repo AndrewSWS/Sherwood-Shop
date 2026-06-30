@@ -8,6 +8,8 @@
 <meta name="apple-mobile-web-app-title" content="Sherwood Shop">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sherwood Steel — Shop &amp; Delivery</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <meta name="theme-color" content="#1C2E1C">
 <meta name="mobile-web-app-capable" content="yes">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -7271,6 +7273,174 @@ const ZONE_TO_GROUP = {
   'New York':'g-new-york'
 };
 
+const CITY_COORDS = {
+  'Allentown|PA':[40.5977756,-75.5393155],
+  'Ambler|PA':[40.1545535,-75.2215651],
+  'Atco|NJ':[39.7697878,-74.887946],
+  'Baltimore|MD':[39.2905023,-76.6104072],
+  'Bellmawr|NJ':[39.8670843,-75.0932352],
+  'Bensalem|PA':[40.0994425,-74.9325683],
+  'Berlin|NJ':[39.7913685,-74.9293769],
+  'Bethlehem|PA':[40.6702816,-75.329557],
+  'Birdsboro|PA':[40.2645371,-75.8040852],
+  'Blackwood|NJ':[39.8023363,-75.0640602],
+  'Bordentown|NJ':[40.1441425,-74.7102597],
+  'Bridgeport|PA':[40.1048838,-75.3383027],
+  'Bristol|PA':[40.1006661,-74.8518311],
+  'Broomall|PA':[39.967933,-75.347048],
+  'Burlington|NJ':[40.0705324,-74.8661766],
+  'Camp Hill|PA':[40.2398118,-76.9199742],
+  'Cape May Court House|NJ':[39.0826135,-74.8237786],
+  'Cape May Ct. House|NJ':[39.0826135,-74.8237786],
+  'Cherry Hill|NJ':[39.8817088,-74.955948],
+  'Chester|PA':[39.8400941,-75.3703662],
+  'Cinnaminson|NJ':[40.0026501,-74.9968543],
+  'Claymont|DE':[39.8006685,-75.4596404],
+  'Clayton|NJ':[39.6610672,-75.0786357],
+  'Clifton|NJ':[40.843339,-74.1533563],
+  'Coatesville|PA':[39.9831616,-75.8238355],
+  'Collegeville|PA':[40.1856597,-75.451571],
+  'Colmar|PA':[40.2738379,-75.2508229],
+  'Cranbury|NJ':[40.3159561,-74.5088945],
+  'Cranford|NJ':[40.6569929,-74.3059546],
+  'Croydon|PA':[40.0873329,-74.9034996],
+  'Dayton|NJ':[40.372607,-74.5101536],
+  'Douglassville|PA':[40.2590132,-75.7226116],
+  'Dover|DE':[39.158168,-75.5243682],
+  'Downingtown|PA':[40.0064958,-75.7032742],
+  'Drexel|PA':[39.9470567,-75.2921301],
+  'Eagleville|PA':[40.1595501,-75.4082385],
+  'Edison|NJ':[40.5054763,-74.3939339],
+  'Egg Harbor Township|NJ':[39.3480422,-74.663464],
+  'Egg Harbor|NJ':[39.3480422,-74.663464],
+  'Elkton|MD':[39.6067789,-75.8332718],
+  'Elmsford|NY':[41.0550969,-73.8201337],
+  'Ewing|NJ':[40.2450268,-74.7863698],
+  'Exton|PA':[40.0325817,-75.6274583],
+  'Fairless Hills|PA':[40.1795537,-74.8551644],
+  'Fallsington|PA':[40.1873314,-74.8187743],
+  'Feastersville|PA':[40.1439987,-75.0051694],
+  'Feasterville|PA':[40.1439987,-75.0051694],
+  'Florence|NJ':[40.1181399,-74.8097703],
+  'Florham Park|NJ':[40.7772437,-74.3880699],
+  'Fogelsville|PA':[40.5832443,-75.6326395],
+  'Folcroft|PA':[39.8913853,-75.2799884],
+  'Glendora|NJ':[39.8388611,-75.0698754],
+  'Glenolden|PA':[39.9029561,-75.291653],
+  'Hainesport|NJ':[39.9809263,-74.8331674],
+  'Hamilton|NJ':[40.2482028,-74.6985891],
+  'Harleysville|PA':[40.2795476,-75.3871206],
+  'Harrington|DE':[38.9237244,-75.5777033],
+  'Hatfield|PA':[40.2798274,-75.2993417],
+  'Hillsborough|NJ':[40.5106594,-74.6472522],
+  'Holmes|PA':[39.901253,-75.3076904],
+  'Huntingdon Valley|PA':[40.1206597,-75.0552739],
+  'Ivyland|PA':[40.2078863,-75.0726707],
+  'Jamesburg|NJ':[40.3536486,-74.442969],
+  'Kenilworth|NJ':[40.6772404,-74.2912872],
+  'Kennett Square|PA':[39.8467767,-75.7116032],
+  'King of Prussia|PA':[40.0972222,-75.3761952],
+  'Lakewood|NJ':[40.0807404,-74.2061931],
+  'Lancaster|PA':[40.0033209,-76.2363248],
+  'Langhorne|PA':[40.1745538,-74.9226665],
+  'Lansdale|PA':[40.2414952,-75.2837862],
+  'Lebanon|PA':[40.3392151,-76.4262102],
+  'Levittown|PA':[40.1344021,-74.8565613],
+  'Lodi|NJ':[40.8775996,-74.0850769],
+  'Lumberton|NJ':[39.9592134,-74.8073996],
+  'Magnolia|NJ':[39.855156,-75.040671],
+  'Mahwah|NJ':[41.0792097,-74.1841702],
+  'Malvern|PA':[40.0362184,-75.5138118],
+  'Marlton|NJ':[39.8912248,-74.9218324],
+  'Millville|NJ':[39.3985083,-75.0612295],
+  'Montgomeryville|PA':[40.2314755,-75.2231106],
+  'Moorestown|NJ':[39.9635321,-74.9505802],
+  'Morrisville|PA':[40.2086471,-74.7746182],
+  'Morton|PA':[39.9098345,-75.3235215],
+  'Mount Holly|NJ':[39.9931696,-74.7855812],
+  'Mt Kisco|NY':[41.2042616,-73.7270761],
+  'Mt. Bethel|PA':[40.9048188,-75.1115654],
+  'Mt. Holly|NJ':[39.9931696,-74.7855812],
+  'Mt. Laurel|NJ':[39.9358189,-74.9091853],
+  'New Castle|DE':[39.6620397,-75.5668166],
+  'Newark|DE':[39.6837226,-75.7496572],
+  'Newburgh|NY':[41.5034271,-74.0104178],
+  'Newport|DE':[39.7137237,-75.6093709],
+  'Norristown|PA':[40.121497,-75.3399048],
+  'North Plainfield|NJ':[40.6137438,-74.4232507],
+  'Norwood|NJ':[40.9924695,-73.9536163],
+  'Oley|PA':[40.3887489,-75.79142],
+  'Ottsville|PA':[40.4731586,-75.1610067],
+  'Palmyra|NJ':[40.0072707,-75.0319086],
+  'Paterson|NJ':[40.9300511,-74.156292],
+  'Pennington|NJ':[40.3273123,-74.7989389],
+  'Pennsauken|NJ':[39.9701797,-75.0552739],
+  'Perth Amboy|NJ':[40.5090949,-74.2766186],
+  'Philadelphia|PA':[39.9525839,-75.1652215],
+  'Phoenixville|PA':[40.1303822,-75.5149128],
+  'Pitman|NJ':[39.7332171,-75.1315753],
+  'Pittsgrove|NJ':[39.5261948,-75.1673485],
+  'Pleasantville|NJ':[39.3983456,-74.511172],
+  'Plymouth Meeting|PA':[40.1110194,-75.2887369],
+  'Port Chester|NY':[41.0017643,-73.6656834],
+  'Pottstown|PA':[40.2453741,-75.6496302],
+  'Quakertown|PA':[40.4417682,-75.3415667],
+  'Reading|PA':[40.403733,-75.9405178],
+  'Riverton|NJ':[40.0097264,-75.0120407],
+  'Rockledge|PA':[40.0812219,-75.0896176],
+  'Runnemeade|NJ':[39.8525918,-75.0786357],
+  'Runnemede|NJ':[39.8525918,-75.0786357],
+  'Saddle Brook|NJ':[40.9041233,-74.0946311],
+  'Sewell|NJ':[39.7662167,-75.1441926],
+  'Sharon Hill|PA':[39.9065017,-75.2715732],
+  'Shrewsbury|NJ':[40.323974,-74.061559],
+  'Smyrna|DE':[39.2998339,-75.6046494],
+  'Souderton|PA':[40.3117706,-75.3251759],
+  'South Plainfield|NJ':[40.56829,-74.4173877],
+  'Southampton|PA':[40.1744997,-75.0438405],
+  'Telford|PA':[40.324992,-75.3281748],
+  'Temple|PA':[40.4087042,-75.9215962],
+  'Tinton Falls|NJ':[40.3038147,-74.0887576],
+  'Toms River|NJ':[40.0207099,-74.2061931],
+  'Totowa|NJ':[40.9025415,-74.223802],
+  'Trenton|NJ':[40.222434,-74.7483371],
+  'Trevose|PA':[40.152151,-74.9807852],
+  'Tullytown|PA':[40.1392766,-74.8146076],
+  'Upper Darby|PA':[39.9573936,-75.2654063],
+  'Vincetown|NJ':[39.9319279,-74.7483371],
+  'Vineland|NJ':[39.4787827,-75.0377502],
+  'Wall Township|NJ':[40.1642213,-74.0887576],
+  'Warminster|PA':[40.2060731,-75.10768],
+  'Warrington|PA':[40.2492741,-75.1340604],
+  'West Berlin|NJ':[39.8008256,-74.9150313],
+  'West Chester|PA':[39.959884,-75.6062135],
+  'West Conshohocken|PA':[40.0698321,-75.3162951],
+  'Westville|NJ':[39.8702951,-75.1370254],
+  'Wharton|NJ':[40.8988296,-74.5830901],
+  'Whippany|NJ':[40.8254055,-74.4022355],
+  'Whiting|NJ':[39.9543627,-74.378734],
+  'Wildwood|NJ':[38.9840667,-74.8247205],
+  'Willingboro|NJ':[40.0330851,-74.8857989],
+  'Willow Grove|PA':[40.1439985,-75.1157286],
+  'Wilmington|DE':[39.744655,-75.5483909],
+  'Woodbury Heights|NJ':[39.8135459,-75.145782],
+  'Woodstown|NJ':[39.6514372,-75.327953],
+  'Wrightstown|NJ':[40.0362576,-74.6178406],
+  'Yonkers|NY':[40.9318589,-73.899008],
+  'York|PA':[39.961066,-76.7269596],
+  'langhorne|PA':[40.1745538,-74.9226665]
+};
+
+// Live lookup: city+state -> [lat, lon]. Static table, not geocoded on the
+// fly — Nominatim's usage policy caps requests and flags repeated identical
+// queries (see weather fetch fix), so baking in city-level coordinates here
+// avoids hammering that API every time someone opens the customer map.
+function getCustCoords(cust){
+  if(!cust) return null;
+  const key = `${cust.city||''}|${cust.state||''}`;
+  return CITY_COORDS[key] || null;
+}
+
 function initGroups(){
   if(!state.deliveryGroups||!state.deliveryGroups.length){
     state.deliveryGroups=DEFAULT_GROUPS.map(g=>({...g}));
@@ -7349,6 +7519,7 @@ function getDeliverySuggestions(){
 // ── RENDER getCustomers() VIEW ──────────────────────────────────────────────
 let custSearch_q='';
 let custSearch_zone='';
+let custView='list'; // 'list' or 'map'
 let custEditName=null;
 
 function filterCustomersInPlace(q){
@@ -7379,7 +7550,7 @@ function renderCustomers(c){
   c.innerHTML=`
   <div class="grid2 gap16" style="margin-bottom:16px">
 
-    <!-- LEFT: Customer list -->
+    <!-- LEFT: Customer list or map -->
     <div>
       <div class="card card-sm mb12">
         <div class="flex gap8 flex-wrap">
@@ -7388,8 +7559,20 @@ function renderCustomers(c){
           <select onchange="custSearch_zone=this.value;renderCustomers()" style="width:160px">
             ${zones.map(z=>`<option${custSearch_zone===z?' selected':''}>${z}</option>`).join('')}
           </select>
+          <div class="flex gap4" style="border:1px solid var(--border);border-radius:var(--rad);padding:2px">
+            <button class="btn btn-sm${custView==='list'?' btn-primary':''}" style="padding:4px 10px"
+              onclick="custView='list';renderCustomers()">List</button>
+            <button class="btn btn-sm${custView==='map'?' btn-primary':''}" style="padding:4px 10px"
+              onclick="custView='map';renderCustomers()">🗺 Map</button>
+          </div>
         </div>
       </div>
+      ${custView==='map' ? `
+      <div class="card card-sm mb8" style="padding:8px 12px">
+        <div style="font-size:11px;color:var(--text3)">Showing ${filtered.length} customer${filtered.length===1?'':'s'} · colored by delivery region · click a pin for details</div>
+      </div>
+      <div id="cust-map" style="height:620px;border-radius:var(--rad2);border:1px solid var(--border);overflow:hidden"></div>
+      ` : `
       <div style="max-height:620px;overflow-y:auto">
         ${filtered.map(cu=>{
           const meta=getCustMeta(cu.name);
@@ -7413,6 +7596,7 @@ function renderCustomers(c){
         }).join('')}
         ${filtered.length===0?'<div style="text-align:center;padding:24px;color:var(--text3)">No customers match</div>':''}
       </div>
+      `}
     </div>
 
     <!-- RIGHT: Edit panel + Groups -->
@@ -7446,6 +7630,70 @@ function renderCustomers(c){
       </div>
     </div>
   </div>`;
+
+  if(custView==='map') renderCustomerMap(filtered);
+}
+
+// Renders the Customer Admin map view using Leaflet + OpenStreetMap tiles.
+// Coordinates come from the static CITY_COORDS table (city-level precision),
+// never geocoded live — repeatedly geocoding the same cities on every map
+// open would risk the same Nominatim rate-limit problem that broke the
+// weather widget. Pins are colored by each customer's delivery group, same
+// color used everywhere else in the app (list view dots, schedule board).
+let _custMapInstance = null;
+function renderCustomerMap(custList){
+  const container = document.getElementById('cust-map');
+  if(!container || typeof L === 'undefined') return;
+
+  // Destroy any previous map instance before re-creating — Leaflet throws if
+  // you call L.map() on a container that already has one attached, which
+  // would otherwise happen every time the filter/search changes.
+  if(_custMapInstance){ _custMapInstance.remove(); _custMapInstance = null; }
+
+  const map = L.map(container, { scrollWheelZoom: true }).setView([40.0, -75.1], 8);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 18,
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(map);
+  _custMapInstance = map;
+
+  // Mark the shop itself so the map always has a clear reference point.
+  L.circleMarker([BENSALEM_LAT, BENSALEM_LON], {
+    radius: 8, color: '#1C2E1C', fillColor: '#1C2E1C', fillOpacity: 1, weight: 2
+  }).addTo(map).bindPopup('<strong>Sherwood Steel — Bensalem, PA</strong><br>Shop location');
+
+  const bounds = [[BENSALEM_LAT, BENSALEM_LON]];
+  let plotted = 0, skipped = 0;
+
+  custList.forEach(cu=>{
+    const coords = getCustCoords(cu);
+    if(!coords){ skipped++; return; }
+    const grp = getCustGroup(cu.name);
+    const color = grp ? grp.color : '#888888';
+    const marker = L.circleMarker(coords, {
+      radius: 6, color, fillColor: color, fillOpacity: 0.85, weight: 1.5
+    }).addTo(map);
+    const meta = getCustMeta(cu.name);
+    marker.bindPopup(
+      `<strong>${cu.name}</strong><br>`+
+      `${cu.city||''}, ${cu.state||''}<br>`+
+      `<span style="color:${color}">●</span> ${grp?grp.name:(cu.zone||'No region')}`+
+      (meta.phone?`<br>📞 ${meta.phone}`:'')
+    );
+    marker.on('click', ()=>{ selectCustEdit(cu.name); });
+    bounds.push(coords);
+    plotted++;
+  });
+
+  if(bounds.length>1) map.fitBounds(bounds, { padding:[30,30], maxZoom: 11 });
+
+  if(skipped>0){
+    const note = document.createElement('div');
+    note.style.cssText='position:absolute;bottom:8px;left:8px;background:#fff8e6;border:1px solid #FAC775;border-radius:4px;padding:4px 8px;font-size:11px;color:#b8860b;z-index:1000';
+    note.textContent = `⚠ ${skipped} customer${skipped===1?'':'s'} not shown (no coordinates for their city)`;
+    container.style.position='relative';
+    container.appendChild(note);
+  }
 }
 
 function selectCustEdit(name){
