@@ -2968,8 +2968,10 @@ function setLIStatus(woId,itemId,status){
 // ══════════════════════════════════════════════════════
 let _boardTimer = null;
 let _boardClockTimer = null;
+let _boardScaleFingerprint = null;
 
 function enterBoardView(){
+  _boardScaleFingerprint = null; // force a fresh scale measurement on open
   document.getElementById('board-overlay').classList.add('active');
   if(document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(()=>{});
   renderBoardView();
@@ -3263,7 +3265,12 @@ function renderBoardView(){
       })()+'</div>';
   }).join('');
 
-  // Auto-scale: measure natural height then scale to fit
+  // Auto-scale: measure natural height OFF-SCREEN (hidden clone) then apply
+  // a single scale to the live grid. This avoids the old approach of resetting
+  // the visible grid to full size, forcing a reflow, then snapping it back down —
+  // which on large 4K TVs produced a very visible "resize flash" on every
+  // 15s board refresh. We also skip the whole measure/scale pass entirely if
+  // the rendered content hasn't actually changed since last time.
   setTimeout(()=>{
     const overlay = document.getElementById('board-overlay');
     const header = overlay ? overlay.querySelector('.board-header') : null;
@@ -3271,44 +3278,57 @@ function renderBoardView(){
     const scaler = document.getElementById('board-scaler');
     if(!grid || !overlay || !scaler) return;
 
+    // Skip re-measuring/rescaling if nothing actually changed (same HTML +
+    // same viewport size as last successful scale). This is what stops the
+    // visible "snap" on routine 15s polls when the board content is identical.
+    const contentKey = grid.innerHTML.length + ':' + grid.children.length;
+    const viewportKey = overlay.offsetWidth + 'x' + overlay.offsetHeight;
+    const fingerprint = contentKey + '|' + viewportKey;
+    if(_boardScaleFingerprint === fingerprint){
+      renderBoardPickups();
+      return;
+    }
+
     const headerH = header ? header.offsetHeight : 60;
     const pickupBarH = pickupBar ? pickupBar.offsetHeight : 36;
     const availH = overlay.offsetHeight - headerH - pickupBarH - 4;
 
-    // Step 1: reset all transforms on grid and scaler
-    scaler.style.height = 'auto';
-    scaler.style.overflow = 'visible';
-    grid.style.transform = 'none';
-    grid.style.width = '100%';
-    grid.style.height = 'auto';
-    grid.style.overflow = 'visible';
-    const cols = grid.querySelectorAll('.board-day');
-    cols.forEach(col=>{
-      col.style.height = 'auto';
-      col.style.overflow = 'visible';
-    });
+    // Measure natural height using a hidden off-screen clone instead of
+    // resetting the live, on-screen grid — this is what eliminates the
+    // visible resize/flash on every refresh.
+    const measureEl = grid.cloneNode(true);
+    measureEl.style.transform = 'none';
+    measureEl.style.width = grid.parentElement ? grid.parentElement.offsetWidth + 'px' : '100%';
+    measureEl.style.height = 'auto';
+    measureEl.style.position = 'absolute';
+    measureEl.style.visibility = 'hidden';
+    measureEl.style.pointerEvents = 'none';
+    measureEl.style.left = '-99999px';
+    measureEl.style.top = '0';
+    document.body.appendChild(measureEl);
+    const naturalH = measureEl.scrollHeight;
+    document.body.removeChild(measureEl);
 
-    // Step 2: force browser to recalculate layout
-    void overlay.offsetHeight;
-
-    // Step 3: measure the natural rendered height of the grid
-    const naturalH = grid.scrollHeight;
-
-    // Step 4: scale if needed
+    // Apply scale directly to the live grid — no intermediate full-size flash.
     if(naturalH > availH && naturalH > 0){
       const scale = availH / naturalH;
       grid.style.transform = `scale(${scale})`;
       grid.style.transformOrigin = 'top left';
       grid.style.width = `${+(100/scale).toFixed(4)}%`;
-      // Scaler contains the scaled grid — set its height to the post-scale height
+      grid.style.height = 'auto';
+      grid.style.overflow = 'visible';
       scaler.style.height = `${Math.round(naturalH * scale)}px`;
       scaler.style.overflow = 'hidden';
-      grid.style.overflow = 'visible';
     } else {
+      grid.style.transform = 'none';
+      grid.style.width = '100%';
+      grid.style.height = 'auto';
+      grid.style.overflow = 'visible';
       scaler.style.height = availH + 'px';
       scaler.style.overflow = 'hidden';
     }
 
+    _boardScaleFingerprint = fingerprint;
     renderBoardPickups();
   }, 400);
 }
