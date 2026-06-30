@@ -1046,6 +1046,7 @@ async function sbLoadState() {
             case 'linear_weights': {const lw=typeof val==='string'?JSON.parse(val):val;if(lw&&typeof lw==='object'){Object.assign(LINEAR_WEIGHTS,lw);console.log('[adminConfig] loaded linear_weights, keys:',Object.keys(lw).length);}} break;
             case 'sheet_weights':  {const sw=typeof val==='string'?JSON.parse(val):val;if(sw&&typeof sw==='object')Object.assign(SHEET_WEIGHTS,sw);} break;
             case 'weatherGeocodeCache': {const wgc=typeof val==='string'?JSON.parse(val):val;if(wgc&&typeof wgc==='object'){if(!state.adminConfig)state.adminConfig={};state.adminConfig.weatherGeocodeCache=wgc;}} break;
+            case 'cityCoordsOverride': {const cco=typeof val==='string'?JSON.parse(val):val;if(cco&&typeof cco==='object'){if(!state.adminConfig)state.adminConfig={};state.adminConfig.cityCoordsOverride=cco;}} break;
           }
         } catch(e) {}
       });
@@ -1890,6 +1891,14 @@ function saveNewCustomer(){
     zip: newCust.zip||null, zone: newCust.zone||null,
     contact: contact||null, phone: phone||null, email: email||null
   }).catch(e=>console.warn('sbPost customer error',e));
+
+  // If this customer's city isn't already in CITY_COORDS, geocode it once
+  // in the background so it appears on the Customer Admin map. Fire-and-
+  // forget — the map will simply show it on next render once this resolves,
+  // no need to block the rest of the save flow on it.
+  if(newCust.city && newCust.state){
+    geocodeNewCustomerCity(newCust.city, newCust.state, newCust.zip).catch(()=>{});
+  }
 
   // Select into the WO form
   selectCust(newCust);
@@ -7431,14 +7440,45 @@ const CITY_COORDS = {
   'langhorne|PA':[40.1745538,-74.9226665]
 };
 
-// Live lookup: city+state -> [lat, lon]. Static table, not geocoded on the
-// fly — Nominatim's usage policy caps requests and flags repeated identical
-// queries (see weather fetch fix), so baking in city-level coordinates here
-// avoids hammering that API every time someone opens the customer map.
+// Live lookup: city+state -> [lat, lon]. Checks the static CITY_COORDS table
+// first, then a runtime overlay (state.adminConfig.cityCoordsOverride) that
+// holds cities geocoded on-the-fly when a NEW customer is added in a town
+// not already in the static table — see geocodeNewCustomerCity below.
 function getCustCoords(cust){
   if(!cust) return null;
   const key = `${cust.city||''}|${cust.state||''}`;
-  return CITY_COORDS[key] || null;
+  if(CITY_COORDS[key]) return CITY_COORDS[key];
+  const overrides = state.adminConfig?.cityCoordsOverride;
+  if(overrides && overrides[key]) return overrides[key];
+  return null;
+}
+
+// One-time geocode for a NEW customer's city, only called from
+// saveNewCustomer — NOT from any page-load or polling path. This is the one
+// legitimate case for a live Nominatim call: it fires once per genuinely new
+// city (existing cities already hit the CITY_COORDS table above and never
+// reach here), and the result is cached into adminConfig + synced to
+// Supabase so it's never re-geocoded again, by this device or any other.
+async function geocodeNewCustomerCity(city, state_, zip){
+  if(!city || !state_) return;
+  const key = `${city}|${state_}`;
+  if(CITY_COORDS[key]) return; // already known, nothing to do
+  if(state.adminConfig?.cityCoordsOverride?.[key]) return; // already geocoded before
+  try{
+    const query = zip ? `${city}, ${state_} ${zip}` : `${city}, ${state_}`;
+    const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&country=US&format=json&limit=1`);
+    const geoData = await geoRes.json();
+    if(!geoData.length) return; // no result — customer just won't have a pin until manually added
+    const coords = [parseFloat(geoData[0].lat), parseFloat(geoData[0].lon)];
+    if(!state.adminConfig) state.adminConfig = {};
+    if(!state.adminConfig.cityCoordsOverride) state.adminConfig.cityCoordsOverride = {};
+    state.adminConfig.cityCoordsOverride[key] = coords;
+    saveState();
+    sbSaveAdminConfig('cityCoordsOverride', state.adminConfig.cityCoordsOverride)
+      .catch(e=>console.warn('cityCoordsOverride save error',e));
+  } catch(e){
+    console.warn('geocodeNewCustomerCity error', e);
+  }
 }
 
 function initGroups(){
