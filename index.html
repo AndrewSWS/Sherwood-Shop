@@ -8704,7 +8704,13 @@ function renderWeightRows(cat, g, sizes, isFlatSheet, safecat){
         +' onblur="updateProductWeight(\'' +cat+ '\',\'' +g+ '\',\'' +s+ '\',document.getElementById(\'wt-'+safecat+'-'+safeG+'-'+si+'\')?.value||0,this.value)">'
       : '';
     return '<tr style="border-bottom:1px solid var(--border)">'
-      +'<td style="padding:4px 6px;font-size:11px">'+s+'</td>'
+      +'<td style="padding:4px 6px;font-size:11px">'
+      +'<input type="text" value="'+s.replace(/"/g,'&quot;')+'"'
+      +' id="size-'+safecat+'-'+safeG+'-'+si+'"'
+      +' style="width:100%;font-size:11px;padding:2px 4px;border:1px solid transparent;border-radius:4px;background:transparent"'
+      +' onfocus="this.style.borderColor=\'var(--border)\';this.style.background=\'#fff\'"'
+      +' onblur="this.style.borderColor=\'transparent\';this.style.background=\'transparent\';renameCatSize(\'' +cat+ '\',\'' +g+ '\',' +si+ ',this.value)"'
+      +' onkeydown="if(event.key===\'Enter\'){this.blur();}"></td>'
       +'<td style="padding:4px 6px;text-align:right">'
       +'<input type="number" value="'+(curWt||'')+'" step="0.001" placeholder="lbs/pc"'
       +' id="wt-'+safecat+'-'+safeG+'-'+si+'"'
@@ -8773,6 +8779,18 @@ async function sbDeleteCatalogRows(category, gauge, size){
   } catch(e){ console.warn('sbDeleteCatalogRows error', e); }
 }
 
+async function sbRenameCatalogRow(category, gauge, oldSize, newSize){
+  try{
+    const q = `category=eq.${encodeURIComponent(category)}&gauge=eq.${encodeURIComponent(gauge)}&size=eq.${encodeURIComponent(oldSize)}`;
+    const r = await fetch(`${_SB_URL}/rest/v1/product_catalog?${q}`, {
+      method: 'PATCH',
+      headers: { ..._SB_HDR, 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ size: newSize })
+    });
+    if(!r.ok) console.warn('sbRenameCatalogRow error', await r.text());
+  } catch(e){ console.warn('sbRenameCatalogRow error', e); }
+}
+
 function addCatGauge(cat){
   const safeId=cat.replace(/\W/g,'');
   const inp=document.getElementById('new-gauge-'+safeId);
@@ -8837,6 +8855,48 @@ async function removeCatSize(cat,gauge,idx){
   renderSettings(document.getElementById('content'));
   try{
     if(size != null) await sbDeleteCatalogRows(cat, gauge, size);
+  } finally {
+    window._editingProductCatalog = false;
+  }
+}
+
+// Rename a size in place (e.g. "8' Drive" → "1/2\" 8' Drive") without losing
+// its weight/bundle entries or its position in the list. Carries over the
+// weight/bundle keyed under the old size name to the new name in
+// SHEET_WEIGHTS/LINEAR_WEIGHTS, then asks Supabase to rename the matching row.
+async function renameCatSize(cat,gauge,idx,newSizeRaw){
+  const newSize = (newSizeRaw||'').trim();
+  const oldSize = PRODUCT_CATS[cat].sizes[gauge][idx];
+  if(!newSize || newSize===oldSize) return;
+  if(PRODUCT_CATS[cat].sizes[gauge].includes(newSize)){ toast('That size already exists'); renderSettings(document.getElementById('content')); return; }
+
+  window._editingProductCatalog = true;
+  PRODUCT_CATS[cat].sizes[gauge][idx] = newSize;
+
+  // Carry over weight/bundle keyed by the old size name to the new name.
+  const isFlatSheet = cat==='Flat Sheet';
+  const oldKey = `${gauge}|${oldSize.replace(' x ','x').replace('×','x')}`;
+  const newKey = `${gauge}|${newSize.replace(' x ','x').replace('×','x')}`;
+  let carriedWeight = null, carriedBundle = null;
+  if(isFlatSheet){
+    if(SHEET_WEIGHTS[oldKey] != null){
+      carriedWeight = SHEET_WEIGHTS[oldKey];
+      SHEET_WEIGHTS[newKey] = carriedWeight;
+      delete SHEET_WEIGHTS[oldKey];
+    }
+  } else {
+    if(LINEAR_WEIGHTS[oldKey] != null){
+      carriedWeight = LINEAR_WEIGHTS[oldKey].wt;
+      carriedBundle = LINEAR_WEIGHTS[oldKey].bundle;
+      LINEAR_WEIGHTS[newKey] = LINEAR_WEIGHTS[oldKey];
+      delete LINEAR_WEIGHTS[oldKey];
+    }
+  }
+
+  toast(`✓ Renamed to ${newSize}`);
+  renderSettings(document.getElementById('content'));
+  try{
+    await sbRenameCatalogRow(cat, gauge, oldSize, newSize);
   } finally {
     window._editingProductCatalog = false;
   }
