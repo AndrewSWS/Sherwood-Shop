@@ -626,15 +626,12 @@ const PRODUCT_CATS = {
     sizes: {'16':['1x120'],'18':['1x120'],'20':['1x120'],'22':['1x120'],'24':['1x120']}
   },
   'Plenums': {
-    gauges: ['26'],
+    gauges: ['26','24','22','20'],
     sizes: {
-      '26':[
-        '13x20x36','16.5x20x36','20x20x36','23.5x20x36',
-        '13x20x30','16.5x20x30','23.5x20x30',
-        '12.5x24x30','16x24x30','18.5x24x30','22x24x30',
-        '20x20x40',
-        'Custom'
-      ]
+      '26':['13x20x36 Plenum Kit','13x20x48 Plenum Kit','Custom'],
+      '24':['13x20x36 Plenum Kit','13x20x48 Plenum Kit','Custom'],
+      '22':['Custom'],
+      '20':['Custom']
     }
   },
   'Other / Hardware': {
@@ -964,7 +961,7 @@ const _liDbIdMap = {};
 // ── SUPABASE: Load full state from DB ──
 async function sbLoadState() {
   try {
-    const [wosRaw, lisRaw, trucksRaw, stopsRaw, coilsRaw, configRaw, custsRaw, vendorsRaw, catalogRaw] = await Promise.all([
+    const [wosRaw, lisRaw, trucksRaw, stopsRaw, coilsRaw, configRaw, custsRaw, vendorsRaw] = await Promise.all([
       _sbGet('work_orders', 'order=created_at.asc&limit=500'),
       _sbGet('line_items', 'order=id.asc&limit=5000'),
       _sbGet('trucks', 'order=id.asc'),
@@ -972,8 +969,7 @@ async function sbLoadState() {
       _sbGet('coil_records', 'order=priority.asc&limit=500'),
       _sbGet('admin_config', 'select=key,value'),
       _sbGet('customers', 'order=name.asc&limit=2000'),
-      _sbGet('vendors', 'order=name.asc').catch(()=>[]),
-      _sbGet('product_catalog', 'order=category.asc,gauge.asc,sort_order.asc').catch(()=>[])
+      _sbGet('vendors', 'order=name.asc').catch(()=>[])
     ]);
     if (!wosRaw) return false; // offline
 
@@ -1052,40 +1048,6 @@ async function sbLoadState() {
       });
     }
 
-    // Load product catalog (gauges/sizes for dropdowns) from Supabase as the
-    // source of truth. REPLACE each category's gauges/sizes entirely on every
-    // load — do NOT merge — so that deletions made on one device (e.g. removing
-    // an old Plenum gauge) actually clear stale options on every other open
-    // screen, rather than leaving them re-appear via Object.assign-style merge.
-    // Skipped while someone has the Settings → Products editor open, same as
-    // the WO edit-form guard, so a mid-edit poll can't yank rows out from
-    // under an in-progress add/remove.
-    if (Array.isArray(catalogRaw) && catalogRaw.length && !window._editingProductCatalog) {
-      const byCat = {};
-      catalogRaw.forEach(row => {
-        const cat = row.category;
-        if (!byCat[cat]) byCat[cat] = { gauges: [], sizes: {} };
-        if (!byCat[cat].gauges.includes(row.gauge)) byCat[cat].gauges.push(row.gauge);
-        if (!byCat[cat].sizes[row.gauge]) byCat[cat].sizes[row.gauge] = [];
-        byCat[cat].sizes[row.gauge].push(row.size);
-        // Register weight directly into the existing weight tables so manual
-        // entry and QB import both see it, same as before.
-        if (row.weight != null && row.weight > 0) {
-          if (cat === 'Flat Sheet') {
-            SHEET_WEIGHTS[`${row.gauge}|${row.size.replace(' x ','x').replace('×','x')}`] = row.weight;
-          } else {
-            LINEAR_WEIGHTS[`${row.gauge}|${row.size}`] = { wt: row.weight, bundle: row.bundle_qty || 1 };
-          }
-        }
-      });
-      // Full replace per category that has DB rows — categories with zero DB
-      // rows fall back to whatever PRODUCT_CATS already had (the hardcoded
-      // seed), so an empty/not-yet-migrated table never wipes the UI.
-      Object.keys(byCat).forEach(cat => {
-        PRODUCT_CATS[cat] = byCat[cat];
-      });
-    }
-
     // Merge customers from DB — Supabase is the source of truth for new additions,
     // but the hardcoded snap list is the baseline. We merge: snap first, then
     // any DB customer not already in snap gets added.
@@ -1106,11 +1068,21 @@ async function sbLoadState() {
       if (newFromDB.length) {
         state.adminConfig.customers = [...snapCusts, ...newFromDB];
       }
-      // Also update zone for existing customers if DB has a zone set
+      // Always let Supabase's zone win over the hardcoded snapshot when DB
+      // has a non-empty zone — NOT just when the snapshot is missing one.
+      // The snapshot is a static baseline baked into the page source; once
+      // someone edits a customer's zone in Customer Admin, that edit is
+      // persisted to Supabase via saveCustMeta's _sbPatch call, and from then
+      // on the DB row is the only thing that should be trusted for that
+      // customer's zone. The previous "only fill in if missing" check meant
+      // any customer whose snapshot already had a (possibly outdated) zone
+      // baked in would never pick up a corrected zone from the DB — the edit
+      // would silently succeed in Supabase but appear to "not save" on every
+      // reload, because the stale hardcoded value kept winning the merge.
       custsRaw.forEach(r => {
         if (!r.zone) return;
         const existing = (state.adminConfig.customers||[]).find(c => c.name.toLowerCase() === (r.name||'').toLowerCase());
-        if (existing && !existing.zone) existing.zone = r.zone;
+        if (existing) existing.zone = r.zone;
       });
     }
 
@@ -1150,7 +1122,7 @@ function startSBPoll() {
   if (_sbPollTimer) return;
   _sbPollTimer = setInterval(async () => {
     // Skip entire poll cycle if user is actively editing — don't overwrite state
-    const editingNow = !!window._editingWOId || !!document.querySelector('#e-wonum') || !!document.querySelector('.wo-edit-form') || !!window._editingProductCatalog;
+    const editingNow = !!window._editingWOId || !!document.querySelector('#e-wonum') || !!document.querySelector('.wo-edit-form');
     if(editingNow){ updateBadges(); return; }
     const ok = await sbLoadState();
     if (ok) {
@@ -1609,11 +1581,6 @@ function updateQueueToggle(){
 }
 
 function nav(view,el){
-  // Safety net: clear the product-catalog edit lock on any navigation, in case
-  // someone leaves the Settings → Products panel open via a sidebar click
-  // instead of the explicit Close button — otherwise the poll would stay
-  // paused indefinitely.
-  if(view!=='settings') { window._editingProductCatalog=false; settingsProdCat=null; }
   state.activeView=view;
   document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));
   if(el)el.classList.add('active');
@@ -2739,7 +2706,7 @@ function renderWOCard(wo){
         <span class="wo-cust">${wo.customer}</span>
         <span class="wo-num" style="color:var(--text3);font-size:12px;font-weight:600">WO #${wo.woNum}</span>
         ${wo.po?`<span class="badge badge-gray">PO: ${wo.po}</span>`:''}
-        ${wo.zone?`<span class="badge badge-blue">${wo.zone}</span>`:''}
+        ${getCustZone(wo.customer,wo.zone)?`<span class="badge badge-blue">${getCustZone(wo.customer,wo.zone)}</span>`:''}
         ${wo.isPickup?'<span class="badge" style="background:#EEF4FB;color:#185FA5;border:1px solid #5B9BD5">🏪 Pick Up</span>':wo.delivery?`<span class="badge badge-amber">📅 ${fmtDate(wo.delivery)}</span>`:''}
         ${getWOTruckId(wo.id)?`<span class="badge badge-teal">🚚 ${truckName(getWOTruckId(wo.id))}</span>`:''}
       </div>
@@ -6015,7 +5982,7 @@ function renderTruckCard(t, filterDay){
           ${s.customer} <span style="font-size:10px;color:var(--text3)">▾</span>
         </div>
         <div style="font-size:11px;color:var(--text2)">WO #${s.woNum}</div>
-        <div class="stop-zone" style="margin-top:2px">${s.zone||''} · ${s.cityst||s.address||''}</div>
+        <div class="stop-zone" style="margin-top:2px">${getCustZone(s.customer,s.zone)} · ${s.cityst||s.address||''}</div>
         <div style="font-size:12px;font-weight:600;color:var(--blue);margin-top:2px">${getWOWeight(s.woId)?getWOWeight(s.woId).toLocaleString()+' lbs':''}</div>
         ${s.notes?`<div class="stop-zone">📝 ${s.notes}</div>`:''}
       </div>
@@ -6997,7 +6964,7 @@ function toggleDayDetail(iso, forceOpen=false){
             ${stoplightDot(wo)}<span style="font-weight:700;font-size:14px">WO #${wo.woNum}</span>
             <span style="color:var(--blue);font-size:13px">${wo.customer}</span>
             ${wo.po?`<span class="badge badge-gray">PO: ${wo.po}</span>`:''}
-            ${wo.zone?`<span class="badge badge-blue">${wo.zone}</span>`:''}
+            ${getCustZone(wo.customer,wo.zone)?`<span class="badge badge-blue">${getCustZone(wo.customer,wo.zone)}</span>`:''}
           </div>
           <div class="flex gap6" style="align-items:center;flex-wrap:wrap">
             ${statusPill(st)}
@@ -7113,7 +7080,7 @@ function printWO(id){
     <div class="fld"><label>Customer</label><span>${wo.customer}</span></div>
     <div class="fld"><label>PO #</label><span>${wo.po||'—'}</span></div>
     <div class="fld"><label>Address</label><span>${wo.address||'—'}</span></div>
-    <div class="fld"><label>Zone</label><span>${wo.zone||'—'}</span></div>
+    <div class="fld"><label>Zone</label><span>${getCustZone(wo.customer,wo.zone)||'—'}</span></div>
   </div>
   ${wo.notes?`<div style="padding:8px 12px;background:#fffbf0;border-left:4px solid #BA7517;margin-bottom:16px;border-radius:4px"><strong>Notes:</strong> ${wo.notes}</div>`:''}
   <table>
@@ -7169,7 +7136,7 @@ function printTruck(truckId, filterDay){
         <td style="padding:8px;font-weight:900;font-size:16px;vertical-align:top;width:28px;border-bottom:2px solid #2D6A2D">${i+1}</td>
         <td colspan="3" style="padding:8px;border-bottom:2px solid #2D6A2D;vertical-align:top">
           <div style="font-size:15px;font-weight:900;margin-bottom:2px">${s.customer}</div>
-          <div style="font-size:11px;color:#555;margin-bottom:2px">📍 ${[s.address,s.cityst].filter(Boolean).join(', ')||'No address'} ${s.zone?'· '+s.zone:''}</div>
+          <div style="font-size:11px;color:#555;margin-bottom:2px">📍 ${[s.address,s.cityst].filter(Boolean).join(', ')||'No address'} ${getCustZone(s.customer,s.zone)?'· '+getCustZone(s.customer,s.zone):''}</div>
           <div style="font-size:11px;color:#666">WO #${s.woNum} · ${getWOWeight(s.woId).toLocaleString()} lbs ${s.notes?'· 📝 '+s.notes:''}</div>
         </td>
       </tr>
@@ -7259,6 +7226,20 @@ function getCustMeta(name){
   return state.customerMeta[name]||{phone:'',email:'',contact:'',notify:false,groupId:'',notes:''};
 }
 
+// Live zone lookup by customer name — always reflects the customer's CURRENT
+// zone from Customer Admin, never a stale snapshot. Use this instead of
+// reading wo.zone directly anywhere a zone is displayed to the user, so that
+// editing a customer's zone updates every existing WO's display immediately
+// rather than only affecting newly created WOs. wo.zone itself is left
+// untouched as a stored field (still used as a fallback below for WOs whose
+// customer no longer exists in the customer list, e.g. one-off/deleted
+// customers, so we don't lose the zone entirely in that edge case).
+function getCustZone(custName, fallbackZone){
+  const cust = getCustomers().find(c=>c.name===custName);
+  if(cust && cust.zone) return cust.zone;
+  return fallbackZone || '';
+}
+
 function getCustGroup(custName){
   const meta=getCustMeta(custName);
   if(meta.groupId){
@@ -7268,16 +7249,24 @@ function getCustGroup(custName){
   // Fall back to zone-based group
   const cust=getCustomers().find(c=>c.name===custName);
   if(cust&&cust.zone){
-    // First try zone-based group from state.deliveryGroups
-    const g=state.deliveryGroups.find(g=>
-      g.name.toLowerCase().includes(cust.zone.toLowerCase().split(' ')[0]) ||
-      g.name.toLowerCase().includes(cust.zone.toLowerCase())
-    );
-    if(g)return g;
-    // Then try ZONE_TO_GROUP map
+    // First try the EXACT zone → group id map (e.g. "NJ North" → g-nj-north).
+    // This must run before any loose substring matching, because a substring
+    // check like name.includes("nj") matches "NJ South Run", "NJ Central Run",
+    // and "NJ North Run" all at once — Array.find() then silently grabs
+    // whichever of those happens to be listed first, which previously caused
+    // every NJ customer (regardless of actual zone) to be misgrouped into
+    // whatever NJ run was first in state.deliveryGroups.
     const gid=ZONE_TO_GROUP[cust.zone];
     const g2=state.deliveryGroups.find(g=>g.id===gid);
     if(g2)return g2;
+    // Last-resort fallback for custom/renamed groups not present in
+    // ZONE_TO_GROUP — match on the FULL zone name only (no truncated
+    // first-word match), so "NJ North" can't accidentally match a group
+    // named "NJ South Run".
+    const g=state.deliveryGroups.find(g=>
+      g.name.toLowerCase().includes(cust.zone.toLowerCase())
+    );
+    if(g)return g;
   }
   return null;
 }
@@ -7855,7 +7844,7 @@ function renderUnscheduledGrouped(unscheduled){
           <div style="font-size:10px;color:var(--text3);margin-bottom:3px">↔ drag to schedule</div>
           <div style="font-weight:700;font-size:13px;cursor:pointer" onclick="event.stopPropagation();openDashWOPopout(${wo.id})">${wo.customer}</div>
           <div style="font-size:11px;color:var(--text2);margin:2px 0;cursor:pointer" onclick="event.stopPropagation();openDashWOPopout(${wo.id})">${stoplightDot(wo)} WO #${wo.woNum}</div>
-          <div style="font-size:11px;color:var(--text3)">${getWOWeight(wo.id)?getWOWeight(wo.id).toLocaleString()+' lbs':''} ${wo.zone||''}</div>
+          <div style="font-size:11px;color:var(--text3)">${getWOWeight(wo.id)?getWOWeight(wo.id).toLocaleString()+' lbs':''} ${getCustZone(wo.customer,wo.zone)}</div>
           <div style="margin-top:6px"><input type="date" onclick="event.stopPropagation()" onchange="setDeliveryFromCard(${wo.id},this.value)"
             style="font-size:11px;padding:3px 6px;width:100%;border:1px solid ${grp?grp.color:'#FAC775'};border-radius:4px;background:#fff" placeholder="Pick a date"></div>
           <div style="margin-top:5px">
@@ -8590,7 +8579,7 @@ function renderSettingsProducts(){
         const gaugeCount=pc.gauges.length;
         const sizeCount=Object.values(pc.sizes||{}).flat().length;
         return`<div class="card card-sm" style="cursor:pointer;border-color:${settingsProdCat===cat?'var(--blue)':'var(--border)'};background:${settingsProdCat===cat?'var(--blue-l)':''};"
-          onclick="window._editingProductCatalog=true;settingsProdCat='${cat}';renderSettings(document.getElementById('content'))">
+          onclick="settingsProdCat='${cat}';renderSettings(document.getElementById('content'))">
           <div style="font-weight:600;font-size:13px;margin-bottom:4px">${cat}</div>
           <div style="font-size:11px;color:var(--text3)">${gaugeCount} gauge${gaugeCount!==1?'s':''} · ${sizeCount} size${sizeCount!==1?'s':''}</div>
         </div>`;
@@ -8614,7 +8603,7 @@ function renderProductCatEditor(){
   return`<div class="card">
   <div class="flex-between mb12">
     <div class="section-head" style="margin:0">${cat} — Catalog Editor</div>
-    <button class="btn btn-sm" onclick="window._editingProductCatalog=false;settingsProdCat=null;renderSettings(document.getElementById('content'))">✕ Close</button>
+    <button class="btn btn-sm" onclick="settingsProdCat=null;renderSettings(document.getElementById('content'))">✕ Close</button>
   </div>
 
   ${isHardware?renderHardwareEditor(pc):renderStructuredEditor(pc,cat)}
@@ -8704,13 +8693,7 @@ function renderWeightRows(cat, g, sizes, isFlatSheet, safecat){
         +' onblur="updateProductWeight(\'' +cat+ '\',\'' +g+ '\',\'' +s+ '\',document.getElementById(\'wt-'+safecat+'-'+safeG+'-'+si+'\')?.value||0,this.value)">'
       : '';
     return '<tr style="border-bottom:1px solid var(--border)">'
-      +'<td style="padding:4px 6px;font-size:11px">'
-      +'<input type="text" value="'+s.replace(/"/g,'&quot;')+'"'
-      +' id="size-'+safecat+'-'+safeG+'-'+si+'"'
-      +' style="width:100%;font-size:11px;padding:2px 4px;border:1px solid transparent;border-radius:4px;background:transparent"'
-      +' onfocus="this.style.borderColor=\'var(--border)\';this.style.background=\'#fff\'"'
-      +' onblur="this.style.borderColor=\'transparent\';this.style.background=\'transparent\';renameCatSize(\'' +cat+ '\',\'' +g+ '\',' +si+ ',this.value)"'
-      +' onkeydown="if(event.key===\'Enter\'){this.blur();}"></td>'
+      +'<td style="padding:4px 6px;font-size:11px">'+s+'</td>'
       +'<td style="padding:4px 6px;text-align:right">'
       +'<input type="number" value="'+(curWt||'')+'" step="0.001" placeholder="lbs/pc"'
       +' id="wt-'+safecat+'-'+safeG+'-'+si+'"'
@@ -8746,88 +8729,32 @@ function updateProductWeight(cat, gauge, size, wtVal, bundleVal){
   toast('✓ Weight updated — '+gauge+' '+size+': '+(wt||'removed')+' lbs/pc');
 }
 
-// ── Product Catalog: Supabase-backed mutators ──────────────────────────
-// Each mutator sets window._editingProductCatalog while its DB write is in
-// flight, which pauses the 15-90s poll cycle entirely (see startSBPoll's
-// editingNow check) so a concurrent poll can never overwrite PRODUCT_CATS
-// mid-edit. The in-memory PRODUCT_CATS object is updated immediately for
-// instant UI feedback; the DB write happens in the background and the lock
-// clears once it settles (success or failure — failure just means the next
-// poll will resync from whatever's actually in Supabase, same recovery
-// behavior as everywhere else in the app).
-
-async function sbInsertCatalogRow(category, gauge, size, weight, bundleQty){
-  try{
-    const r = await fetch(`${_SB_URL}/rest/v1/product_catalog`, {
-      method: 'POST',
-      headers: { ..._SB_HDR, 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ category, gauge, size, weight: weight||null, bundle_qty: bundleQty||null })
-    });
-    if(!r.ok) console.warn('sbInsertCatalogRow error', await r.text());
-  } catch(e){ console.warn('sbInsertCatalogRow error', e); }
-}
-
-async function sbDeleteCatalogRows(category, gauge, size){
-  try{
-    let q = `category=eq.${encodeURIComponent(category)}&gauge=eq.${encodeURIComponent(gauge)}`;
-    if(size != null) q += `&size=eq.${encodeURIComponent(size)}`;
-    const r = await fetch(`${_SB_URL}/rest/v1/product_catalog?${q}`, {
-      method: 'DELETE',
-      headers: _SB_HDR
-    });
-    if(!r.ok) console.warn('sbDeleteCatalogRows error', await r.text());
-  } catch(e){ console.warn('sbDeleteCatalogRows error', e); }
-}
-
-async function sbRenameCatalogRow(category, gauge, oldSize, newSize){
-  try{
-    const q = `category=eq.${encodeURIComponent(category)}&gauge=eq.${encodeURIComponent(gauge)}&size=eq.${encodeURIComponent(oldSize)}`;
-    const r = await fetch(`${_SB_URL}/rest/v1/product_catalog?${q}`, {
-      method: 'PATCH',
-      headers: { ..._SB_HDR, 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ size: newSize })
-    });
-    if(!r.ok) console.warn('sbRenameCatalogRow error', await r.text());
-  } catch(e){ console.warn('sbRenameCatalogRow error', e); }
-}
-
 function addCatGauge(cat){
   const safeId=cat.replace(/\W/g,'');
   const inp=document.getElementById('new-gauge-'+safeId);
   const val=inp?inp.value.trim():'';
   if(!val)return;
   if(PRODUCT_CATS[cat].gauges.includes(val)){toast('Gauge already exists');return;}
-  window._editingProductCatalog = true;
   PRODUCT_CATS[cat].gauges.push(val);
   if(!PRODUCT_CATS[cat].sizes[val])PRODUCT_CATS[cat].sizes[val]=[];
   toast(`✓ ${val} added to ${cat}`);
   renderSettings(document.getElementById('content'));
-  // A bare gauge with no size yet has nothing to insert until a size is
-  // added — addCatSize is what actually creates rows for this gauge.
-  window._editingProductCatalog = false;
 }
 
-async function removeCatGauge(cat,gauge){
+function removeCatGauge(cat,gauge){
   if(!confirm(`Remove gauge ${gauge} and all its sizes from ${cat}?`))return;
-  window._editingProductCatalog = true;
   PRODUCT_CATS[cat].gauges=PRODUCT_CATS[cat].gauges.filter(g=>g!==gauge);
   delete PRODUCT_CATS[cat].sizes[gauge];
   renderSettings(document.getElementById('content'));
-  try{
-    await sbDeleteCatalogRows(cat, gauge, null);
-  } finally {
-    window._editingProductCatalog = false;
-  }
 }
 
-async function addCatSize(cat,gauge){
+function addCatSize(cat,gauge){
   const safeId=cat.replace(/\W/g,'');
   const sizeInp=document.getElementById(`new-size-${safeId}-${gauge}`);
   const wtInp=document.getElementById(`new-wt-${safeId}-${gauge}`);
   const size=sizeInp?sizeInp.value.trim():'';
   const wt=wtInp?parseFloat(wtInp.value)||0:0;
   if(!size)return;
-  window._editingProductCatalog = true;
   if(!PRODUCT_CATS[cat].sizes[gauge])PRODUCT_CATS[cat].sizes[gauge]=[];
   PRODUCT_CATS[cat].sizes[gauge].push(size);
   // Register weight if provided
@@ -8841,98 +8768,32 @@ async function addCatSize(cat,gauge){
   }
   toast(`✓ ${size} added`);
   renderSettings(document.getElementById('content'));
-  try{
-    await sbInsertCatalogRow(cat, gauge, size, wt>0?wt:null, 1);
-  } finally {
-    window._editingProductCatalog = false;
-  }
 }
 
-async function removeCatSize(cat,gauge,idx){
-  const size = PRODUCT_CATS[cat].sizes[gauge][idx];
-  window._editingProductCatalog = true;
+function removeCatSize(cat,gauge,idx){
   PRODUCT_CATS[cat].sizes[gauge].splice(idx,1);
   renderSettings(document.getElementById('content'));
-  try{
-    if(size != null) await sbDeleteCatalogRows(cat, gauge, size);
-  } finally {
-    window._editingProductCatalog = false;
-  }
 }
 
-// Rename a size in place (e.g. "8' Drive" → "1/2\" 8' Drive") without losing
-// its weight/bundle entries or its position in the list. Carries over the
-// weight/bundle keyed under the old size name to the new name in
-// SHEET_WEIGHTS/LINEAR_WEIGHTS, then asks Supabase to rename the matching row.
-async function renameCatSize(cat,gauge,idx,newSizeRaw){
-  const newSize = (newSizeRaw||'').trim();
-  const oldSize = PRODUCT_CATS[cat].sizes[gauge][idx];
-  if(!newSize || newSize===oldSize) return;
-  if(PRODUCT_CATS[cat].sizes[gauge].includes(newSize)){ toast('That size already exists'); renderSettings(document.getElementById('content')); return; }
-
-  window._editingProductCatalog = true;
-  PRODUCT_CATS[cat].sizes[gauge][idx] = newSize;
-
-  // Carry over weight/bundle keyed by the old size name to the new name.
-  const isFlatSheet = cat==='Flat Sheet';
-  const oldKey = `${gauge}|${oldSize.replace(' x ','x').replace('×','x')}`;
-  const newKey = `${gauge}|${newSize.replace(' x ','x').replace('×','x')}`;
-  let carriedWeight = null, carriedBundle = null;
-  if(isFlatSheet){
-    if(SHEET_WEIGHTS[oldKey] != null){
-      carriedWeight = SHEET_WEIGHTS[oldKey];
-      SHEET_WEIGHTS[newKey] = carriedWeight;
-      delete SHEET_WEIGHTS[oldKey];
-    }
-  } else {
-    if(LINEAR_WEIGHTS[oldKey] != null){
-      carriedWeight = LINEAR_WEIGHTS[oldKey].wt;
-      carriedBundle = LINEAR_WEIGHTS[oldKey].bundle;
-      LINEAR_WEIGHTS[newKey] = LINEAR_WEIGHTS[oldKey];
-      delete LINEAR_WEIGHTS[oldKey];
-    }
-  }
-
-  toast(`✓ Renamed to ${newSize}`);
-  renderSettings(document.getElementById('content'));
-  try{
-    await sbRenameCatalogRow(cat, gauge, oldSize, newSize);
-  } finally {
-    window._editingProductCatalog = false;
-  }
-}
-
-async function addHardwareItem(){
+function addHardwareItem(){
   const nameInp=document.getElementById('new-hw-item');
   const pkgInp=document.getElementById('new-hw-pkg');
   const name=nameInp?nameInp.value.trim():'';
   const pkg=pkgInp?pkgInp.value.trim():'';
   if(!name)return;
-  window._editingProductCatalog = true;
   if(!PRODUCT_CATS['Other / Hardware'].sizes['—'])PRODUCT_CATS['Other / Hardware'].sizes['—']=[];
   PRODUCT_CATS['Other / Hardware'].sizes['—'].push(name);
   if(pkg)HARDWARE_PACKAGING[name]=pkg;
   toast(`✓ ${name} added`);
   renderSettings(document.getElementById('content'));
-  try{
-    await sbInsertCatalogRow('Other / Hardware', '—', name, null, null);
-  } finally {
-    window._editingProductCatalog = false;
-  }
 }
 
-async function removeHardwareItem(i){
+function removeHardwareItem(i){
   const items=PRODUCT_CATS['Other / Hardware'].sizes['—']||[];
   const name=items[i];
-  window._editingProductCatalog = true;
   items.splice(i,1);
   if(name)delete HARDWARE_PACKAGING[name];
   renderSettings(document.getElementById('content'));
-  try{
-    if(name) await sbDeleteCatalogRows('Other / Hardware', '—', name);
-  } finally {
-    window._editingProductCatalog = false;
-  }
 }
 
 
