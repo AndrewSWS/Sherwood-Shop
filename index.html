@@ -7787,7 +7787,9 @@ function selectCustEdit(name){
   </div>
   <div class="flex gap8">
     <button class="btn btn-primary" onclick="saveCustMeta('${name.replace(/'/g,"\'")}')">Save</button>
-    <button class="btn" onclick="custEditName=null;renderCustomers(document.getElementById('content'))">Cancel</button>
+      <button class="btn" onclick="custEditName=null;renderCustomers(document.getElementById('content'))">Cancel</button>
+    </div>
+    <button class="btn btn-danger" style="margin-top:8px;width:100%" onclick="deleteCustomer('${name.replace(/'/g,"\'")}')">🗑 Delete Customer</button>
   </div>`;
 }
 
@@ -7812,6 +7814,34 @@ function saveCustMeta(name){
   _sbPatch('customers', {name}, { zone: zone||null, contact: contact||null, phone: phone||null, email: email||null, notes: notes||null })
     .catch(e=>console.warn('saveCustMeta patch error',e));
   toast('\u2713 '+name+' updated');
+  renderCustomers(document.getElementById('content'));
+}
+
+function deleteCustomer(name){
+  // Guard: don't allow deletion if customer has any open work orders
+  const openWOs = state.wos.filter(w=>w.customer===name && woStatus(w)!=='Complete');
+  if(openWOs.length){
+    alert(`Cannot delete ${name} — they have ${openWOs.length} open WO${openWOs.length>1?'s':''} (WO #${openWOs.map(w=>w.woNum).join(', #')}). Complete or reassign those first.`);
+    return;
+  }
+  if(!confirm(`Delete ${name}? This cannot be undone.`)) return;
+
+  // Remove from in-memory customer list
+  if(state.adminConfig && state.adminConfig.customers){
+    state.adminConfig.customers = state.adminConfig.customers.filter(c=>c.name!==name);
+  }
+  // Remove from customerMeta
+  if(state.customerMeta && state.customerMeta[name]){
+    delete state.customerMeta[name];
+  }
+  custEditName = null;
+  saveState();
+
+  // Delete from Supabase customers table
+  _sbDelete('customers', {name})
+    .catch(e=>console.warn('deleteCustomer error',e));
+
+  toast(`🗑 ${name} deleted`);
   renderCustomers(document.getElementById('content'));
 }
 
