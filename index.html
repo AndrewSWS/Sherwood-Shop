@@ -276,7 +276,7 @@ select{cursor:pointer}
 .board-subtitle{font-size:13px;color:#A8D5A8;margin-top:2px}
 .board-grid{
   display:grid;grid-template-columns:repeat(5,1fr);gap:2px;
-  overflow:hidden;padding:2px;padding-left:24px;
+  overflow:hidden;padding:2px;
   align-items:start;
 }
 .board-day{
@@ -2984,6 +2984,9 @@ let _boardClockTimer = null;
 function enterBoardView(){
   document.getElementById('board-overlay').classList.add('active');
   if(document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(()=>{});
+  // Clear scale fingerprint so the fresh open always re-measures from scratch
+  window._boardScaleFingerprint = null;
+  window._boardScaleApplied = false;
   renderBoardView();
   // Auto-refresh every 15 seconds — pulls from Supabase for live multi-user sync
   _boardTimer = setInterval(async ()=>{
@@ -3275,7 +3278,11 @@ function renderBoardView(){
       })()+'</div>';
   }).join('');
 
-  // Auto-scale: measure natural height then scale to fit
+  // Auto-scale: measure natural height then scale to fit.
+  // Uses a content fingerprint so the reset→measure→snap cycle only runs
+  // when something actually changed (new WOs, day rollover, window resize).
+  // Without this, every 90-second poll wipes the existing scale transform
+  // and reapplies it, producing a visible glitch on the 85" TV board.
   setTimeout(()=>{
     const overlay = document.getElementById('board-overlay');
     const header = overlay ? overlay.querySelector('.board-header') : null;
@@ -3283,11 +3290,27 @@ function renderBoardView(){
     const scaler = document.getElementById('board-scaler');
     if(!grid || !overlay || !scaler) return;
 
+    // Build a fingerprint of everything that affects board layout:
+    // day range, WO count per day, window dimensions. If nothing changed
+    // since the last successful scale, skip the entire reset cycle.
+    const fp = [
+      days.map(d=>d.iso).join(','),
+      days.map(d=>state.wos.filter(w=>w.delivery===d.iso).length).join(','),
+      overlay.offsetWidth,
+      overlay.offsetHeight
+    ].join('|');
+
+    if(fp === window._boardScaleFingerprint && window._boardScaleApplied){
+      renderBoardPickups();
+      return; // content identical — keep the existing scale, no glitch
+    }
+    window._boardScaleFingerprint = fp;
+
     const headerH = header ? header.offsetHeight : 60;
     const pickupBarH = pickupBar ? pickupBar.offsetHeight : 36;
     const availH = overlay.offsetHeight - headerH - pickupBarH - 4;
 
-    // Step 1: reset all transforms on grid and scaler
+    // Reset transforms only when we actually need to re-measure
     scaler.style.height = 'auto';
     scaler.style.overflow = 'visible';
     grid.style.transform = 'none';
@@ -3295,24 +3318,17 @@ function renderBoardView(){
     grid.style.height = 'auto';
     grid.style.overflow = 'visible';
     const cols = grid.querySelectorAll('.board-day');
-    cols.forEach(col=>{
-      col.style.height = 'auto';
-      col.style.overflow = 'visible';
-    });
+    cols.forEach(col=>{ col.style.height='auto'; col.style.overflow='visible'; });
 
-    // Step 2: force browser to recalculate layout
+    // Force layout recalc, then measure
     void overlay.offsetHeight;
-
-    // Step 3: measure the natural rendered height of the grid
     const naturalH = grid.scrollHeight;
 
-    // Step 4: scale if needed
     if(naturalH > availH && naturalH > 0){
       const scale = availH / naturalH;
       grid.style.transform = `scale(${scale})`;
       grid.style.transformOrigin = 'top left';
       grid.style.width = `${+(100/scale).toFixed(4)}%`;
-      // Scaler contains the scaled grid — set its height to the post-scale height
       scaler.style.height = `${Math.round(naturalH * scale)}px`;
       scaler.style.overflow = 'hidden';
       grid.style.overflow = 'visible';
@@ -3320,6 +3336,7 @@ function renderBoardView(){
       scaler.style.height = availH + 'px';
       scaler.style.overflow = 'hidden';
     }
+    window._boardScaleApplied = true;
 
     renderBoardPickups();
   }, 400);
