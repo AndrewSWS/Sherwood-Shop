@@ -3318,11 +3318,16 @@ function renderBoardView(){
     grid.style.height = 'auto';
     grid.style.overflow = 'visible';
     const cols = grid.querySelectorAll('.board-day');
-    cols.forEach(col=>{ col.style.height='auto'; col.style.overflow='visible'; });
+    cols.forEach(col=>{ col.style.height='auto'; col.style.overflow='visible'; col.style.maxHeight='none'; });
 
-    // Force layout recalc, then measure
+    // Force layout recalc, then measure the tallest column.
+    // grid.scrollHeight is unreliable when overflow is being toggled;
+    // measuring the tallest .board-day scrollHeight is more accurate.
     void overlay.offsetHeight;
-    const naturalH = grid.scrollHeight;
+    let naturalH = 0;
+    cols.forEach(col=>{ naturalH = Math.max(naturalH, col.scrollHeight); });
+    // Add the grid gap/padding to account for header row within the grid
+    if(!naturalH) naturalH = grid.scrollHeight;
 
     if(naturalH > availH && naturalH > 0){
       const scale = availH / naturalH;
@@ -3333,6 +3338,8 @@ function renderBoardView(){
       scaler.style.overflow = 'hidden';
       grid.style.overflow = 'visible';
     } else {
+      // Content fits — constrain each column so nothing bleeds off-screen
+      cols.forEach(col=>{ col.style.maxHeight = availH + 'px'; col.style.overflow = 'hidden'; });
       scaler.style.height = availH + 'px';
       scaler.style.overflow = 'hidden';
     }
