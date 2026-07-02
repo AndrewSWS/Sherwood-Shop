@@ -3307,8 +3307,11 @@ function renderBoardView(){
     window._boardScaleFingerprint = fp;
 
     const headerH = header ? header.offsetHeight : 60;
-    const pickupBarH = pickupBar ? pickupBar.offsetHeight : 36;
-    const availH = overlay.offsetHeight - headerH - pickupBarH - 4;
+    // pickupBar may not be rendered yet when we measure (renderBoardPickups runs after).
+    // Use its actual height if available, but guarantee a minimum so the tallest column
+    // is never clipped by the bar appearing after scaling is applied.
+    const pickupBarH = pickupBar ? Math.max(pickupBar.offsetHeight, 48) : 48;
+    const availH = overlay.offsetHeight - headerH - pickupBarH - 12;
 
     // Reset transforms only when we actually need to re-measure
     scaler.style.height = 'auto';
