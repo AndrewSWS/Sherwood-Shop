@@ -184,6 +184,28 @@
     border-bottom: 1px solid #2d3248;
     flex-shrink: 0;
   }
+  #active-filter-bar {
+    display: none; align-items: center; gap: 10px;
+    padding: 8px 16px;
+    background: #0e1221;
+    border-bottom: 1px solid #2d3248;
+    flex-shrink: 0;
+  }
+  #active-filter-bar .af-label {
+    font-size: 13px; font-weight: 600; color: var(--text2);
+    text-transform: uppercase; letter-spacing: .05em;
+  }
+  #active-filter-bar .af-pill {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--blue); color: #fff;
+    border-radius: 8px; padding: 6px 12px;
+    font-size: 14px; font-weight: 700;
+  }
+  #active-filter-bar .af-clear {
+    background: none; border: none; color: #fff;
+    font-size: 18px; line-height: 1; padding: 0 2px;
+    cursor: pointer; opacity: .8;
+  }
   #queue-summary .summary-totals {
     display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; margin-bottom: 8px;
   }
@@ -359,6 +381,14 @@
     <div class="summary-wt" id="summary-wt"></div>
   </div>
   <div id="summary-pills"></div>
+</div>
+
+<div id="active-filter-bar">
+  <span class="af-label">Showing:</span>
+  <div class="af-pill">
+    <span id="active-filter-label"></span>
+    <button class="af-clear" onclick="toggleProductFilter(document.getElementById('active-filter-label').textContent)">&#x2715;</button>
+  </div>
 </div>
 
 <div id="main">
@@ -599,21 +629,26 @@ function renderTiles() {
     document.getElementById('summary-qty').innerHTML = totalQty.toLocaleString() + ' <span>total pcs</span>';
     document.getElementById('summary-wt').textContent = totalWt ? totalWt.toLocaleString()+' lbs' : '';
     const pillsEl = document.getElementById('summary-pills');
-    pillsEl.innerHTML = Object.entries(qtyByProd)
-      .sort((a,b)=>{
-        const gaA=parseFloat(a[0].match(/^([\d.]+)/)?.[1]||'9999');
-        const gaB=parseFloat(b[0].match(/^([\d.]+)/)?.[1]||'9999');
-        if(gaA!==gaB) return gaA-gaB;
-        return a[0].localeCompare(b[0]);
-      })
-      .map(([prod,qty])=>{
-        const active = _productFilter === prod;
-        return `<div class="summary-pill${active?' active':''}" onclick="toggleProductFilter('${prod.replace(/'/g,"\\'")}')">
-          ${prod} <strong>&times;${qty.toLocaleString()}</strong>${active?' ✕':''}
-        </div>`;
-      }).join('');
+    if (_productFilter) {
+      summaryEl.style.display = 'none';
+      document.getElementById('active-filter-bar').style.display = 'flex';
+      document.getElementById('active-filter-label').textContent = _productFilter;
+    } else {
+      document.getElementById('active-filter-bar').style.display = 'none';
+      pillsEl.innerHTML = Object.entries(qtyByProd)
+        .sort((a,b)=>{
+          const gaA=parseFloat(a[0].match(/^([\d.]+)/)?.[1]||'9999');
+          const gaB=parseFloat(b[0].match(/^([\d.]+)/)?.[1]||'9999');
+          if(gaA!==gaB) return gaA-gaB;
+          return a[0].localeCompare(b[0]);
+        })
+        .map(([prod,qty])=>{
+          return `<div class="summary-pill" onclick="toggleProductFilter('${prod.replace(/'/g,"\\'")}')">${prod} <strong>&times;${qty.toLocaleString()}</strong></div>`;
+        }).join('');
+    }
   } else {
     summaryEl.style.display = 'none';
+    document.getElementById('active-filter-bar').style.display = 'none';
   }
 
   // Apply product filter
