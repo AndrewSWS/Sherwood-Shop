@@ -313,6 +313,55 @@ select{cursor:pointer}
 }
 /* Make content sit above rain layers */
 .board-day[data-wrap="1"] > *{position:relative;z-index:1;}
+
+/* ── JULY 4TH FIREWORKS COLUMN ── */
+.board-day[data-holiday="july4"] {
+  background: #0a0a1a;
+  overflow: hidden;
+}
+.board-day[data-holiday="july4"] > * { position: relative; z-index: 2; }
+.board-day[data-holiday="july4"]::before {
+  content: '';
+  position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background-image:
+    radial-gradient(circle, #ff4444 1.5px, transparent 2px),
+    radial-gradient(circle, #ff8800 1.5px, transparent 2px),
+    radial-gradient(circle, #ffdd00 1.5px, transparent 2px),
+    radial-gradient(circle, #44aaff 1.5px, transparent 2px),
+    radial-gradient(circle, #ff44cc 1.5px, transparent 2px),
+    radial-gradient(circle, #44ff88 1.5px, transparent 2px),
+    radial-gradient(circle, #ffffff 1.5px, transparent 2px),
+    radial-gradient(circle, #ff6644 1.5px, transparent 2px);
+  background-size: 120px 180px, 90px 200px, 150px 160px, 80px 220px, 110px 190px, 130px 170px, 95px 210px, 140px 150px;
+  background-position: 20px 30px, 75px 80px, 40px 140px, 100px 20px, 55px 100px, 85px 160px, 15px 190px, 110px 60px;
+  animation: fw-drift 3s linear infinite, fw-fade 2.5s ease-in-out infinite;
+  opacity: 0.85;
+}
+.board-day[data-holiday="july4"]::after {
+  content: '';
+  position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background-image:
+    radial-gradient(circle, #ff4444 1.5px, transparent 2px),
+    radial-gradient(circle, #ffdd00 1.5px, transparent 2px),
+    radial-gradient(circle, #44aaff 1.5px, transparent 2px),
+    radial-gradient(circle, #ff44cc 1.5px, transparent 2px),
+    radial-gradient(circle, #44ff88 1.5px, transparent 2px),
+    radial-gradient(circle, #ffffff 1.5px, transparent 2px);
+  background-size: 100px 160px, 130px 140px, 85px 200px, 115px 175px, 145px 155px, 70px 220px;
+  background-position: 60px 50px, 10px 110px, 90px 170px, 35px 25px, 105px 130px, 50px 200px;
+  animation: fw-drift 4.1s linear infinite reverse, fw-fade 3.2s ease-in-out infinite 1.2s;
+  opacity: 0.7;
+}
+@keyframes fw-drift {
+  0%   { background-position: 20px 30px, 75px 80px, 40px 140px, 100px 20px, 55px 100px, 85px 160px, 15px 190px, 110px 60px; }
+  100% { background-position: 20px -170px, 75px -120px, 40px -60px, 100px -180px, 55px -100px, 85px -40px, 15px -10px, 110px -140px; }
+}
+@keyframes fw-fade {
+  0%,100% { opacity: 0.2; }
+  30%      { opacity: 0.9; }
+  60%      { opacity: 0.5; }
+}
+
 @keyframes board-clouds{
   0%{background-position:0 -10px, 60px 20px;}
   100%{background-position:140px -10px, 160px 20px;}
@@ -3184,6 +3233,8 @@ function renderBoardView(){
     const dayWOs = state.wos.filter(w=>w.delivery===day.iso);
     const ntWOs = dayWOs.filter(w=>!getWOTruckId(w.id));
     const isToday = day.iso===todayISO;
+    // July 3 observed holiday (fireworks eve)
+    const isJuly4Eve = day.iso && day.iso.slice(5) === '07-03';
 
     const renderStop = (wo)=>{
       const grp = getCustGroup(wo.customer);
@@ -3241,7 +3292,8 @@ function renderBoardView(){
         +'</div>'
       : '';
 
-    return '<div class="board-day"'+(dayWrap?' data-wrap="1"':'')+'>'
+    return '<div class="board-day"'+(dayWrap?' data-wrap="1"':'')+(isJuly4Eve?' data-holiday="july4"':'')+'>'
+      +(isJuly4Eve ? '<div style="position:relative;z-index:2;background:rgba(0,0,60,.7);text-align:center;font-size:11px;font-weight:800;letter-spacing:.08em;color:#ffdd00;padding:3px 0;border-bottom:1px solid #333">🎆 JULY 3 — OBSERVED HOLIDAY 🎆</div>' : '')
       +wrapBanner
       +'<div class="board-day-header" style="'+(isToday?'background:#1C2E1C;color:#A8D5A8;border-bottom-color:#2D6A2D;':'')+'">'
       +'<span class="bd-count">'+doneCount+'/'+dayWOs.length+'</span>'
