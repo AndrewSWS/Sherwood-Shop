@@ -515,11 +515,15 @@ async function loadData() {
     // Also drop anything whose delivery date has already passed — a past delivery
     // date almost always means it went out and just never got marked "delivered";
     // leaving it in the shop queue only clutters the board.
+    // Pickup orders are a separate case: completion is signaled by pickup_date
+    // being set (NOT by the delivered flag — that's only used for truck
+    // deliveries), so a picked-up order needs its own check here too.
     const now = new Date();
     const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
     const activeWOIds = new Set(
       wosRaw
         .filter(w => !w.delivered)
+        .filter(w => !(w.is_pickup && w.pickup_date)) // already picked up — hide
         .filter(w => !w.delivery || w.delivery >= todayStr) // no date = keep (unscheduled); past date = hide
         .map(w => w.id)
     );
