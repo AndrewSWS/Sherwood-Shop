@@ -430,6 +430,26 @@ async function sbGet(table, params = '') {
   return r.json();
 }
 
+// Supabase/PostgREST caps responses at a server-side max-rows setting (commonly 1000)
+// REGARDLESS of any ?limit= in the query string — it silently truncates, no error.
+// Pages through with the Range header until a batch comes back short of pageSize.
+async function sbGetAll(table, params = '') {
+  const pageSize = 1000;
+  const cleanParams = params.replace(/(^|&)limit=\d+/, '').replace(/^&/, '');
+  let offset = 0;
+  let all = [];
+  while (true) {
+    const url = `${SB_URL}/rest/v1/${table}${cleanParams ? '?' + cleanParams : ''}`;
+    const r = await fetch(url, { headers: { ...HDR, 'Range-Unit': 'items', 'Range': `${offset}-${offset+pageSize-1}` } });
+    if (!r.ok) throw new Error(`SB GET(all) ${table} ${r.status}`);
+    const batch = await r.json();
+    all = all.concat(batch);
+    if (batch.length < pageSize) break;
+    offset += pageSize;
+  }
+  return all;
+}
+
 async function sbPatch(table, match, body) {
   const params = Object.entries(match).map(([k,v]) => `${k}=eq.${v}`).join('&');
   const r = await fetch(`${SB_URL}/rest/v1/${table}?${params}`, {
@@ -487,12 +507,22 @@ async function loadData() {
 
     // Load active (non-delivered) work orders + line items
     const [wosRaw, lisRaw] = await Promise.all([
-      sbGet('work_orders', 'delivered=eq.false&order=created_at.asc&limit=300'),
-      sbGet('line_items',  'status=neq.Skip&order=id.asc&limit=3000')
+      sbGetAll('work_orders', 'delivered=eq.false&order=created_at.asc'),
+      sbGetAll('line_items',  'status=neq.Skip&order=id.asc')
     ]);
 
     // Filter to WOs that aren't completely done or delivered
-    const activeWOIds = new Set(wosRaw.filter(w => !w.delivered).map(w => w.id));
+    // Also drop anything whose delivery date has already passed — a past delivery
+    // date almost always means it went out and just never got marked "delivered";
+    // leaving it in the shop queue only clutters the board.
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+    const activeWOIds = new Set(
+      wosRaw
+        .filter(w => !w.delivered)
+        .filter(w => !w.delivery || w.delivery >= todayStr) // no date = keep (unscheduled); past date = hide
+        .map(w => w.id)
+    );
     const woMap = {};
     wosRaw.forEach(w => { woMap[w.id] = w; });
 
