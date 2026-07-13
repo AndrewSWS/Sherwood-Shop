@@ -3380,11 +3380,16 @@ function renderBoardView(){
     if(!grid || !overlay || !scaler) return;
 
     // Build a fingerprint of everything that affects board layout:
-    // day range, WO count per day, window dimensions. If nothing changed
-    // since the last successful scale, skip the entire reset cycle.
+    // day range, WO *content* per day (not just count — a WO going from 0 items
+    // to a full list, or gaining notes/waiting-vendor flags, changes its rendered
+    // height without changing how many WOs are on the day), window dimensions.
+    // If nothing changed since the last successful scale, skip the reset cycle.
     const fp = [
       days.map(d=>d.iso).join(','),
-      days.map(d=>state.wos.filter(w=>w.delivery===d.iso).length).join(','),
+      days.map(d => state.wos.filter(w=>w.delivery===d.iso).map(w=>{
+        const items = w.items||[];
+        return `${w.id}:${items.length}:${w.notes?1:0}:${items.filter(i=>i.waitingVendor).length}:${w.delivered?1:0}`;
+      }).join(',')).join('|'),
       overlay.offsetWidth,
       overlay.offsetHeight
     ].join('|');
