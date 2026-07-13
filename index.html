@@ -782,6 +782,39 @@ async function _sbGet(table, params='') {
   }
 }
 
+// Supabase/PostgREST caps responses at a server-side max-rows setting (commonly 1000)
+// REGARDLESS of any ?limit= in the query string — it just silently truncates, no error.
+// This helper pages through with the Range header until a batch comes back short of
+// pageSize, so tables that grow past that cap (line_items, work_orders, customers) never
+// get silently truncated on load. Strips any 'limit=' from params since Range drives paging.
+async function _sbGetAll(table, params='') {
+  const pageSize = 1000;
+  const cleanParams = params.replace(/(^|&)limit=\d+/, '').replace(/^&/, '');
+  let offset = 0;
+  let all = [];
+  try {
+    while (true) {
+      const url = `${_SB_URL}/rest/v1/${table}${cleanParams ? '?' + cleanParams : ''}`;
+      const r = await fetch(url, { headers: { ..._SB_HDR, 'Range-Unit': 'items', 'Range': `${offset}-${offset+pageSize-1}` } });
+      if (!r.ok) {
+        const msg = await r.text();
+        console.warn('SB GET(all) error', table, r.status, msg);
+        window._sbLastError = r.status + ' ' + table;
+        return all.length ? all : null;
+      }
+      const batch = await r.json();
+      all = all.concat(batch);
+      if (batch.length < pageSize) break;
+      offset += pageSize;
+    }
+    return all;
+  } catch(e) {
+    console.warn('SB GET(all) fetch error', table, e.message);
+    window._sbLastError = e.message;
+    return all.length ? all : null;
+  }
+}
+
 async function _sbPost(table, body) {
   try {
     const r = await fetch(`${_SB_URL}/rest/v1/${table}`, {
@@ -1013,13 +1046,13 @@ const _liDbIdMap = {};
 async function sbLoadState() {
   try {
     const [wosRaw, lisRaw, trucksRaw, stopsRaw, coilsRaw, configRaw, custsRaw, vendorsRaw] = await Promise.all([
-      _sbGet('work_orders', 'order=created_at.asc&limit=500'),
-      _sbGet('line_items', 'order=id.asc&limit=5000'),
+      _sbGetAll('work_orders', 'order=created_at.asc'),
+      _sbGetAll('line_items', 'order=id.asc'),
       _sbGet('trucks', 'order=id.asc'),
-      _sbGet('truck_stops', 'order=seq.asc&limit=1000'),
+      _sbGetAll('truck_stops', 'order=seq.asc'),
       _sbGet('coil_records', 'order=priority.asc&limit=500'),
       _sbGet('admin_config', 'select=key,value'),
-      _sbGet('customers', 'order=name.asc&limit=2000'),
+      _sbGetAll('customers', 'order=name.asc'),
       _sbGet('vendors', 'order=name.asc').catch(()=>[])
     ]);
     if (!wosRaw) return false; // offline
@@ -1299,11 +1332,11 @@ async function exportBackup(){
 
   // Pull all Supabase tables in parallel
   const [sbCustomers, sbLineItems, sbTruckStops, sbBundleUsage, sbCoilRecords] = await Promise.all([
-    _sbGet('customers',  'limit=5000').catch(()=>[]),
-    _sbGet('line_items', 'limit=10000').catch(()=>[]),
-    _sbGet('truck_stops','limit=5000').catch(()=>[]),
-    _sbGet('bundle_usage','limit=5000').catch(()=>[]),
-    _sbGet('coil_records','limit=2000').catch(()=>[]),
+    _sbGetAll('customers').catch(()=>[]),
+    _sbGetAll('line_items').catch(()=>[]),
+    _sbGetAll('truck_stops').catch(()=>[]),
+    _sbGetAll('bundle_usage').catch(()=>[]),
+    _sbGetAll('coil_records').catch(()=>[]),
   ]);
 
   const exportData = {
@@ -2651,6 +2684,10 @@ async function mergeDupWO(existingId){
   });
 
   // Update qty on changed items
+  // NOTE: qty changes are handled via the new/removed item pooling above (matching by qty),
+  // not as in-place updates — this array is intentionally always empty, kept only so the
+  // summary toast below can report "0 qty updates" without crashing.
+  const qtyUpdated = [];
   qtyUpdated.forEach(({existing: item, newQty})=>{
     item.qty = newQty;
     sbUpdateLI(existing.id, item.id, {qty: newQty}).catch(e=>console.warn('merge qty update error',e));
