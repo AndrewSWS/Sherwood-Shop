@@ -5934,17 +5934,24 @@ function renderTruck(c){
   const selWOs=state.wos.filter(w=>w.delivery===activeTruckDay);
   const _dayTrucks=state.trucks.map(t=>({t,stops:t.stops.filter(s=>s.delivery===activeTruckDay)})).map(o=>({...o,w:o.stops.reduce((s,st)=>s+getWOWeight(st.woId),0)}));
 
-  // Yearly stats
-  const thisYear = new Date().getFullYear();
-  const yearDelivered = state.wos.filter(w=>w.delivered && w.deliveredAt && new Date(w.deliveredAt).getFullYear()===thisYear);
+  // Monthly stats
+  const nowStats = new Date();
+  const thisYear = nowStats.getFullYear();
+  const thisMonth = nowStats.getMonth();
+  const yearDelivered = state.wos.filter(w=>{
+    if(!w.delivered || !w.deliveredAt) return false;
+    const d = new Date(w.deliveredAt);
+    return d.getFullYear()===thisYear && d.getMonth()===thisMonth;
+  });
   const yearWeight = yearDelivered.reduce((s,w)=>s+getWOWeight(w.id),0);
   const yearCount  = yearDelivered.length;
+  const monthLabel = nowStats.toLocaleDateString('en-US',{month:'long'});
 
   c.innerHTML=`
   <div class="card mb12" style="background:linear-gradient(135deg,#0d1f3c,#1a3a6b);border:none;color:#fff;padding:14px 20px">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
       <div>
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;opacity:.7;margin-bottom:4px">${thisYear} Deliveries</div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;opacity:.7;margin-bottom:4px">${monthLabel} Deliveries</div>
         <div style="font-size:28px;font-weight:900;letter-spacing:-.5px">${yearWeight.toLocaleString()} <span style="font-size:14px;font-weight:400;opacity:.8">lbs delivered</span></div>
       </div>
       <div style="text-align:right">
