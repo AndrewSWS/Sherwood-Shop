@@ -856,6 +856,8 @@ function _woToRow(wo) {
     delivered_at: wo.deliveredAt||null, delivered_by: wo.deliveredBy||null,
     ready_for_pickup: wo.readyForPickup||false,
     pickup_expected_date: wo.pickupExpectedDate||null,
+    bol_checked: wo.bolChecked||false, bol_checked_by: wo.bolCheckedBy||null,
+    bol_checked_at: wo.bolCheckedAt||null,
     created_at: wo.created||new Date().toISOString()
   };
 }
@@ -907,6 +909,8 @@ function _rowToWO(row, items=[]) {
     deliveredAt: row.delivered_at||'', deliveredBy: row.delivered_by||'',
     readyForPickup: row.ready_for_pickup||false,
     pickupExpectedDate: row.pickup_expected_date||'',
+    bolChecked: row.bol_checked||false, bolCheckedBy: row.bol_checked_by||'',
+    bolCheckedAt: row.bol_checked_at||'',
     created: row.created_at, items
   };
 }
@@ -3253,6 +3257,13 @@ function showBoardWODetail(woId){
         </div>
       </div>
       ${wo.notes?'<div style="font-size:12px;color:#f0a500;margin-bottom:12px;padding:6px 10px;background:#2a2a1a;border-radius:4px">📝 '+wo.notes+'</div>':''}
+      ${(!wo.isPickup && !wo.delivered && doneCount===items.length && items.length>0)?`<div style="margin-bottom:12px;padding:10px 14px;background:${wo.bolChecked?'#1a2e1a':'#2a2a1a'};border:2px solid ${wo.bolChecked?'#4CAF7D':'#555'};border-radius:8px;display:flex;align-items:center;justify-content:space-between;gap:10px">
+        <div>
+          <div style="font-size:12px;font-weight:800;color:${wo.bolChecked?'#4CAF7D':'#aaa'};text-transform:uppercase;letter-spacing:.06em">${wo.bolChecked?'\u2713 BOL Checked':'BOL Check Needed'}</div>
+          <div style="font-size:11px;color:#888;margin-top:2px">${wo.bolChecked?'Checked by '+(wo.bolCheckedBy||'?'):'Verify order against the BOL before it ships'}</div>
+        </div>
+        <button onclick="toggleBolCheck(${woId})" style="background:${wo.bolChecked?'#333':'#4CAF7D'};color:${wo.bolChecked?'#aaa':'#000'};border:none;border-radius:6px;padding:8px 14px;cursor:pointer;font-size:12px;font-weight:800;white-space:nowrap">${wo.bolChecked?'\u21a9 Undo':'\u2713 Mark Checked'}</button>
+      </div>`:''}
       <div style="border-top:1px solid #333;padding-top:12px">
         ${itemRows||'<div style="color:#666;font-style:italic">No line items</div>'}
       </div>
@@ -3307,8 +3318,19 @@ function renderBoardView(){
       }).filter(Boolean).join(' · ');
       const moreItems = items.length > 4 ? '...' : '';
 
+      // BOL quality check -- a check against the bill of lading done once all items
+      // are complete, before the order goes out. Delivery orders only (not pickups).
+      // Tap the checkmark to toggle it; white = shop-complete but not BOL-checked yet,
+      // green = BOL check done. Separate from item completion and from pickup-ready.
+      const canBolCheck = complete && !delivered && !wo.isPickup;
+      const bolChecked = !!wo.bolChecked;
+      const checkMark = !complete ? '' : delivered ? '🚚 '
+        : canBolCheck
+          ? '<span onclick="event.stopPropagation();toggleBolCheck('+wo.id+')" style="cursor:pointer;color:'+(bolChecked?'#4CAF7D':'#fff')+'" title="'+(bolChecked?'BOL checked \u2014 tap to clear':'Tap to confirm BOL check')+'">\u2713</span> '
+          : '\u2713 ';
+
       return '<div class="board-stop'+(delivered?' done':'')+'" style="border-left-color:'+color+';cursor:pointer" onclick="showBoardWODetail('+wo.id+')">'
-        +'<div class="board-stop-cust">'+(delivered?'🚚 ':complete?'✓ ':'')+wo.customer+'</div>'
+        +'<div class="board-stop-cust">'+checkMark+wo.customer+'</div>'
         +'<div class="board-stop-wo">'
           +'<span style="white-space:nowrap;flex-shrink:0">WO #'+wo.woNum+(getWOWeight(wo.id)?' · '+getWOWeight(wo.id).toLocaleString()+' lbs':'')+'</span>'
           +(itemSnippet?'<span style="font-size:9px;color:#aaa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;max-width:120px">'+itemSnippet+moreItems+'</span>':'')
@@ -3561,6 +3583,25 @@ function setPickupReady(woId, ready){
   renderBoardPickups();
   scheduleRenderQueue();
   toast(ready ? '✓ Order marked ready for pick up' : 'Pick up ready status cleared');
+}
+
+// Toggle the BOL quality-check for a WO from the main board.
+// This is separate from item completion — it's a final check-against-BOL step
+// done once all items are done. Turns the board checkmark from white to green.
+function toggleBolCheck(woId){
+  const wo = state.wos.find(w=>w.id===woId);
+  if(!wo) return;
+  if(wo.isPickup) return; // BOL check applies to delivered orders only — pickups use their own ready-for-pickup flow
+  const checking = !wo.bolChecked;
+  wo.bolChecked = checking;
+  wo.bolCheckedBy = checking ? (state.currentUser||'Board') : '';
+  wo.bolCheckedAt = checking ? new Date().toISOString() : '';
+  saveState();
+  sbUpdateWO(wo).catch(e=>console.warn('toggleBolCheck error',e));
+  renderBoardView();
+  // Refresh the board detail modal in place if it's open for this WO
+  if(document.getElementById('board-detail-modal')) showBoardWODetail(woId);
+  toast(checking ? '✓ BOL checked — '+wo.customer : 'BOL check cleared — '+wo.customer);
 }
 
 function showPickupModal(woId){
