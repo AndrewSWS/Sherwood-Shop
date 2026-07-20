@@ -3494,6 +3494,23 @@ function setPickupReady(woId, ready){
   const wo = state.wos.find(w=>w.id===woId);
   if(!wo) return;
   wo.readyForPickup = ready;
+  wo.items.forEach(item=>{
+    if(ready){
+      item.status='Complete';
+      item.completedBy=state.currentUser||'Pickup';
+      item.completedAt=new Date().toISOString();
+    } else if(item.completedBy==='Pickup'||item.completedBy===state.currentUser){
+      // Only revert items this action completed — leave anyone else's manual completions alone
+      item.status='Pending';
+      item.completedBy='';
+      item.completedAt='';
+    }
+    sbUpdateLI(woId, item.id, {
+      status: item.status,
+      completedBy: item.completedBy,
+      completedAt: item.completedAt
+    }).catch(e=>console.warn('sbUpdateLI setPickupReady error',e));
+  });
   saveState();
   sbUpdateWO(wo).catch(e=>console.warn('setPickupReady error',e));
   // Refresh the WO detail panel
@@ -3501,6 +3518,7 @@ function setPickupReady(woId, ready){
   if(det && det.style.display!=='none') det.innerHTML = renderWODetail(wo);
   // Refresh the board pickup bar if board is open
   renderBoardPickups();
+  scheduleRenderQueue();
   toast(ready ? '✓ Order marked ready for pick up' : 'Pick up ready status cleared');
 }
 
@@ -3556,10 +3574,21 @@ function boardSetPickupReady(woId){
   const wo = state.wos.find(w=>w.id===woId);
   if(!wo) return;
   wo.readyForPickup = true;
+  wo.items.forEach(item=>{
+    item.status='Complete';
+    item.completedBy=state.currentUser||'Pickup';
+    item.completedAt=new Date().toISOString();
+    sbUpdateLI(woId, item.id, {
+      status: item.status,
+      completedBy: item.completedBy,
+      completedAt: item.completedAt
+    }).catch(e=>console.warn('sbUpdateLI boardSetPickupReady error',e));
+  });
   saveState();
   sbUpdateWO(wo).catch(e=>console.warn('boardSetPickupReady error',e));
   document.getElementById('board-pickup-modal')?.remove();
   renderBoardPickups();
+  scheduleRenderQueue();
   toast('✓ '+wo.customer+' marked ready for pick up');
 }
 
@@ -3923,7 +3952,7 @@ function printQueueList(station){
   const today = new Date(); today.setHours(0,0,0,0);
   const rawItems = [];
   state.wos.forEach(wo=>{
-    const isPast = wo.delivery && new Date(wo.delivery+'T00:00:00') < today;
+    const isPast = (wo.delivery && new Date(wo.delivery+'T00:00:00') < today) || (wo.isPickup && !!wo.pickupDate);
     if(isPast && !showAllQueue) return;
     wo.items.forEach(item=>{
       if(item.status !== 'Complete' && item.station === station){
@@ -4165,7 +4194,7 @@ function printQueueSummary(station){
   const today = new Date(); today.setHours(0,0,0,0);
   const rawItems = [];
   state.wos.forEach(wo=>{
-    const isPast = wo.delivery && new Date(wo.delivery+'T00:00:00') < today;
+    const isPast = (wo.delivery && new Date(wo.delivery+'T00:00:00') < today) || (wo.isPickup && !!wo.pickupDate);
     if(isPast && !showAllQueue) return;
     wo.items.forEach(item=>{
       if(item.status !== 'Complete' && item.station === station){
@@ -4706,15 +4735,15 @@ function renderQueue(c){
   const today=new Date();today.setHours(0,0,0,0);
   const allItems=[];
   state.wos.forEach(wo=>{
-    // Skip past WOs unless showAllQueue
-    const isPast=wo.delivery&&new Date(wo.delivery+'T00:00:00')<today;
+    // Skip past-delivery WOs, and pickup WOs that have already been picked up, unless showAllQueue
+    const isPast=(wo.delivery&&new Date(wo.delivery+'T00:00:00')<today) || (wo.isPickup&&!!wo.pickupDate);
     if(isPast&&!showAllQueue)return;
     wo.items.forEach(item=>{
       if(item.status!=='Complete')allItems.push({...item,woNum:wo.woNum,woId:wo.id,customer:wo.customer,delivery:wo.delivery,isPast});
     });
   });
   // Count hidden
-  const hiddenWOs=showAllQueue?0:state.wos.filter(w=>w.delivery&&new Date(w.delivery+'T00:00:00')<today).length;
+  const hiddenWOs=showAllQueue?0:state.wos.filter(w=>(w.delivery&&new Date(w.delivery+'T00:00:00')<today)||(w.isPickup&&!!w.pickupDate)).length;
   const totalOpen=allItems.length;
   const totalUnassigned=allItems.filter(i=>!i.assignee).length;
   const tabs=Q_STATIONS.map(s=>{
@@ -4729,7 +4758,7 @@ function renderQueue(c){
   // Get items for active station using getActiveStep
   const stationAllItems = [];
   state.wos.forEach(wo=>{
-    const isPastQ = wo.delivery && new Date(wo.delivery+'T00:00:00') < today;
+    const isPastQ = (wo.delivery && new Date(wo.delivery+'T00:00:00') < today) || (wo.isPickup && !!wo.pickupDate);
     if(isPastQ && !showAllQueue) return;
     wo.items.forEach(item=>{
       if(item.status==='Complete') return;
@@ -5087,7 +5116,7 @@ function getQueueItems(){
   const today = new Date(); today.setHours(0,0,0,0);
   const allItems = [];
   state.wos.forEach(wo=>{
-    const isPast = wo.delivery && new Date(wo.delivery+'T00:00:00') < today;
+    const isPast = (wo.delivery && new Date(wo.delivery+'T00:00:00') < today) || (wo.isPickup && !!wo.pickupDate);
     if(isPast && !showAllQueue) return;
     wo.items.forEach(item=>{
       if(item.status === 'Complete') return;
@@ -5187,7 +5216,7 @@ function moveQueueItem(woId, itemId, direction){
   const today = new Date(); today.setHours(0,0,0,0);
   const allItems = [];
   state.wos.forEach(wo=>{
-    const isPast = wo.delivery && new Date(wo.delivery+'T00:00:00') < today;
+    const isPast = (wo.delivery && new Date(wo.delivery+'T00:00:00') < today) || (wo.isPickup && !!wo.pickupDate);
     if(isPast && !showAllQueue) return;
     wo.items.forEach(item=>{
       if(item.status !== 'Complete' && item.station === activeQStation){
@@ -5412,7 +5441,7 @@ function getActiveCoilsSorted(){
   const today = new Date(); today.setHours(0,0,0,0);
   const activeCoils = new Set();
   state.wos.forEach(wo=>{
-    const isPast = wo.delivery && new Date(wo.delivery+'T00:00:00') < today;
+    const isPast = (wo.delivery && new Date(wo.delivery+'T00:00:00') < today) || (wo.isPickup && !!wo.pickupDate);
     if(isPast && !showAllQueue) return;
     wo.items.forEach(item=>{
       const cn = String(item.coilNum||'').trim();
