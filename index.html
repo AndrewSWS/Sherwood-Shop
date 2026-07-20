@@ -3036,6 +3036,10 @@ function updateLI(woId,itemId,field,val){
   const item=wo.items.find(i=>i.id==itemId);if(!item)return;
   item[field]=field==='weight'?parseFloat(val)||0:val;
   saveState();updateBadges();
+  // Push to Supabase so it sticks — without this, the change only lives in
+  // localStorage and the ~90s poll cycle pulls the old DB value right back
+  // over it (this is why station kept reverting to its import-time default).
+  sbUpdateLI(woId, itemId, {[field]: item[field]}).catch(e=>console.warn('updateLI sync error',e));
   // Refresh truck weight if weight changed
   if(field==='weight')syncTruckWeights(wo);
   // If assignee changed and My Tasks is active, refresh it
