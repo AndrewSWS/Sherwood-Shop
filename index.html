@@ -3494,18 +3494,6 @@ function renderBoardPickups(){
     const statusLabel = wo.readyForPickup ? '✓ READY' : status==='In Process' ? '⚡ In Process' : '⏳ Pending';
     const borderColor = wo.readyForPickup ? '#4CAF7D' : (grp ? grp.color : '#888');
 
-    // Line-item summary, same style as the board day cards
-    const items = wo.items||[];
-    const itemSnippet = items.slice(0,3).map(i=>{
-      const parts = [];
-      if(i.gauge) parts.push(i.gauge);
-      if(i.size) parts.push(i.size);
-      else if(i.productCat) parts.push(i.productCat.replace('Other / Hardware','Hdwr').replace('Flat Sheet','Flat'));
-      if(i.qty) parts.push('×'+i.qty);
-      return parts.join(' ');
-    }).filter(Boolean).join(' · ');
-    const moreItems = items.length > 3 ? ' …' : '';
-
     // Expected pickup date badge — amber if today/overdue, muted otherwise
     let expBadge = '';
     if(wo.pickupExpectedDate){
@@ -3522,15 +3510,12 @@ function renderBoardPickups(){
       white-space:nowrap;
       flex-shrink:0;
       cursor:pointer;
-    " title="Click to mark picked up">
-      <div>
-        <span style="font-size:12px;font-weight:700;color:#fff">${wo.customer}</span>
-        <span style="font-size:10px;color:#888;margin-left:6px">WO #${wo.woNum}</span>
-        <span style="font-size:10px;font-weight:700;color:${statusColor};margin-left:8px">${statusLabel}</span>
-        ${!wo.readyForPickup?'<span style="font-size:9px;color:#555;margin-left:4px">not ready</span>':'<span style="font-size:9px;color:#4CAF7D;margin-left:4px">tap to clear</span>'}
-        ${expBadge}
-      </div>
-      ${itemSnippet?`<div style="font-size:9px;color:#999;margin-top:1px">${itemSnippet}${moreItems}</div>`:''}
+    " title="Click to view line items">
+      <span style="font-size:12px;font-weight:700;color:#fff">${wo.customer}</span>
+      <span style="font-size:10px;color:#888;margin-left:6px">WO #${wo.woNum}</span>
+      <span style="font-size:10px;font-weight:700;color:${statusColor};margin-left:8px">${statusLabel}</span>
+      ${!wo.readyForPickup?'<span style="font-size:9px;color:#555;margin-left:4px">not ready</span>':'<span style="font-size:9px;color:#4CAF7D;margin-left:4px">tap to clear</span>'}
+      ${expBadge}
     </div>`;
   }).join('');
 }
