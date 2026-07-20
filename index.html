@@ -6047,7 +6047,7 @@ function renderTruck(c){
     const isSelected=iso===activeTruckDay;
     const isToday=iso===todayISOf;
     const dayWOs=state.wos.filter(w=>w.delivery===iso);
-    const totalW=state.trucks.reduce((sum,t)=>sum+t.stops.filter(s=>s.delivery===iso).reduce((s,st)=>s+getWOWeight(st.woId),0),0);
+    const totalW=dayWOs.reduce((sum,wo)=>sum+getWOWeight(wo.id),0);
     return`<div onclick="switchTruckDay('${iso}')" style="flex:1;padding:10px 8px;text-align:center;cursor:pointer;border-bottom:3px solid ${isSelected?'var(--blue)':'transparent'};background:${isSelected?'var(--blue-l)':isToday?'#f8fbff':'var(--surface)'};border-radius:var(--rad) var(--rad) 0 0;transition:all .15s;min-width:80px">
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:${isSelected?'var(--blue)':isToday?'var(--blue)':'var(--text2)'}">${d.toLocaleDateString('en-US',{weekday:'short'})}</div>
       <div style="font-size:12px;color:${isSelected?'var(--blue)':'var(--text2)'};">${d.toLocaleDateString('en-US',{month:'short',day:'numeric'})}</div>
@@ -6114,11 +6114,15 @@ function renderTruck(c){
     ${state.trucks.map(t=>renderTruckCard(t, activeTruckDay)).join('')}
   </div>
 
-  ${selWOs.filter(w=>!getWOTruckId(w.id)).length?`
+  ${(()=>{
+    const noTruckSelWOs = selWOs.filter(w=>!getWOTruckId(w.id));
+    if(!noTruckSelWOs.length) return '';
+    const noTruckWeight = noTruckSelWOs.reduce((s,w)=>s+getWOWeight(w.id),0);
+    return `
   <div class="card mt16" style="border-color:var(--amber)">
-    <div class="section-head" style="color:var(--amber)">⚠ WOs on this date not yet assigned to a truck (${selWOs.filter(w=>!getWOTruckId(w.id)).length})</div>
+    <div class="section-head" style="color:var(--amber)">⚠ WOs on this date not yet assigned to a truck (${noTruckSelWOs.length}) · ${noTruckWeight.toLocaleString()} lbs total</div>
     <div style="display:flex;flex-wrap:wrap;gap:8px">
-      ${selWOs.filter(w=>!getWOTruckId(w.id)).map(wo=>`
+      ${noTruckSelWOs.map(wo=>`
         <div style="background:var(--amber-l);border:1px solid #FAC775;border-radius:var(--rad);padding:10px 14px;min-width:180px">
           <div style="font-weight:700">WO #${wo.woNum}</div>
           <div style="font-size:12px;color:var(--amber)">${wo.customer}</div>
@@ -6127,8 +6131,8 @@ function renderTruck(c){
             ${state.trucks.map((t,i)=>`<button class="btn btn-xs${i===0?' btn-primary':''}" onclick="quickAssignTruck(${wo.id},${t.id})">\u2192 ${t.name.split(' ').slice(0,2).join(' ')}</button>`).join('')}
           </div>
         </div>`).join('')}
-    </div>
-  </div>`:''}
+    </div>`;
+  })()}
 
   <div class="card mt16">
     <div class="section-head">Add WO to Truck</div>
