@@ -3506,16 +3506,17 @@ function renderBoardPickups(){
       border:1px solid ${borderColor};
       border-left:3px solid ${borderColor};
       border-radius:4px;
-      padding:4px 10px;
-      white-space:nowrap;
-      flex-shrink:0;
+      padding:4px 8px;
+      overflow:hidden;
       cursor:pointer;
     " title="Click to view line items">
-      <span style="font-size:12px;font-weight:700;color:#fff">${wo.customer}</span>
-      <span style="font-size:10px;color:#888;margin-left:6px">WO #${wo.woNum}</span>
-      <span style="font-size:10px;font-weight:700;color:${statusColor};margin-left:8px">${statusLabel}</span>
-      ${!wo.readyForPickup?'<span style="font-size:9px;color:#555;margin-left:4px">not ready</span>':'<span style="font-size:9px;color:#4CAF7D;margin-left:4px">tap to clear</span>'}
-      ${expBadge}
+      <div style="font-size:12px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${wo.customer}</div>
+      <div style="font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+        <span style="color:#888">WO #${wo.woNum}</span>
+        <span style="font-weight:700;color:${statusColor};margin-left:6px">${statusLabel}</span>
+        ${!wo.readyForPickup?'<span style="color:#555;margin-left:4px">not ready</span>':'<span style="color:#4CAF7D;margin-left:4px">tap to clear</span>'}
+        ${expBadge}
+      </div>
     </div>`;
   }).join('');
 }
@@ -11033,20 +11034,20 @@ if("serviceWorker" in navigator){
   <div id="board-pickup-bar" style="
     background:#1a1a2e;
     border-top:2px solid #f0a500;
-    padding:4px 16px;
+    padding:6px 16px;
     flex-shrink:0;
     display:flex;
-    align-items:center;
+    align-items:flex-start;
     gap:12px;
     overflow-x:hidden;
     overflow-y:auto;
-    max-height:72px;
+    max-height:112px;
     min-height:36px;
   ">
-    <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#f0a500;white-space:nowrap;flex-shrink:0">
+    <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#f0a500;white-space:nowrap;flex-shrink:0;padding-top:4px">
       📦 Pick Ups
     </div>
-    <div id="board-pickup-items" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"></div>
+    <div id="board-pickup-items" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;align-items:start;flex:1;min-width:0"></div>
   </div>
 </div>
 
