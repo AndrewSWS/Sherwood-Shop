@@ -3910,6 +3910,9 @@ function deleteWO(id){
 
 function editWO(id){
   const wo=state.wos.find(w=>w.id===id);if(!wo)return;
+  // Remember where we came from (e.g. the Shop Queue) so Save/Cancel return there
+  window._editReturnView = state.activeView;
+  window._editReturnQStation = typeof activeQStation!=='undefined' ? activeQStation : null;
   state.activeView='assign';
   const c=document.getElementById('content');
   document.getElementById('page-title').textContent='Edit WO #'+wo.woNum;
@@ -4056,12 +4059,25 @@ function saveEditWO(id){
     }
   });
   toast('WO #'+wo.woNum+' updated');
-  nav('assign',document.querySelector('.nav-item[onclick*=assign]'));
+  returnFromWOEdit();
+}
+
+function returnFromWOEdit(){
+  const rv = window._editReturnView;
+  const rs = window._editReturnQStation;
+  window._editReturnView = null;
+  window._editReturnQStation = null;
+  if(rv==='queue'){
+    if(rs && typeof activeQStation!=='undefined') activeQStation = rs;
+    nav('queue', document.querySelector('.nav-item[onclick*=queue]'));
+  } else {
+    nav('assign', document.querySelector('.nav-item[onclick*=assign]'));
+  }
 }
 
 function cancelEdit(){
   window._editingWOId=null;
-  nav('assign',document.querySelector('.nav-item[onclick*=assign]'));
+  returnFromWOEdit();
 }
 
 // ══════════════════════════════════════════════════════
@@ -4978,7 +4994,7 @@ function renderQueue(c){
           ${item.qty?`<span style="font-size:15px;font-weight:700;color:var(--text2);margin-left:8px">× ${item.qty}</span>`:''}
         </div>
         <div class="flex gap8 flex-wrap" style="margin-bottom:4px">
-          <span style="font-size:11px;color:var(--text3)">WO #${item.woNum}</span>
+          <span onclick="editWO(${item.woId})" style="font-size:11px;color:var(--blue);cursor:pointer;text-decoration:underline;font-weight:700" title="Edit full work order details">✏ WO #${item.woNum}</span>
           ${item.delivery?`<span class="badge badge-amber">📅 ${fmtDate(item.delivery)}</span>`:item.isPickup?(item.pickupExpectedDate?`<span class="badge badge-blue">🏪 ${fmtDate(item.pickupExpectedDate)}</span>`:`<span class="badge badge-red">🏪 No pickup date</span>`):''}
           ${item.isDual?(()=>{
             const steps=DUAL_STATIONS[item.station]||[];
