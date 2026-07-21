@@ -499,7 +499,7 @@ function renderDashboard(){
   const isTheo=weightMode==='theoretical';
 
   const rows=computed.map(g=>{
-    const sl=statLabel(g.L_months,tgt);
+    const sl=g.D_total>0?statLabel(g.L_months,tgt):'none';
     const sc=sl==='over'?'s-over':sl==='near'?'s-near':sl==='below'?'s-below':'s-none';
     const st=sl==='over'?'At / Over':sl==='near'?'Near':sl==='below'?'Below':'—';
     const bp=Math.min(100,(g.L_months/(tgt||3))*100);
