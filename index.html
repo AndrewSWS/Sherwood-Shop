@@ -4104,7 +4104,7 @@ function printQueueList(station){
     if(isPast && !showAllQueue) return;
     wo.items.forEach(item=>{
       if(item.status !== 'Complete' && item.station === station){
-        rawItems.push({woId: wo.id, item, woNum: wo.woNum, customer: wo.customer, delivery: wo.delivery});
+        rawItems.push({woId: wo.id, item, woNum: wo.woNum, customer: wo.customer, delivery: wo.delivery, isPickup: wo.isPickup, pickupExpectedDate: wo.pickupExpectedDate});
       }
     });
   });
@@ -4138,7 +4138,7 @@ function printQueueList(station){
         <div class="shear-customer">${item.customer}</div>
         <div class="shear-meta">
           <span class="shear-wo">WO #${item.woNum}</span>
-          <span class="delivery" style="font-size:15px;font-weight:800;padding:3px 10px;border-radius:4px;${item.delivery ? 'background:#1C2E1C;color:#fff' : 'background:#f0f0f0;color:#888;font-style:italic'}">📅 ${item.delivery ? fmtDate(item.delivery) : 'Unscheduled'}</span>
+          <span class="delivery" style="font-size:15px;font-weight:800;padding:3px 10px;border-radius:4px;${item.delivery||item.pickupExpectedDate ? 'background:#1C2E1C;color:#fff' : 'background:#f0f0f0;color:#888;font-style:italic'}">${item.delivery ? '📅 '+fmtDate(item.delivery) : item.pickupExpectedDate ? '🏪 '+fmtDate(item.pickupExpectedDate) : '📅 Unscheduled'}</span>
           <span class="assignee">${item.assignee || '<i style="color:#c0392b">Unassigned</i>'}</span>
         </div>
       </div>
@@ -4165,7 +4165,7 @@ function printQueueList(station){
         <span class="row-num">${i}</span>
         <span class="wo-num">WO #${item.woNum}</span>
         <span class="customer">${item.customer}</span>
-        <span class="delivery" style="font-size:15px;font-weight:800;padding:3px 10px;border-radius:4px;${item.delivery ? 'background:#1C2E1C;color:#fff' : 'background:#f0f0f0;color:#888;font-style:italic'}">📅 ${item.delivery ? fmtDate(item.delivery) : 'Unscheduled'}</span>
+        <span class="delivery" style="font-size:15px;font-weight:800;padding:3px 10px;border-radius:4px;${item.delivery||item.pickupExpectedDate ? 'background:#1C2E1C;color:#fff' : 'background:#f0f0f0;color:#888;font-style:italic'}">${item.delivery ? '📅 '+fmtDate(item.delivery) : item.pickupExpectedDate ? '🏪 '+fmtDate(item.pickupExpectedDate) : '📅 Unscheduled'}</span>
         <span class="assignee">${item.assignee || '<i style="color:#c0392b">Unassigned</i>'}</span>
         ${isIOWA && item.coilNum ? `<span class="coil-badge">🪙 Coil #${item.coilNum}</span>` : ''}
       </div>
@@ -4346,7 +4346,7 @@ function printQueueSummary(station){
     if(isPast && !showAllQueue) return;
     wo.items.forEach(item=>{
       if(item.status !== 'Complete' && item.station === station){
-        rawItems.push({woId:wo.id, item, woNum:wo.woNum, customer:wo.customer, delivery:wo.delivery});
+        rawItems.push({woId:wo.id, item, woNum:wo.woNum, customer:wo.customer, delivery:wo.delivery, isPickup:wo.isPickup, pickupExpectedDate:wo.pickupExpectedDate});
       }
     });
   });
@@ -4487,14 +4487,22 @@ function queueSort(a, b){
   // If only one has manual priority, it goes first
   if(hasA) return -1;
   if(hasB) return 1;
+  // Effective date: pickup orders sort by their expected pickup date instead
+  // of a delivery date (pickups have no delivery date). On a tie — pickup
+  // date falls on or before a delivery's date — the pickup goes first, since
+  // the customer is coming to get it rather than waiting on a truck.
+  const aIsPickup = !!(a.item.isPickup || a.isPickup);
+  const bIsPickup = !!(b.item.isPickup || b.isPickup);
+  const da = (aIsPickup ? (a.item.pickupExpectedDate || a.pickupExpectedDate) : (a.item.delivery || a.delivery)) || '';
+  const db = (bIsPickup ? (b.item.pickupExpectedDate || b.pickupExpectedDate) : (b.item.delivery || b.delivery)) || '';
   // No delivery date goes to bottom
-  const da = a.item.delivery || a.delivery || '';
-  const db = b.item.delivery || b.delivery || '';
   if(!da && !db) return (parseInt(a.item.woNum||a.woNum)||0) - (parseInt(b.item.woNum||b.woNum)||0);
   if(!da) return 1;  // a has no date → goes to bottom
   if(!db) return -1; // b has no date → goes to bottom
-  // Sort by delivery date ascending, then WO number
+  // Sort by date ascending, then WO number
   if(da !== db) return da < db ? -1 : 1;
+  // Same date: pickups before deliveries
+  if(aIsPickup !== bIsPickup) return aIsPickup ? -1 : 1;
   return (parseInt(a.item.woNum||a.woNum)||0) - (parseInt(b.item.woNum||b.woNum)||0);
 }
 
@@ -4915,6 +4923,8 @@ function renderQueue(c){
         item.woNum = wo.woNum;
         item.customer = wo.customer;
         item.delivery = wo.delivery;
+        item.isPickup = wo.isPickup;
+        item.pickupExpectedDate = wo.pickupExpectedDate;
         item.woId = wo.id;
         stationAllItems.push({woId:wo.id, item});
       }
@@ -4969,7 +4979,7 @@ function renderQueue(c){
         </div>
         <div class="flex gap8 flex-wrap" style="margin-bottom:4px">
           <span style="font-size:11px;color:var(--text3)">WO #${item.woNum}</span>
-          ${item.delivery?`<span class="badge badge-amber">📅 ${fmtDate(item.delivery)}</span>`:''}
+          ${item.delivery?`<span class="badge badge-amber">📅 ${fmtDate(item.delivery)}</span>`:item.isPickup?(item.pickupExpectedDate?`<span class="badge badge-blue">🏪 ${fmtDate(item.pickupExpectedDate)}</span>`:`<span class="badge badge-red">🏪 No pickup date</span>`):''}
           ${item.isDual?(()=>{
             const steps=DUAL_STATIONS[item.station]||[];
             const onStep = item.step1Status!=='Complete'?1:item.step2Status!=='Complete'?2:3;
@@ -5912,7 +5922,7 @@ function printTaskList(operator){
   state.wos.forEach(wo=>{
     wo.items.forEach(item=>{
       if(item.assignee===operator && item.status!=='Complete'){
-        tasks.push({...item, woNum:wo.woNum, woId:wo.id, customer:wo.customer, delivery:wo.delivery});
+        tasks.push({...item, woNum:wo.woNum, woId:wo.id, customer:wo.customer, delivery:wo.delivery, isPickup:wo.isPickup, pickupExpectedDate:wo.pickupExpectedDate});
       }
     });
   });
@@ -5923,7 +5933,7 @@ function printTaskList(operator){
       <div class="task-header">
         <span class="wo-num">WO #${item.woNum}</span>
         <span class="customer">${item.customer}</span>
-        ${item.delivery?`<span class="delivery">📅 ${fmtDate(item.delivery)}</span>`:''}
+        ${item.delivery?`<span class="delivery">📅 ${fmtDate(item.delivery)}</span>`:item.isPickup&&item.pickupExpectedDate?`<span class="delivery">🏪 ${fmtDate(item.pickupExpectedDate)}</span>`:''}
         <span class="station">${item.station||'—'}</span>
       </div>
       <div class="task-fields">
@@ -5985,7 +5995,7 @@ function renderMyView(c){
   const tasks=[];
   state.wos.forEach(wo=>{
     wo.items.forEach(item=>{
-      if(item.assignee===me)tasks.push({...item,woNum:wo.woNum,woId:wo.id,customer:wo.customer,delivery:wo.delivery,woNotes:wo.notes});
+      if(item.assignee===me)tasks.push({...item,woNum:wo.woNum,woId:wo.id,customer:wo.customer,delivery:wo.delivery,isPickup:wo.isPickup,pickupExpectedDate:wo.pickupExpectedDate,woNotes:wo.notes});
     });
   });
   tasks.sort((a,b)=>(a.status==='Complete'?1:0)-(b.status==='Complete'?1:0)||(a.priority-b.priority));
@@ -6016,7 +6026,7 @@ function renderMyTask(item,isDone=false){
     <div class="flex gap8 flex-wrap">
       <strong style="font-size:14px">WO #${item.woNum}</strong>
       <span style="color:var(--blue);font-size:13px">${item.customer}</span>
-      ${item.delivery?`<span class="badge badge-amber">📅 ${fmtDate(item.delivery)}</span>`:''}
+      ${item.delivery?`<span class="badge badge-amber">📅 ${fmtDate(item.delivery)}</span>`:item.isPickup&&item.pickupExpectedDate?`<span class="badge badge-blue">🏪 ${fmtDate(item.pickupExpectedDate)}</span>`:''}
     </div>
     <div class="flex gap6">
       <span class="badge badge-gray">${item.station}</span>
