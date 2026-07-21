@@ -4087,8 +4087,13 @@ function initAdminConfig(){
   }
 }
 
-const Q_STATIONS=['IOWA','SHEAR','SLIP','DRIVE','BREAK','PLENUMS','PICK / PULL','STANDING S','RETURN AIR FRAMES','ROLLERS','OTHER'];
-let activeQStation=Q_STATIONS[0];
+// Shop Queue tabs — derived live from the admin-configured station list
+// (Stations / Machines panel) rather than a fixed array, so adding a new
+// station there shows up here immediately. Dual-step stations (e.g.
+// IOWA → SHEAR) are excluded — they decompose into their component single
+// stations via getActiveStep(), so items surface under those tabs instead.
+function getQStations(){ return getStations().filter(s=>!s.includes('→')); }
+let activeQStation='IOWA';
 
 function printQueueList(station){
   // Build items — normalize priorities right now so print always matches queue display
@@ -4889,7 +4894,7 @@ function renderQueue(c){
   const hiddenWOs=showAllQueue?0:state.wos.filter(w=>(w.delivery&&new Date(w.delivery+'T00:00:00')<today)||(w.isPickup&&!!w.pickupDate)).length;
   const totalOpen=allItems.length;
   const totalUnassigned=allItems.filter(i=>!i.assignee).length;
-  const tabs=Q_STATIONS.map(s=>{
+  const tabs=getQStations().map(s=>{
     // Count items whose current active step matches this station
     const cnt=allItems.filter(i=>{
       const activeStep = getActiveStep(i.item||i);
@@ -9090,13 +9095,16 @@ function renderSettingsStations(){
   return`<div class="grid2 gap16">
   <div class="card">
     <div class="section-head">Stations / Machines</div>
-    <div style="margin-bottom:12px;font-size:12px;color:var(--text2)">These appear in the Station dropdown on line items and the Shop Queue tabs.</div>
+    <div style="margin-bottom:12px;font-size:12px;color:var(--text2)">These appear in the Station dropdown on line items and the Shop Queue tabs. Click a single station\u2019s name to rename it.</div>
     ${stations.map((s,i)=>{
       const isDual=isDualStation(s);
       return`<div class="flex-between flex-wrap gap8" style="padding:8px 0;border-bottom:1px solid var(--border)">
-        <div class="flex gap8" style="align-items:center">
-          ${isDual?'<span class="badge badge-purple">⚡ Dual</span>':'<span class="badge badge-gray">Single</span>'}
-          <span style="font-size:13px;font-weight:500">${s}</span>
+        <div class="flex gap8" style="align-items:center;flex:1;min-width:0">
+          ${isDual?'<span class="badge badge-purple">\u26a1 Dual</span>':'<span class="badge badge-gray">Single</span>'}
+          ${isDual
+            ?`<span style="font-size:13px;font-weight:500">${s}</span>`
+            :`<input type="text" value="${escHtml(s)}" style="flex:1;min-width:100px;max-width:260px;border:1px solid transparent;background:transparent;font-size:13px;font-weight:500;padding:3px 6px;border-radius:4px" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--surface)'" onblur="this.style.borderColor='transparent';this.style.background='transparent'" onchange="renameStation('${s.replace(/'/g,"\\'")}',this.value)">`
+          }
         </div>
         <div class="flex gap6">
           ${i>0?`<button class="btn btn-xs" onclick="moveStation(${i},-1)">↑</button>`:''}
@@ -9145,6 +9153,52 @@ function addStation(){
   state.adminConfig.stations.push(name);
   saveState();toast(`✓ ${name} added`);
   sbSaveAdminConfig('stations', state.adminConfig.stations);
+  renderSettings(document.getElementById('content'));
+}
+
+function renameStation(oldName,newValRaw){
+  const newName=(newValRaw||'').trim();
+  if(!newName||newName===oldName){renderSettings(document.getElementById('content'));return;} // no-op or blank — just redraw to reset the input
+  if(getStations().includes(newName)){toast(`"${newName}" already exists`);renderSettings(document.getElementById('content'));return;}
+
+  // 1) Rename in the station list itself, preserving position
+  const idx=state.adminConfig.stations.indexOf(oldName);
+  if(idx===-1){renderSettings(document.getElementById('content'));return;}
+  state.adminConfig.stations[idx]=newName;
+
+  // 2) Update any operator's default station that pointed at the old name
+  if(state.adminConfig.stationDefaults){
+    Object.keys(state.adminConfig.stationDefaults).forEach(op=>{
+      if(state.adminConfig.stationDefaults[op]===oldName) state.adminConfig.stationDefaults[op]=newName;
+    });
+  }
+
+  // 3) Update dual-step pairs that use this station as step 1 or step 2
+  //    (e.g. renaming IOWA also updates the "IOWA → SHEAR" pair's step 1)
+  Object.keys(DUAL_STATIONS).forEach(key=>{
+    DUAL_STATIONS[key]=DUAL_STATIONS[key].map(s=>s===oldName?newName:s);
+  });
+
+  // 4) Keep the active Shop Queue tab pointed at the renamed station
+  if(typeof activeQStation!=='undefined' && activeQStation===oldName) activeQStation=newName;
+
+  // 5) Update every existing line item still carrying the old station name —
+  //    otherwise open orders would silently vanish from the renamed tab/dropdown
+  let itemsUpdated=0;
+  state.wos.forEach(wo=>{
+    wo.items.forEach(item=>{
+      if(item.station===oldName){
+        item.station=newName;
+        itemsUpdated++;
+        sbUpdateLI(wo.id,item.id,{station:newName}).catch(e=>console.warn('renameStation sync error',e));
+      }
+    });
+  });
+
+  saveState();
+  sbSaveAdminConfig('stations', state.adminConfig.stations);
+  sbSaveAdminConfig('station_defaults', state.adminConfig.stationDefaults);
+  toast(`✓ Renamed "${oldName}" → "${newName}"${itemsUpdated?` (${itemsUpdated} item${itemsUpdated!==1?'s':''} updated)`:''}`);
   renderSettings(document.getElementById('content'));
 }
 
