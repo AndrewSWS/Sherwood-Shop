@@ -6255,7 +6255,7 @@ function renderTruckCard(t, filterDay){
     <span style="color:var(--text3);margin-left:8px">(${t.stops.reduce((s,st)=>s+getWOWeight(st.woId),0).toLocaleString()} lbs total all days)</span></div>
     ${dayStops.length?`<button class="btn btn-sm no-print" onclick="printTruck('${t.id}','${filterDay||''}')" style="font-size:11px;padding:4px 10px">🖨 Print Load Sheet</button>`:''}
   </div>
-  <divsection-head">Stops for ${fmtDate(filterDay)} (${dayStops.length})</div>
+  <div class="section-head">Stops for ${fmtDate(filterDay)} (${dayStops.length})</div>
   ${dayStops.length?(()=>{
     let lastGrpId = null;
     return dayStops.map((s,i)=>{
