@@ -258,13 +258,15 @@
   /* ── BUNDLE PROMPT MODAL ── */
   #bundle-modal {
     position: fixed; inset: 0; background: rgba(0,0,0,.88);
-    display: flex; align-items: center; justify-content: center;
-    z-index: 9999; padding: 24px;
+    display: flex; align-items: flex-start; justify-content: center;
+    z-index: 9999; padding: 24px; padding-top: 8vh;
+    overflow-y: auto; -webkit-overflow-scrolling: touch;
   }
   #bundle-modal .box {
     background: var(--card); border-radius: 20px; padding: 28px 24px;
     max-width: 380px; width: 100%; border: 2px solid var(--amber);
     box-shadow: 0 0 40px rgba(240,165,0,.2);
+    max-height: 82vh; overflow-y: auto;
   }
   #bundle-modal h2 { font-size: 20px; font-weight: 800; margin-bottom: 4px; }
   #bundle-modal .sub { font-size: 13px; color: var(--text2); margin-bottom: 20px; line-height: 1.4; }
@@ -907,8 +909,31 @@ function requestComplete(dbId, woId) {
   document.getElementById('bundle-preview-spec').textContent = spec;
   document.getElementById('bundle-preview-sub').textContent = `WO #${item.woNum} · ${item.customer} · ×${item.qty||'?'}`;
   document.getElementById('bundle-input').value = '';
-  document.getElementById('bundle-modal').style.display = 'flex';
+  const modalEl = document.getElementById('bundle-modal');
+  modalEl.style.display = 'flex';
+  _fitBundleModalToViewport();
   setTimeout(() => document.getElementById('bundle-input').focus(), 100);
+}
+
+// iOS doesn't shrink position:fixed elements when the on-screen keyboard opens,
+// so a modal centered/sized against the full layout height can end up with its
+// buttons rendered behind the keyboard (tap lands on nothing). Pin the modal's
+// height to the actual visible (visualViewport) area whenever it changes.
+function _fitBundleModalToViewport() {
+  const modalEl = document.getElementById('bundle-modal');
+  if (!modalEl) return;
+  if (window.visualViewport) {
+    modalEl.style.height = window.visualViewport.height + 'px';
+  } else {
+    modalEl.style.height = '';
+  }
+}
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', () => {
+    if (document.getElementById('bundle-modal').style.display !== 'none') {
+      _fitBundleModalToViewport();
+    }
+  });
 }
 
 async function bundleModalConfirm() {
