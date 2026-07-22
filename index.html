@@ -1221,7 +1221,8 @@ function startSBPoll() {
       }
       // Refresh whichever regular view is currently showing
       // Don't re-render if a modal is open, user is editing a WO, or an input is focused
-      const modalOpen = document.querySelector('#split-modal, #wo-modal, [id$="-modal"]');
+      const modalOpen = Array.from(document.querySelectorAll('#split-modal, #wo-modal, [id$="-modal"]'))
+        .some(el => el.offsetParent !== null || getComputedStyle(el).display !== 'none');
       const inputFocused = document.activeElement && ['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName);
       const dropOpen = document.querySelector('#cust-drop[style*="block"], .autocomplete-list[style*="block"]');
       const editingInline = !!window._editingWOId || !!document.querySelector('#e-wonum') || !!document.querySelector('.wo-edit-form');
