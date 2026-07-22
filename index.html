@@ -943,12 +943,22 @@ async function sbUpdateWO(wo) {
   await _sbDelete('truck_stops', {wo_id: wo.id});
   for (const t of state.trucks) {
     const stop = t.stops.find(s=>s.woId===wo.id);
-    if (stop) await _sbPost('truck_stops', {
-      truck_id: t.id, wo_id: wo.id, wo_num: wo.woNum,
-      customer: wo.customer, address: wo.address, cityst: wo.cityst,
-      zone: wo.zone, delivery: wo.delivery||null, notes: wo.notes||null,
-      delivered: stop.delivered||false, seq: t.stops.indexOf(stop)
-    });
+    if (stop) {
+      // Preserve the stop's existing sequence position — this function runs on
+      // every WO save (editing notes, BOL check, pickup confirm, etc.), not just
+      // reordering. Recomputing seq from the stop's momentary array index here
+      // silently overwrote the order set by moveStop's drag/reorder, since each
+      // unrelated save would restamp just that one stop without renumbering its
+      // neighbors, corrupting the driver schedule's order over time.
+      // Only brand-new stops (never given a seq) get placed at the end.
+      const seq = (stop.seq!==undefined && stop.seq!==null) ? stop.seq : t.stops.length-1;
+      await _sbPost('truck_stops', {
+        truck_id: t.id, wo_id: wo.id, wo_num: wo.woNum,
+        customer: wo.customer, address: wo.address, cityst: wo.cityst,
+        zone: wo.zone, delivery: wo.delivery||null, notes: wo.notes||null,
+        delivered: stop.delivered||false, seq
+      });
+    }
   }
 }
 
@@ -6602,6 +6612,9 @@ function moveStop(tid,idx,dir){
   if(newPos<0||newPos>=dayIndices.length)return;
   const ni=dayIndices[newPos];
   [t.stops[idx],t.stops[ni]]=[t.stops[ni],t.stops[idx]];
+  // Keep in-memory seq in sync with new positions so a later WO save
+  // (which preserves stop.seq) doesn't read a stale value and undo this reorder
+  t.stops.forEach((stop,seq)=>{ stop.seq = seq; });
   saveState();renderTruck(document.getElementById('content'));
   // Sync updated sequence to Supabase
   t.stops.forEach((stop,seq)=>{
