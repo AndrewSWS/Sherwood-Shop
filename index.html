@@ -3810,6 +3810,31 @@ function quickTruckAssign(woId, truckId){
   renderDashboard(document.getElementById('content'));
 }
 
+function quickPickupTruckAssign(stopId, truckId){
+  // Find the stop wherever it currently lives (a specific truck, or unassigned)
+  let stop=null;
+  state.trucks.forEach(t=>{
+    const idx=t.stops.findIndex(s=>String(s.id)===String(stopId));
+    if(idx>=0){ stop=t.stops[idx]; t.stops.splice(idx,1); }
+  });
+  if(!stop){
+    const idx=(state.unassignedPickups||[]).findIndex(s=>String(s.id)===String(stopId));
+    if(idx>=0){ stop=state.unassignedPickups[idx]; state.unassignedPickups.splice(idx,1); }
+  }
+  if(!stop) return;
+  if(truckId){
+    const t=state.trucks.find(t=>String(t.id)===String(truckId));
+    if(t) t.stops.push(stop);
+  } else {
+    if(!state.unassignedPickups) state.unassignedPickups=[];
+    state.unassignedPickups.push(stop);
+  }
+  saveState();
+  _sbPatch('truck_stops',{id:stopId},{truck_id:truckId?parseInt(truckId):null}).catch(e=>console.warn('sbPatch pickup truck error',e));
+  toast(truckId?`Pickup → Truck ${truckId}`:'Pickup unassigned');
+  renderDashboard(document.getElementById('content'));
+}
+
 function assignTruck(woId){
   const wo=state.wos.find(w=>w.id===woId);if(!wo)return;
   const sel=document.getElementById(`assign-truck-${woId}`);
@@ -7111,13 +7136,23 @@ function renderDashboard(c){
           <span style="font-size:9px;font-weight:700;text-transform:uppercase;color:${color};white-space:nowrap">${label}</span>
           <div style="flex:1;height:1px;background:${color}"></div>
         </div>`;
-        const renderPickupChip = s => {
+        const renderPickupChip = (s, currentTruckId) => {
           const vendor=(state.vendors||[]).find(v=>v.id===s.vendorId);
           const vName=vendor?vendor.name:(s.customer||'Vendor Pickup');
           return `<div style="background:#fff8e6;border:2px solid #e8a000;border-left:4px solid #e8a000;border-radius:var(--rad);padding:6px 8px;margin-top:4px" onclick="event.stopPropagation()">
-            <div style="font-size:9px;font-weight:800;color:#b37300;text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px">🛻 VENDOR PICKUP</div>
-            <div style="font-weight:700;color:#7a4f00;font-size:12px">${vName}</div>
-            ${s.pickupNote?`<div style="color:#b37300;font-size:11px;font-style:italic">${s.pickupNote}</div>`:''}
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px">
+              <div style="min-width:0;flex:1">
+                <div style="font-size:9px;font-weight:800;color:#b37300;text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px">🛻 VENDOR PICKUP</div>
+                <div style="font-weight:700;color:#7a4f00;font-size:12px">${vName}</div>
+                ${s.pickupNote?`<div style="color:#b37300;font-size:11px;font-style:italic">${s.pickupNote}</div>`:''}
+              </div>
+              <select style="font-size:10px;padding:2px 4px;border:1px solid #e8a000;border-radius:var(--rad);background:#fff;color:#7a4f00;max-width:76px;flex-shrink:0"
+                onclick="event.stopPropagation()"
+                onchange="event.stopPropagation();quickPickupTruckAssign('${s.id}',this.value)">
+                <option value="" ${!currentTruckId?'selected':''}>🚚 Truck</option>
+                ${state.trucks.map(t=>`<option value="${t.id}"${String(currentTruckId)===String(t.id)?' selected':''}>${t.name.split(' ').slice(0,2).join(' ')}</option>`).join('')}
+              </select>
+            </div>
             <button onclick="event.stopPropagation();editVendorPickup('${s.id}')" style="margin-top:3px;font-size:9px;padding:2px 6px;border-radius:3px;border:1px solid #e8a000;background:#e8a000;color:#fff;cursor:pointer;font-weight:700">✏ Edit</button>
           </div>`;
         };
@@ -7127,7 +7162,7 @@ function renderDashboard(c){
           const tWOs=dayWOs.filter(w=>getWOTruckId(w.id)===String(t.id));
           const tPickups=(t.stops||[]).filter(s=>s.type==='pickup'&&s.delivery===iso&&!s.delivered);
           if(!tWOs.length && !tPickups.length) return '';
-          return divider(_tIcons[i%4]+' '+t.name,_tColors[i%4])+tWOs.map(renderChip).join('')+tPickups.map(renderPickupChip).join('');
+          return divider(_tIcons[i%4]+' '+t.name,_tColors[i%4])+tWOs.map(renderChip).join('')+tPickups.map(s=>renderPickupChip(s,t.id)).join('');
         }).join('')
              + (nt.length?divider('⚠ No Truck','#BA7517')+nt.map(renderChip).join(''):'' );
 
@@ -7136,19 +7171,30 @@ function renderDashboard(c){
         // Pickups not assigned to any truck yet
         const unassignedStops = (state.unassignedPickups||[]).filter(s=>s.delivery===iso&&!s.delivered);
         if(!unassignedStops.length) return '';
+        const renderPickupChip = (s, currentTruckId) => {
+          const vendor=(state.vendors||[]).find(v=>v.id===s.vendorId);
+          const vName=vendor?vendor.name:(s.customer||'Vendor Pickup');
+          return `<div style="background:#fff8e6;border:2px solid #e8a000;border-left:4px solid #e8a000;border-radius:var(--rad);padding:6px 8px;margin-top:4px" onclick="event.stopPropagation()">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px">
+              <div style="min-width:0;flex:1">
+                <div style="font-size:9px;font-weight:800;color:#b37300;text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px">🛻 VENDOR PICKUP</div>
+                <div style="font-weight:700;color:#7a4f00;font-size:12px">${vName}</div>
+                ${s.pickupNote?`<div style="color:#b37300;font-size:11px;font-style:italic">${s.pickupNote}</div>`:''}
+              </div>
+              <select style="font-size:10px;padding:2px 4px;border:1px solid #e8a000;border-radius:var(--rad);background:#fff;color:#7a4f00;max-width:76px;flex-shrink:0"
+                onclick="event.stopPropagation()"
+                onchange="event.stopPropagation();quickPickupTruckAssign('${s.id}',this.value)">
+                <option value="" ${!currentTruckId?'selected':''}>🚚 Truck</option>
+                ${state.trucks.map(t=>`<option value="${t.id}"${String(currentTruckId)===String(t.id)?' selected':''}>${t.name.split(' ').slice(0,2).join(' ')}</option>`).join('')}
+              </select>
+            </div>
+            <button onclick="event.stopPropagation();editVendorPickup('${s.id}')" style="margin-top:3px;font-size:9px;padding:2px 6px;border-radius:3px;border:1px solid #e8a000;background:#e8a000;color:#fff;cursor:pointer;font-weight:700">✏ Edit</button>
+          </div>`;
+        };
         return `<div style="display:flex;align-items:center;gap:4px;margin:6px 0 4px">
           <span style="font-size:9px;font-weight:700;text-transform:uppercase;color:#BA7517;white-space:nowrap">🛻 Unassigned Pickup</span>
           <div style="flex:1;height:1px;background:#BA7517"></div>
-        </div>` + unassignedStops.map(s=>{
-          const vendor=(state.vendors||[]).find(v=>v.id===s.vendorId);
-          const vName=vendor?vendor.name:(s.customer||'Vendor Pickup');
-          return `<div style="background:#fff8e6;border:2px solid #e8a000;border-left:4px solid #e8a000;border-radius:var(--rad);padding:6px 8px;margin-top:4px">
-            <div style="font-size:9px;font-weight:800;color:#b37300;text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px">🛻 VENDOR PICKUP</div>
-            <div style="font-weight:700;color:#7a4f00;font-size:12px">${vName}</div>
-            ${s.pickupNote?`<div style="color:#b37300;font-size:11px;font-style:italic">${s.pickupNote}</div>`:''}
-            <button onclick="event.stopPropagation();editVendorPickup('${s.id}')" style="margin-top:3px;font-size:9px;padding:2px 6px;border-radius:3px;border:1px solid #e8a000;background:#e8a000;color:#fff;cursor:pointer;font-weight:700">✏ Edit</button>
-          </div>`;
-        }).join('');
+        </div>` + unassignedStops.map(s=>renderPickupChip(s,null)).join('');
       })()}
       ${isToday?'<div style="font-size:10px;text-align:center;color:var(--blue);margin-top:4px;font-weight:600">▼ click for details</div>':''}
     </div>`;
