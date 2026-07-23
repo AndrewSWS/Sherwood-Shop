@@ -4717,11 +4717,12 @@ function openShopQueueBoard(){
       }
     }catch(e){ console.warn('shop-queue board injection failed', e); }
     // Some TV browsers don't honor an embedded page's own viewport meta the
-    // way a tablet does, so shop-queue.html can render wider than the visible
-    // area on the 85" board. Rather than change that file, measure the actual
-    // rendered width here and scale the whole page down to fit — same idea
-    // as the board's own auto-fit logic for the delivery grid.
-    setTimeout(()=>fitShopQueueFrame(frame), 150);
+    // way a tablet does, so shop-queue.html can render wider (and its #main
+    // list taller than its own scroll area) than the visible screen on the
+    // 85" board. Rather than change that file, we measure its true natural
+    // size and scale the whole page down to fit both dimensions — same
+    // proven technique the board already uses to fit the delivery grid.
+    setTimeout(()=>fitShopQueueFrame(frame), 400);
     window._sqFitTimer = setInterval(()=>fitShopQueueFrame(frame), 4000);
   };
   // (Re)load the frame fresh each time so it reflects current data — avoid stale state sitting open for hours on the board
@@ -4732,16 +4733,31 @@ function openShopQueueBoard(){
 function fitShopQueueFrame(frame){
   try{
     const doc = frame.contentDocument;
-    const win = frame.contentWindow;
-    if(!doc || !win) return;
+    if(!doc) return;
+    const html = doc.documentElement;
     const body = doc.body;
+    const main = doc.getElementById('main');
     if(!body) return;
-    // Reset to measure the page's natural, unscaled width
-    body.style.zoom = '';
-    const contentW = doc.documentElement.scrollWidth;
+
+    // Reset any previous scaling/overrides so we measure the page's true natural size
+    body.style.transform = '';
+    body.style.width = '';
+    body.style.height = '';
+    if(main){ main.style.overflow = 'visible'; main.style.height = 'auto'; }
+    void html.offsetHeight; // force layout recalc before measuring
+
+    const contentW = html.scrollWidth;
+    const contentH = html.scrollHeight;
     const visibleW = frame.clientWidth;
-    if(contentW > visibleW + 2){
-      body.style.zoom = String((visibleW / contentW) * 0.995);
+    const visibleH = frame.clientHeight;
+    if(!contentW || !contentH || !visibleW || !visibleH) return;
+
+    const scale = Math.min(visibleW / contentW, visibleH / contentH, 1) * 0.99;
+    if(scale < 1){
+      body.style.transformOrigin = 'top left';
+      body.style.transform = `scale(${scale})`;
+      body.style.width = (100/scale) + '%';
+      body.style.height = (100/scale) + '%';
     }
   }catch(e){ /* cross-origin or not ready yet — ignore */ }
 }
