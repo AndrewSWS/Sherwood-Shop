@@ -5085,6 +5085,11 @@ function toggleQueueProductFilter(prod){
   scheduleRenderQueue();
 }
 
+function setQueueCustomerFilter(customer){
+  _queueCustomerFilter = customer || null;
+  scheduleRenderQueue();
+}
+
 let _renderQueuePending = false;
 function scheduleRenderQueue(){
   if(_renderQueuePending) return;
@@ -5098,7 +5103,7 @@ function scheduleRenderQueue(){
 function renderQueue(c){
   if(!c)c=document.getElementById('content');
   const today=new Date();today.setHours(0,0,0,0);
-  const allItems=[];
+  let allItems=[];
   state.wos.forEach(wo=>{
     // Skip past-delivery WOs, and pickup WOs that have already been picked up, unless showAllQueue
     const isPast=(wo.delivery&&new Date(wo.delivery+'T00:00:00')<today) || (wo.isPickup&&!!wo.pickupDate);
@@ -5107,6 +5112,11 @@ function renderQueue(c){
       if(item.status!=='Complete')allItems.push({...item,woNum:wo.woNum,woId:wo.id,customer:wo.customer,delivery:wo.delivery,isPast});
     });
   });
+  // Full customer list from every active WO in the queue, regardless of the
+  // current filter or station tab — so the dropdown always offers every
+  // customer currently in the shop, not just ones in the selected station.
+  const queueCustomers=[...new Set(allItems.map(i=>i.customer).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  if(_queueCustomerFilter) allItems=allItems.filter(i=>i.customer===_queueCustomerFilter);
   // Count hidden
   const hiddenWOs=showAllQueue?0:state.wos.filter(w=>(w.delivery&&new Date(w.delivery+'T00:00:00')<today)||(w.isPickup&&!!w.pickupDate)).length;
   const totalOpen=allItems.length;
@@ -5123,6 +5133,7 @@ function renderQueue(c){
   // Get items for active station using getActiveStep
   const stationAllItems = [];
   state.wos.forEach(wo=>{
+    if(_queueCustomerFilter && wo.customer!==_queueCustomerFilter) return;
     const isPastQ = (wo.delivery && new Date(wo.delivery+'T00:00:00') < today) || (wo.isPickup && !!wo.pickupDate);
     if(isPastQ && !showAllQueue) return;
     wo.items.forEach(item=>{
@@ -5459,7 +5470,15 @@ function renderQueue(c){
     ${totalUnassigned?`<div style="background:var(--red-l);border:1px solid #f09595;border-radius:var(--rad);padding:8px 16px;font-size:13px;font-weight:600;color:var(--red)">
       ⚠ ${totalUnassigned} unassigned
     </div>`:'<div style="background:var(--green-l);border:1px solid #c0dd97;border-radius:var(--rad);padding:8px 16px;font-size:13px;font-weight:600;color:var(--green)">✓ All items assigned</div>'}
-    <button onclick="resetQueuePriorities()" class="btn btn-sm" style="margin-left:auto" title="Clear manual priorities — revert to delivery date order">↺ Reset Order</button>
+    ${_queueCustomerFilter?`<div style="background:var(--blue-l);border:1px solid var(--blue);border-radius:var(--rad);padding:8px 16px;font-size:13px;font-weight:600;color:var(--blue);display:flex;align-items:center;gap:8px">
+      🏢 ${escHtml(_queueCustomerFilter)}
+      <span onclick="setQueueCustomerFilter('')" style="cursor:pointer;font-weight:800" title="Clear customer filter">✕</span>
+    </div>`:''}
+    <select onchange="setQueueCustomerFilter(this.value)" class="btn btn-sm" style="margin-left:auto;max-width:200px" title="Filter the whole queue down to one customer, across every station">
+      <option value="">Filter by customer…</option>
+      ${queueCustomers.map(cu=>`<option value="${escHtml(cu)}"${_queueCustomerFilter===cu?' selected':''}>${escHtml(cu)}</option>`).join('')}
+    </select>
+    <button onclick="resetQueuePriorities()" class="btn btn-sm" title="Clear manual priorities — revert to delivery date order">↺ Reset Order</button>
     <button data-station="${activeQStation}" onclick="printQueueList(this.dataset.station)" class="btn btn-sm">🖨 Print ${activeQStation} Queue</button>
     <button data-station="${activeQStation}" onclick="printQueueSummary(this.dataset.station)" class="btn btn-sm">📄 Summary Sheet</button>
   </div>
@@ -6803,6 +6822,7 @@ let showAllWOs = false; // false = hide past-delivery WOs, true = show all
 let showAllAssign = false; // same filter for Assign & Manage
 let showAllQueue = false;  // same filter for Shop Queue
 let _queueProductFilter = null; // active product pill filter
+let _queueCustomerFilter = null; // active customer filter — persists across station tab switches
 let weekOffset = 0; // 0=current week, -1=last week, +1=next week, etc.
 
 function getWeekDays(offset){

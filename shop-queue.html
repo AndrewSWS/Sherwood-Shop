@@ -369,6 +369,9 @@
 
 <div id="header">
   <h1>🏭 Shop Queue</h1>
+  <select id="customer-filter" onchange="setCustomerFilter(this.value)" style="background:var(--surface);border:1px solid var(--border);color:var(--text2);padding:6px 10px;border-radius:20px;font-size:12px;font-weight:700;max-width:150px;flex-shrink:0" title="Filter the whole queue down to one customer, across every category">
+    <option value="">All Customers</option>
+  </select>
   <button onclick="changeUser()" style="background:var(--surface);border:1px solid var(--border);color:var(--text2);padding:6px 14px;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer" id="user-label">—</button>
   <button onclick="toggleShowDone()" id="show-done-btn" style="background:var(--surface);border:1px solid var(--border);color:var(--text2);padding:6px 14px;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer">☑ Done</button>
   <button onclick="loadData()" style="background:var(--surface);border:1px solid var(--border);color:var(--text2);padding:6px 14px;border-radius:20px;font-size:13px;cursor:pointer">↻</button>
@@ -440,6 +443,29 @@ function activeStationFor(item) {
   if (steps.length < 3) return steps[1];
   if (item.step2Status !== 'Complete') return steps[1];
   return steps[steps.length - 1];
+}
+
+// Customer filter — narrows the whole queue down to one customer's active
+// work orders, across every category/station, not just the current tab.
+let _customerFilter = '';
+
+function populateCustomerFilterOptions() {
+  const sel = document.getElementById('customer-filter');
+  if (!sel) return;
+  const customers = [...new Set(allItems.map(i => i.customer).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  sel.innerHTML = '<option value="">All Customers</option>' +
+    customers.map(c => `<option value="${escAttr(c)}"${c===_customerFilter?' selected':''}>${escHtml(c)}</option>`).join('');
+  // If the previously selected customer no longer has active items in the queue, clear the filter
+  if (_customerFilter && !customers.includes(_customerFilter)) {
+    _customerFilter = '';
+    sel.value = '';
+  }
+}
+
+function setCustomerFilter(customer) {
+  _customerFilter = customer || '';
+  refreshStationTabs();
+  renderTiles();
 }
 
 // ── SUPABASE HELPERS ─────────────────────────────────────────────────────────
@@ -591,17 +617,15 @@ async function loadData() {
     // marked done on a "SHEAR → BREAK" item, it moves to the BREAK tab),
     // matching how the main dashboard's Shop Queue view already works.
     allItems.forEach(i => { i.activeStation = activeStationFor(i); });
+    populateCustomerFilterOptions();
 
-    // Derive station list from live data + config
-    const liveStations = [...new Set(allItems.map(i => i.activeStation))].filter(Boolean);
-    if (!stations.length) stations = liveStations;
-    // Always show stations that have items, plus config stations — but never
-    // the raw compound dual-pair name itself (e.g. "SHEAR → BREAK"), since
-    // items always live under one of its real component steps, never the
-    // pairing label. Matches index.html's getQStations() filter.
-    const allStations = [...new Set([...stations, ...liveStations])].filter(s => !s.includes('→'));
+    // Seed the config station list on first run only — always from every
+    // item, regardless of any customer filter currently selected.
+    if (!stations.length) {
+      stations = [...new Set(allItems.map(i => i.activeStation))].filter(Boolean);
+    }
 
-    renderStationTabs(allStations);
+    refreshStationTabs();
     renderTiles();
     setSyncState('ok');
     document.getElementById('last-sync').textContent = 'Updated ' + new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
@@ -617,20 +641,26 @@ async function loadData() {
 // reassignment) that can move an item to a different tab, so counts and tab
 // membership stay correct without waiting for the next full data reload.
 function refreshStationTabs() {
-  const liveStations = [...new Set(allItems.map(i => i.activeStation))].filter(Boolean);
-  const allStations = [...new Set([...stations, ...liveStations])].filter(s => !s.includes('→'));
+  const scopedItems = _customerFilter ? allItems.filter(i => i.customer === _customerFilter) : allItems;
+  const liveStations = [...new Set(scopedItems.map(i => i.activeStation))].filter(Boolean);
+  // With a customer filter active, only show categories that customer
+  // actually has work in — not the full config station list — so the tabs
+  // genuinely reflect "just this vendor's categories" as requested.
+  const allStations = (_customerFilter ? liveStations : [...new Set([...stations, ...liveStations])])
+    .filter(s => !s.includes('→'));
   renderStationTabs(allStations);
 }
 
 // ── RENDER TABS ──────────────────────────────────────────────────────────────
 function renderStationTabs(allStations) {
+  const scopedItems = _customerFilter ? allItems.filter(i => i.customer === _customerFilter) : allItems;
   const pendingByStation = {};
-  allItems.forEach(i => {
+  scopedItems.forEach(i => {
     if (i.status !== 'Complete') {
       pendingByStation[i.activeStation] = (pendingByStation[i.activeStation] || 0) + 1;
     }
   });
-  const totalPending = allItems.filter(i => i.status !== 'Complete').length;
+  const totalPending = scopedItems.filter(i => i.status !== 'Complete').length;
 
   const tabs = document.getElementById('station-tabs');
   const stationList = ['ALL', ...allStations.sort()];
@@ -668,6 +698,8 @@ function renderTiles() {
   let items = activeStation === 'ALL'
     ? allItems
     : allItems.filter(i => i.activeStation === activeStation);
+
+  if (_customerFilter) items = items.filter(i => i.customer === _customerFilter);
 
   // Hide completed items unless showDone is toggled on
   if (!showDone) items = items.filter(i => i.status !== 'Complete');
@@ -757,7 +789,7 @@ function renderTiles() {
   }
 
   if (!items.length) {
-    container.innerHTML = `<div class="empty-state"><div class="big">✅</div><p>No items for this station${_productFilter?' matching filter':''}</p></div>`;
+    container.innerHTML = `<div class="empty-state"><div class="big">✅</div><p>No items for this station${_customerFilter?' for '+escHtml(_customerFilter):''}${_productFilter?' matching filter':''}</p></div>`;
     return;
   }
 
