@@ -33,7 +33,7 @@
 
   /* ── HEADER ── */
   #header {
-    display: flex; align-items: center; gap: 12px;
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap; row-gap: 8px;
     padding: 14px 20px 10px;
     background: var(--surface);
     border-bottom: 1px solid var(--border);
@@ -372,6 +372,8 @@
   <select id="customer-filter" onchange="setCustomerFilter(this.value)" style="background:var(--surface);border:1px solid var(--border);color:var(--text2);padding:6px 10px;border-radius:20px;font-size:12px;font-weight:700;max-width:150px;flex-shrink:0" title="Filter the whole queue down to one customer, across every category">
     <option value="">All Customers</option>
   </select>
+  <input id="date-filter" type="date" onchange="setDateFilter(this.value)" style="background:var(--surface);border:1px solid var(--border);color:var(--text2);padding:6px 10px;border-radius:20px;font-size:12px;font-weight:700;flex-shrink:0;color-scheme:dark" title="Show only items needed for one delivery/pickup date">
+  <button onclick="setDateFilterTomorrow()" style="background:var(--surface);border:1px solid var(--border);color:var(--text2);padding:6px 12px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0">Tomorrow</button>
   <button onclick="changeUser()" style="background:var(--surface);border:1px solid var(--border);color:var(--text2);padding:6px 14px;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer" id="user-label">—</button>
   <button onclick="toggleShowDone()" id="show-done-btn" style="background:var(--surface);border:1px solid var(--border);color:var(--text2);padding:6px 14px;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer">☑ Done</button>
   <button onclick="loadData()" style="background:var(--surface);border:1px solid var(--border);color:var(--text2);padding:6px 14px;border-radius:20px;font-size:13px;cursor:pointer">↻</button>
@@ -466,6 +468,39 @@ function setCustomerFilter(customer) {
   _customerFilter = customer || '';
   refreshStationTabs();
   renderTiles();
+}
+
+// Delivery/pickup date filter — narrows the queue to just what's needed for
+// one date, using each item's pickup-expected date if it's a pickup order,
+// its delivery date otherwise (same "effective date" concept used for sorting).
+let _dateFilter = '';
+
+function itemEffectiveDate(item) {
+  return (item.isPickup ? item.pickupExpectedDate : item.delivery) || '';
+}
+
+function localISODate(d) {
+  // Avoids the classic toISOString() UTC-shift bug — builds the date string
+  // from local date parts instead.
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dd}`;
+}
+
+function setDateFilter(dateStr) {
+  _dateFilter = dateStr || '';
+  refreshStationTabs();
+  renderTiles();
+}
+
+function setDateFilterTomorrow() {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  const iso = localISODate(d);
+  const inp = document.getElementById('date-filter');
+  if (inp) inp.value = iso;
+  setDateFilter(iso);
 }
 
 // ── SUPABASE HELPERS ─────────────────────────────────────────────────────────
@@ -636,24 +671,34 @@ async function loadData() {
   }
 }
 
+// Applies the customer + date filters together — the single source of truth
+// for "what's in scope right now", used by both the tab bar and the tile list.
+function scopedAllItems() {
+  let items = allItems;
+  if (_customerFilter) items = items.filter(i => i.customer === _customerFilter);
+  if (_dateFilter) items = items.filter(i => itemEffectiveDate(i) === _dateFilter);
+  return items;
+}
+
 // Recomputes the live station tab list from current item data and re-renders
 // the tab bar — used after any local change (step completion, manual station
 // reassignment) that can move an item to a different tab, so counts and tab
 // membership stay correct without waiting for the next full data reload.
 function refreshStationTabs() {
-  const scopedItems = _customerFilter ? allItems.filter(i => i.customer === _customerFilter) : allItems;
+  const scopedItems = scopedAllItems();
   const liveStations = [...new Set(scopedItems.map(i => i.activeStation))].filter(Boolean);
-  // With a customer filter active, only show categories that customer
-  // actually has work in — not the full config station list — so the tabs
-  // genuinely reflect "just this vendor's categories" as requested.
-  const allStations = (_customerFilter ? liveStations : [...new Set([...stations, ...liveStations])])
+  // With a customer and/or date filter active, only show categories that
+  // still have matching work — not the full config station list — so the
+  // tabs genuinely reflect "just this narrowed-down view" as requested.
+  const filtered = !!(_customerFilter || _dateFilter);
+  const allStations = (filtered ? liveStations : [...new Set([...stations, ...liveStations])])
     .filter(s => !s.includes('→'));
   renderStationTabs(allStations);
 }
 
 // ── RENDER TABS ──────────────────────────────────────────────────────────────
 function renderStationTabs(allStations) {
-  const scopedItems = _customerFilter ? allItems.filter(i => i.customer === _customerFilter) : allItems;
+  const scopedItems = scopedAllItems();
   const pendingByStation = {};
   scopedItems.forEach(i => {
     if (i.status !== 'Complete') {
@@ -695,11 +740,8 @@ function toggleProductFilter(prod) {
 
 function renderTiles() {
   const container = document.getElementById('tiles');
-  let items = activeStation === 'ALL'
-    ? allItems
-    : allItems.filter(i => i.activeStation === activeStation);
-
-  if (_customerFilter) items = items.filter(i => i.customer === _customerFilter);
+  let items = scopedAllItems();
+  items = activeStation === 'ALL' ? items : items.filter(i => i.activeStation === activeStation);
 
   // Hide completed items unless showDone is toggled on
   if (!showDone) items = items.filter(i => i.status !== 'Complete');
@@ -789,7 +831,7 @@ function renderTiles() {
   }
 
   if (!items.length) {
-    container.innerHTML = `<div class="empty-state"><div class="big">✅</div><p>No items for this station${_customerFilter?' for '+escHtml(_customerFilter):''}${_productFilter?' matching filter':''}</p></div>`;
+    container.innerHTML = `<div class="empty-state"><div class="big">✅</div><p>No items for this station${_customerFilter?' for '+escHtml(_customerFilter):''}${_dateFilter?' on '+fmtDate(_dateFilter):''}${_productFilter?' matching filter':''}</p></div>`;
     return;
   }
 

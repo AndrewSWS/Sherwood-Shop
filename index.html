@@ -5090,6 +5090,26 @@ function setQueueCustomerFilter(customer){
   scheduleRenderQueue();
 }
 
+// Effective date for filtering/sorting — a pickup order's expected pickup
+// date, or a regular order's delivery date.
+function itemEffectiveDate(i){
+  return (i.isPickup ? i.pickupExpectedDate : i.delivery) || '';
+}
+
+function setQueueDateFilter(dateStr){
+  _queueDateFilter = dateStr || null;
+  scheduleRenderQueue();
+}
+
+function setQueueDateFilterTomorrow(){
+  const d = new Date();
+  d.setDate(d.getDate()+1);
+  const iso = localISO(d);
+  const inp = document.getElementById('queue-date-filter');
+  if(inp) inp.value = iso;
+  setQueueDateFilter(iso);
+}
+
 let _renderQueuePending = false;
 function scheduleRenderQueue(){
   if(_renderQueuePending) return;
@@ -5109,7 +5129,7 @@ function renderQueue(c){
     const isPast=(wo.delivery&&new Date(wo.delivery+'T00:00:00')<today) || (wo.isPickup&&!!wo.pickupDate);
     if(isPast&&!showAllQueue)return;
     wo.items.forEach(item=>{
-      if(item.status!=='Complete')allItems.push({...item,woNum:wo.woNum,woId:wo.id,customer:wo.customer,delivery:wo.delivery,isPast});
+      if(item.status!=='Complete')allItems.push({...item,woNum:wo.woNum,woId:wo.id,customer:wo.customer,delivery:wo.delivery,isPickup:wo.isPickup,pickupExpectedDate:wo.pickupExpectedDate,isPast});
     });
   });
   // Full customer list from every active WO in the queue, regardless of the
@@ -5117,6 +5137,7 @@ function renderQueue(c){
   // customer currently in the shop, not just ones in the selected station.
   const queueCustomers=[...new Set(allItems.map(i=>i.customer).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
   if(_queueCustomerFilter) allItems=allItems.filter(i=>i.customer===_queueCustomerFilter);
+  if(_queueDateFilter) allItems=allItems.filter(i=>itemEffectiveDate(i)===_queueDateFilter);
   // Count hidden
   const hiddenWOs=showAllQueue?0:state.wos.filter(w=>(w.delivery&&new Date(w.delivery+'T00:00:00')<today)||(w.isPickup&&!!w.pickupDate)).length;
   const totalOpen=allItems.length;
@@ -5134,6 +5155,10 @@ function renderQueue(c){
   const stationAllItems = [];
   state.wos.forEach(wo=>{
     if(_queueCustomerFilter && wo.customer!==_queueCustomerFilter) return;
+    if(_queueDateFilter){
+      const woDate = wo.isPickup ? wo.pickupExpectedDate : wo.delivery;
+      if((woDate||'')!==_queueDateFilter) return;
+    }
     const isPastQ = (wo.delivery && new Date(wo.delivery+'T00:00:00') < today) || (wo.isPickup && !!wo.pickupDate);
     if(isPastQ && !showAllQueue) return;
     wo.items.forEach(item=>{
@@ -5474,10 +5499,16 @@ function renderQueue(c){
       🏢 ${escHtml(_queueCustomerFilter)}
       <span onclick="setQueueCustomerFilter('')" style="cursor:pointer;font-weight:800" title="Clear customer filter">✕</span>
     </div>`:''}
+    ${_queueDateFilter?`<div style="background:var(--blue-l);border:1px solid var(--blue);border-radius:var(--rad);padding:8px 16px;font-size:13px;font-weight:600;color:var(--blue);display:flex;align-items:center;gap:8px">
+      📅 ${fmtDate(_queueDateFilter)}
+      <span onclick="setQueueDateFilter('');document.getElementById('queue-date-filter').value=''" style="cursor:pointer;font-weight:800" title="Clear date filter">✕</span>
+    </div>`:''}
     <select onchange="setQueueCustomerFilter(this.value)" class="btn btn-sm" style="margin-left:auto;max-width:200px" title="Filter the whole queue down to one customer, across every station">
       <option value="">Filter by customer…</option>
       ${queueCustomers.map(cu=>`<option value="${escHtml(cu)}"${_queueCustomerFilter===cu?' selected':''}>${escHtml(cu)}</option>`).join('')}
     </select>
+    <input id="queue-date-filter" type="date" value="${_queueDateFilter||''}" onchange="setQueueDateFilter(this.value)" class="btn btn-sm" style="max-width:128px;padding:8px 8px" title="Show only items needed for one delivery/pickup date">
+    <button onclick="setQueueDateFilterTomorrow()" class="btn btn-sm">Tomorrow</button>
     <button onclick="resetQueuePriorities()" class="btn btn-sm" title="Clear manual priorities — revert to delivery date order">↺ Reset Order</button>
     <button data-station="${activeQStation}" onclick="printQueueList(this.dataset.station)" class="btn btn-sm">🖨 Print ${activeQStation} Queue</button>
     <button data-station="${activeQStation}" onclick="printQueueSummary(this.dataset.station)" class="btn btn-sm">📄 Summary Sheet</button>
@@ -6823,6 +6854,7 @@ let showAllAssign = false; // same filter for Assign & Manage
 let showAllQueue = false;  // same filter for Shop Queue
 let _queueProductFilter = null; // active product pill filter
 let _queueCustomerFilter = null; // active customer filter — persists across station tab switches
+let _queueDateFilter = null; // active delivery/pickup date filter — persists across station tab switches
 let weekOffset = 0; // 0=current week, -1=last week, +1=next week, etc.
 
 function getWeekDays(offset){
