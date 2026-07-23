@@ -5132,17 +5132,22 @@ function renderQueue(c){
       if(item.status!=='Complete')allItems.push({...item,woNum:wo.woNum,woId:wo.id,customer:wo.customer,delivery:wo.delivery,isPickup:wo.isPickup,pickupExpectedDate:wo.pickupExpectedDate,isPast});
     });
   });
-  // Full customer list from every active WO in the queue, regardless of the
-  // current filter or station tab — so the dropdown always offers every
-  // customer currently in the shop, not just ones in the selected station.
-  const queueCustomers=[...new Set(allItems.map(i=>i.customer).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  // Customer list scoped to the active date filter (if any), so picking a
+  // date narrows the dropdown to only customers who actually have work that
+  // day — but never scoped by the customer filter itself, so the dropdown
+  // still lets you switch between customers.
+  const dateScopedForCustomers = _queueDateFilter ? allItems.filter(i=>itemEffectiveDate(i)===_queueDateFilter) : allItems;
+  const queueCustomers=[...new Set(dateScopedForCustomers.map(i=>i.customer).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  // If the selected customer has no items on the newly selected date, clear the filter rather than show an empty queue silently
+  if(_queueCustomerFilter && !queueCustomers.includes(_queueCustomerFilter)) _queueCustomerFilter=null;
   if(_queueCustomerFilter) allItems=allItems.filter(i=>i.customer===_queueCustomerFilter);
   if(_queueDateFilter) allItems=allItems.filter(i=>itemEffectiveDate(i)===_queueDateFilter);
   // Count hidden
   const hiddenWOs=showAllQueue?0:state.wos.filter(w=>(w.delivery&&new Date(w.delivery+'T00:00:00')<today)||(w.isPickup&&!!w.pickupDate)).length;
   const totalOpen=allItems.length;
   const totalUnassigned=allItems.filter(i=>!i.assignee).length;
-  const tabs=getQStations().map(s=>{
+  const tabs=`<div class="stab${activeQStation==='ALL'?' active':''}" onclick="switchQStation('ALL',this)">ALL${totalOpen?` <span style="opacity:.7">(${totalOpen})</span>`:''}
+    </div>` + getQStations().map(s=>{
     // Count items whose current active step matches this station
     const cnt=allItems.filter(i=>{
       const activeStep = getActiveStep(i.item||i);
@@ -5164,7 +5169,7 @@ function renderQueue(c){
     wo.items.forEach(item=>{
       if(item.status==='Complete') return;
       const activeStep = getActiveStep(item);
-      if(activeStep===activeQStation){
+      if(activeStep===activeQStation || activeQStation==='ALL'){
         item.woNum = wo.woNum;
         item.customer = wo.customer;
         item.delivery = wo.delivery;
@@ -5194,14 +5199,15 @@ function renderQueue(c){
 
   function renderQueueItem(item, qIdx, totalItems, groupPos){
     const displayNum = groupPos !== undefined ? groupPos : qIdx+1;
+    const canReorder = activeQStation !== 'ALL'; // reordering mixes priority across different stations' own ordering — view-only on ALL
     return `
-    <div class="q-item" draggable="true"
-      ondragstart="qDragStart(this,${qIdx})"
+    <div class="q-item" draggable="${canReorder}"
+      ${canReorder?`ondragstart="qDragStart(this,${qIdx})"
       ondragend="qDragEnd(this)"
       ondragover="qDragOver(this,event)"
-      ondrop="qDrop(this,${qIdx})">
+      ondrop="qDrop(this,${qIdx})"`:''}>
       <div style="display:flex;flex-direction:column;gap:2px;margin-right:6px;flex-shrink:0;align-items:center">
-        <span style="font-size:14px;color:var(--text3);cursor:grab;line-height:1;margin-bottom:2px" title="Drag to reorder">⠿</span>
+        ${canReorder?`<span style="font-size:14px;color:var(--text3);cursor:grab;line-height:1;margin-bottom:2px" title="Drag to reorder">⠿</span>
         <button data-qidx="${qIdx}" data-dir="-1"
           onclick="moveQueueByIndex(parseInt(this.dataset.qidx),parseInt(this.dataset.dir))"
           style="background:none;border:1px solid var(--border);border-radius:3px;width:22px;height:22px;font-size:12px;padding:0;display:flex;align-items:center;justify-content:center;color:var(--text2)"
@@ -5213,7 +5219,7 @@ function renderQueue(c){
         <button data-qidx="${qIdx}"
           onclick="dropQueueToBottom(parseInt(this.dataset.qidx))"
           style="background:none;border:1px solid var(--border);border-radius:3px;width:22px;height:22px;font-size:10px;padding:0;display:flex;align-items:center;justify-content:center;color:var(--text2);margin-top:2px"
-          title="Drop to bottom">⤓</button>
+          title="Drop to bottom">⤓</button>`:''}
       </div>
       <div class="li-num-dot">${displayNum}</div>
       <div style="flex:1;min-width:0">
@@ -5510,8 +5516,8 @@ function renderQueue(c){
     <input id="queue-date-filter" type="date" value="${_queueDateFilter||''}" onchange="setQueueDateFilter(this.value)" class="btn btn-sm" style="max-width:128px;padding:8px 8px" title="Show only items needed for one delivery/pickup date">
     <button onclick="setQueueDateFilterTomorrow()" class="btn btn-sm">Tomorrow</button>
     <button onclick="resetQueuePriorities()" class="btn btn-sm" title="Clear manual priorities — revert to delivery date order">↺ Reset Order</button>
-    <button data-station="${activeQStation}" onclick="printQueueList(this.dataset.station)" class="btn btn-sm">🖨 Print ${activeQStation} Queue</button>
-    <button data-station="${activeQStation}" onclick="printQueueSummary(this.dataset.station)" class="btn btn-sm">📄 Summary Sheet</button>
+    <button data-station="${activeQStation}" onclick="printQueueList(this.dataset.station)" class="btn btn-sm"${activeQStation==='ALL'?' disabled title="Select a single station to print"':''}>🖨 Print ${activeQStation} Queue</button>
+    <button data-station="${activeQStation}" onclick="printQueueSummary(this.dataset.station)" class="btn btn-sm"${activeQStation==='ALL'?' disabled title="Select a single station to print"':''}>📄 Summary Sheet</button>
   </div>
   <div class="station-tab">${tabs}</div>${_rows}`;
 }

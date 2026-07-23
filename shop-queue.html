@@ -454,10 +454,13 @@ let _customerFilter = '';
 function populateCustomerFilterOptions() {
   const sel = document.getElementById('customer-filter');
   if (!sel) return;
-  const customers = [...new Set(allItems.map(i => i.customer).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  // Scoped to the active date filter (if any) — never scoped by the customer
+  // filter itself, so the dropdown still lets you switch between customers.
+  const scoped = _dateFilter ? allItems.filter(i => itemEffectiveDate(i) === _dateFilter) : allItems;
+  const customers = [...new Set(scoped.map(i => i.customer).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
   sel.innerHTML = '<option value="">All Customers</option>' +
     customers.map(c => `<option value="${escAttr(c)}"${c===_customerFilter?' selected':''}>${escHtml(c)}</option>`).join('');
-  // If the previously selected customer no longer has active items in the queue, clear the filter
+  // If the previously selected customer has no items on the current date filter, clear it rather than show an empty queue silently
   if (_customerFilter && !customers.includes(_customerFilter)) {
     _customerFilter = '';
     sel.value = '';
@@ -490,6 +493,7 @@ function localISODate(d) {
 
 function setDateFilter(dateStr) {
   _dateFilter = dateStr || '';
+  populateCustomerFilterOptions(); // customer options depend on the date filter
   refreshStationTabs();
   renderTiles();
 }
