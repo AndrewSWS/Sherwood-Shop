@@ -424,6 +424,24 @@ let stations = [];
 let pollTimer = null;
 let showDone = false;
 
+// Mirrors index.html's DUAL_STATIONS — a multi-step item (e.g. "SHEAR → BREAK")
+// should move to the next step's tab once the current step is marked complete,
+// same as it does on the main dashboard's Shop Queue view.
+const DUAL_STATIONS = {
+  'IOWA → SHEAR': ['IOWA','SHEAR'],
+  'SHEAR → BREAK': ['SHEAR','BREAK'],
+  'IOWA → SHEAR → BREAK': ['IOWA','SHEAR','BREAK']
+};
+
+function activeStationFor(item) {
+  const steps = DUAL_STATIONS[item.station];
+  if (!steps) return item.station; // not a dual/multi-step station — unchanged
+  if (item.step1Status !== 'Complete') return steps[0];
+  if (steps.length < 3) return steps[1];
+  if (item.step2Status !== 'Complete') return steps[1];
+  return steps[steps.length - 1];
+}
+
 // ── SUPABASE HELPERS ─────────────────────────────────────────────────────────
 async function sbGet(table, params = '') {
   const url = `${SB_URL}/rest/v1/${table}${params ? '?' + params : ''}`;
@@ -541,6 +559,8 @@ async function loadData() {
         woNum:       li.wo_num || woMap[li.wo_id]?.wo_num || '—',
         customer:    li.customer || woMap[li.wo_id]?.customer || '—',
         delivery:    woMap[li.wo_id]?.delivery || '',
+        isPickup:    !!woMap[li.wo_id]?.is_pickup,
+        pickupExpectedDate: woMap[li.wo_id]?.pickup_expected_date || '',
         station:     li.station || 'OTHER',
         productCat:  li.product_cat || '',
         type:        li.type || '',
@@ -566,11 +586,20 @@ async function loadData() {
         step2Status: li.step2_status || 'Pending',
       }));
 
+    // Which station tab an item currently belongs in — for a dual/multi-step
+    // item this moves forward as each step completes (e.g. once Shear is
+    // marked done on a "SHEAR → BREAK" item, it moves to the BREAK tab),
+    // matching how the main dashboard's Shop Queue view already works.
+    allItems.forEach(i => { i.activeStation = activeStationFor(i); });
+
     // Derive station list from live data + config
-    const liveStations = [...new Set(allItems.map(i => i.station))].filter(Boolean);
+    const liveStations = [...new Set(allItems.map(i => i.activeStation))].filter(Boolean);
     if (!stations.length) stations = liveStations;
-    // Always show stations that have items, plus config stations
-    const allStations = [...new Set([...stations, ...liveStations])];
+    // Always show stations that have items, plus config stations — but never
+    // the raw compound dual-pair name itself (e.g. "SHEAR → BREAK"), since
+    // items always live under one of its real component steps, never the
+    // pairing label. Matches index.html's getQStations() filter.
+    const allStations = [...new Set([...stations, ...liveStations])].filter(s => !s.includes('→'));
 
     renderStationTabs(allStations);
     renderTiles();
@@ -583,12 +612,22 @@ async function loadData() {
   }
 }
 
+// Recomputes the live station tab list from current item data and re-renders
+// the tab bar — used after any local change (step completion, manual station
+// reassignment) that can move an item to a different tab, so counts and tab
+// membership stay correct without waiting for the next full data reload.
+function refreshStationTabs() {
+  const liveStations = [...new Set(allItems.map(i => i.activeStation))].filter(Boolean);
+  const allStations = [...new Set([...stations, ...liveStations])].filter(s => !s.includes('→'));
+  renderStationTabs(allStations);
+}
+
 // ── RENDER TABS ──────────────────────────────────────────────────────────────
 function renderStationTabs(allStations) {
   const pendingByStation = {};
   allItems.forEach(i => {
     if (i.status !== 'Complete') {
-      pendingByStation[i.station] = (pendingByStation[i.station] || 0) + 1;
+      pendingByStation[i.activeStation] = (pendingByStation[i.activeStation] || 0) + 1;
     }
   });
   const totalPending = allItems.filter(i => i.status !== 'Complete').length;
@@ -628,18 +667,37 @@ function renderTiles() {
   const container = document.getElementById('tiles');
   let items = activeStation === 'ALL'
     ? allItems
-    : allItems.filter(i => i.station === activeStation);
+    : allItems.filter(i => i.activeStation === activeStation);
 
   // Hide completed items unless showDone is toggled on
   if (!showDone) items = items.filter(i => i.status !== 'Complete');
 
-  // Sort: In Process first, then Pending by priority/delivery, then Complete
+  // Sort: In Process first, then Pending by priority/pickup-or-delivery date, then Complete
   items = [...items].sort((a, b) => {
     const order = { 'In Process': 0, 'Pending': 1, 'Complete': 2 };
     const oa = order[a.status] ?? 1, ob = order[b.status] ?? 1;
     if (oa !== ob) return oa - ob;
-    if (a.priority !== b.priority) return (a.priority||999) - (b.priority||999);
-    return (a.delivery||'z').localeCompare(b.delivery||'z');
+
+    // Manual priority (set by drag-ordering on the main dashboard) wins if either item has one.
+    // 999 is this file's own "no priority set" default, not a real manual priority.
+    const pa = a.priority, pb = b.priority;
+    const hasA = pa != null && pa > 0 && pa !== 999;
+    const hasB = pb != null && pb > 0 && pb !== 999;
+    if (hasA && hasB) return pa - pb;
+    if (hasA) return -1;
+    if (hasB) return 1;
+
+    // Pickup orders sort by their expected pickup date the same way deliveries
+    // sort by delivery date — a tie goes to the pickup, since that customer is
+    // coming in rather than waiting on a truck. Matches the main dashboard's queue.
+    const da = (a.isPickup ? a.pickupExpectedDate : a.delivery) || '';
+    const db = (b.isPickup ? b.pickupExpectedDate : b.delivery) || '';
+    if (!da && !db) return (parseInt(a.woNum)||0) - (parseInt(b.woNum)||0);
+    if (!da) return 1;  // a has no date — goes to bottom
+    if (!db) return -1; // b has no date — goes to bottom
+    if (da !== db) return da < db ? -1 : 1;
+    if (a.isPickup !== b.isPickup) return a.isPickup ? -1 : 1;
+    return (parseInt(a.woNum)||0) - (parseInt(b.woNum)||0);
   });
 
   const pending = items.filter(i => i.status !== 'Complete').length;
@@ -801,7 +859,7 @@ function renderTile(item) {
     <div class="tile-accent" style="background:${accentColor}"></div>
     <div class="tile-header">
       <div class="tile-num">WO #${item.woNum}</div>
-      <div class="tile-wo">${item.station}${item.delivery ? ' · 📅 ' + fmtDate(item.delivery) : ''}</div>
+      <div class="tile-wo">${item.activeStation || item.station}${item.delivery ? ' · 📅 ' + fmtDate(item.delivery) : (item.isPickup && item.pickupExpectedDate ? ' · 🏪 ' + fmtDate(item.pickupExpectedDate) : '')}</div>
     </div>
     <div class="tile-customer" style="${done?'opacity:0.5;text-decoration:line-through;':''}">${escHtml(item.customer)}</div>
     <hr class="tile-divider">
@@ -995,6 +1053,8 @@ async function updateStatus(dbId, woId, newStatus) {
       item.step1Status = 'Pending'; item.step2Status = 'Pending';
     }
   }
+  item.activeStation = activeStationFor(item);
+  refreshStationTabs();
 
   // Optimistic render
   renderTiles();
@@ -1050,6 +1110,8 @@ async function updateDualStep(dbId, woId, step, newStatus) {
     item.status = 'Pending';
     item.completedBy = ''; item.completedAt = '';
   }
+  item.activeStation = activeStationFor(item);
+  refreshStationTabs();
 
   renderTiles();
   toast(newStatus === 'Complete' ? '✓ Step done' : newStatus === 'In Process' ? '▶ Step started' : 'Reset');
@@ -1075,13 +1137,16 @@ async function updateStation(dbId, woId, newStation, el) {
   if (!item) return;
   const prev = item.station;
   item.station = newStation;
-  renderStationTabs([...new Set(allItems.map(i => i.station))]);
+  item.activeStation = activeStationFor(item);
+  refreshStationTabs();
   renderTiles();
   toast('Moved to ' + newStation);
   try {
     await sbPatch('line_items', { id: dbId }, { station: newStation || null });
   } catch(e) {
     item.station = prev;
+    item.activeStation = activeStationFor(item);
+    refreshStationTabs();
     renderTiles();
     toast('⚠ Sync failed');
   }
