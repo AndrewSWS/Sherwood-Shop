@@ -4714,6 +4714,7 @@ function openShopQueueBoard(){
         if(userModal) userModal.style.display = 'none';
         const label = doc.getElementById('user-label');
         if(label) label.style.display = 'none';
+        injectBoardCompactStyles(doc);
       }
     }catch(e){ console.warn('shop-queue board injection failed', e); }
     // Some TV browsers don't honor an embedded page's own viewport meta the
@@ -4728,6 +4729,53 @@ function openShopQueueBoard(){
   // (Re)load the frame fresh each time so it reflects current data — avoid stale state sitting open for hours on the board
   frame.src = 'shop-queue.html?t=' + Date.now();
   modal.style.display='block';
+}
+
+function injectBoardCompactStyles(doc){
+  // shop-queue.html's own CSS is sized for touch (iPad) — big fonts, big
+  // padding, big tap targets. On the 85" board this is just a view-only
+  // display for the whole team, so we shrink everything way down here
+  // (without editing shop-queue.html) for a dense, glanceable grid.
+  if(doc.getElementById('board-compact-style')) return; // already injected on a prior load
+  const style = doc.createElement('style');
+  style.id = 'board-compact-style';
+  style.textContent = `
+    #header{padding:6px 12px 4px!important}
+    #header h1{font-size:14px!important}
+    #station-tabs{padding:4px 10px 4px!important;gap:4px!important}
+    .station-tab{padding:3px 8px!important;font-size:10px!important}
+    .station-tab .count-badge{font-size:8px!important;padding:0 4px!important}
+    #queue-summary{padding:5px 10px!important}
+    #queue-summary .summary-totals{gap:8px!important;margin-bottom:3px!important}
+    #queue-summary .summary-station{font-size:10px!important}
+    #queue-summary .summary-qty{font-size:14px!important}
+    #queue-summary .summary-qty span{font-size:9px!important}
+    #queue-summary .summary-wt{font-size:10px!important}
+    #summary-pills{gap:3px!important}
+    .summary-pill{padding:2px 7px!important;font-size:9px!important}
+    #main{padding:6px 8px!important;padding-bottom:10px!important}
+    #tiles{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))!important;gap:6px!important}
+    .tile{padding:7px!important;border-radius:6px!important;border-width:1px!important}
+    .tile-header{gap:4px!important;margin-bottom:2px!important}
+    .tile-num{min-width:22px!important;height:14px!important;font-size:7px!important;padding:0 4px!important}
+    .tile-customer{font-size:12px!important;letter-spacing:0!important;margin-bottom:0!important}
+    .tile-wo{font-size:8px!important}
+    .tile-divider{margin:4px 0!important}
+    .tile-specs{font-size:14px!important;margin:0 0 3px!important;letter-spacing:0!important}
+    .tile-meta{gap:3px!important;margin-bottom:4px!important}
+    .chip{padding:1px 6px!important;font-size:8px!important}
+    .tile-notes{font-size:8px!important;padding:3px 5px!important;margin-bottom:4px!important}
+    .tile-actions{gap:4px!important;margin-top:3px!important}
+    .btn-action{padding:5px 4px!important;font-size:9px!important;border-radius:5px!important}
+    .tile-assign{gap:4px!important;margin-top:4px!important}
+    .tile-assign label{font-size:7px!important}
+    .assign-select{padding:3px 6px!important;padding-right:18px!important;font-size:9px!important;border-radius:5px!important;background-position:right 6px center!important;background-size:8px 6px!important}
+    .dual-steps{gap:4px!important;margin-bottom:3px!important}
+    .step-box{padding:5px!important;border-radius:5px!important;border-width:1px!important}
+    .step-label{font-size:6px!important;margin-bottom:2px!important}
+    .step-btn{padding:4px 3px!important;font-size:8px!important;border-radius:4px!important}
+  `;
+  doc.head.appendChild(style);
 }
 
 function fitShopQueueFrame(frame){
