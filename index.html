@@ -1143,6 +1143,8 @@ async function sbLoadState() {
             case 'acknowledged_gaps': state.adminConfig.acknowledgedGaps = val; break;
             case 'linear_weights': {const lw=typeof val==='string'?JSON.parse(val):val;if(lw&&typeof lw==='object'){Object.assign(LINEAR_WEIGHTS,lw);console.log('[adminConfig] loaded linear_weights, keys:',Object.keys(lw).length);}} break;
             case 'sheet_weights':  {const sw=typeof val==='string'?JSON.parse(val):val;if(sw&&typeof sw==='object')Object.assign(SHEET_WEIGHTS,sw);} break;
+            case 'product_cats': {const pcSaved=typeof val==='string'?JSON.parse(val):val;if(pcSaved&&typeof pcSaved==='object'&&typeof settingsProdCat!=='undefined'&&!settingsProdCat){Object.keys(pcSaved).forEach(cat=>{if(PRODUCT_CATS[cat])PRODUCT_CATS[cat]=pcSaved[cat];});}} break;
+            case 'hardware_packaging': {const hp=typeof val==='string'?JSON.parse(val):val;if(hp&&typeof hp==='object')Object.assign(HARDWARE_PACKAGING,hp);} break;
             case 'weatherGeocodeCache': {const wgc=typeof val==='string'?JSON.parse(val):val;if(wgc&&typeof wgc==='object'){if(!state.adminConfig)state.adminConfig={};state.adminConfig.weatherGeocodeCache=wgc;}} break;
             case 'cityCoordsOverride': {const cco=typeof val==='string'?JSON.parse(val):val;if(cco&&typeof cco==='object'){if(!state.adminConfig)state.adminConfig={};state.adminConfig.cityCoordsOverride=cco;}} break;
           }
@@ -1287,8 +1289,9 @@ async function sbSaveAdminConfig(key, value) {
       headers: { ..._SB_HDR, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
       body: JSON.stringify({key, value})
     });
-    if (!r.ok) console.warn('sbSaveAdminConfig error', key, await r.text());
-  } catch(e) { console.warn('sbSaveAdminConfig error', e); }
+    if (!r.ok) { console.warn('sbSaveAdminConfig error', key, await r.text()); return false; }
+    return true;
+  } catch(e) { console.warn('sbSaveAdminConfig error', e); return false; }
 }
 
 // ── SUPABASE: Save queue item priorities ──
@@ -9681,7 +9684,7 @@ function renderStructuredEditor(pc,cat){
               <th style="padding:3px 6px;background:var(--gray-l);border-radius:0 4px 4px 0"></th>
             </tr></thead>
             <tbody>
-            ${renderWeightRows(cat,g,pc.sizes[g]||[],isFlatSheet,safecat)}}
+            ${renderWeightRows(cat,g,pc.sizes[g]||[],isFlatSheet,safecat)}
             </tbody>
           </table>
         </div>
@@ -9720,24 +9723,29 @@ function renderWeightRows(cat, g, sizes, isFlatSheet, safecat){
     const gClean = String(g).replace('ga','').trim();
     const sClean = String(s).trim();
     const wtKey = gClean+'|'+sClean.replace(' x ','x').replace('×','x');
-    if(!isFlatSheet&&wtKey.includes('Plenum'))console.log('[weightRender] key:',wtKey,'found:',!!LINEAR_WEIGHTS[wtKey],'val:',LINEAR_WEIGHTS[wtKey]);
     const curWt = isFlatSheet ? (SHEET_WEIGHTS[wtKey]||0) : (LINEAR_WEIGHTS[wtKey]?LINEAR_WEIGHTS[wtKey].wt:0);
     const curBundle = isFlatSheet ? '' : (LINEAR_WEIGHTS[wtKey]?LINEAR_WEIGHTS[wtKey].bundle:'');
     const safeG = g.replace(/\W/g,'');
+    // Pass the row index, not the raw size text — size names routinely
+    // contain literal ' and " (feet/inches marks), which would otherwise
+    // terminate the onchange="..." attribute or the JS string literal
+    // right where the mark appears, silently breaking the save entirely.
     const bundleInput = !isFlatSheet
       ? '<input type="number" value="'+curBundle+'" placeholder="bdl" style="width:50px;font-size:11px;padding:2px 4px;border:1px solid var(--border);border-radius:4px"'
         +' id="bndl-'+safecat+'-'+safeG+'-'+si+'"'
-        +' onchange="updateProductWeight(\'' +cat+ '\',\'' +g+ '\',\'' +s+ '\',document.getElementById(\'wt-'+safecat+'-'+safeG+'-'+si+'\')?.value||0,this.value)"'
-        +' onblur="updateProductWeight(\'' +cat+ '\',\'' +g+ '\',\'' +s+ '\',document.getElementById(\'wt-'+safecat+'-'+safeG+'-'+si+'\')?.value||0,this.value)">'
+        +' onchange="updateProductWeight(\'' +cat+ '\',\'' +g+ '\',' +si+ ',document.getElementById(\'wt-'+safecat+'-'+safeG+'-'+si+'\')?.value||0,this.value)"'
+        +' onblur="updateProductWeight(\'' +cat+ '\',\'' +g+ '\',' +si+ ',document.getElementById(\'wt-'+safecat+'-'+safeG+'-'+si+'\')?.value||0,this.value)">'
       : '';
     return '<tr style="border-bottom:1px solid var(--border)">'
-      +'<td style="padding:4px 6px;font-size:11px">'+s+'</td>'
+      +'<td style="padding:4px 6px;font-size:11px">'+s
+      +' <span onclick="renameCatSize(\'' +cat+ '\',\'' +g+ '\',' +si+ ')" style="cursor:pointer;color:var(--text3);font-size:11px;margin-left:2px" title="Rename this size">✎</span>'
+      +'</td>'
       +'<td style="padding:4px 6px;text-align:right">'
       +'<input type="number" value="'+(curWt||'')+'" step="0.001" placeholder="lbs/pc"'
       +' id="wt-'+safecat+'-'+safeG+'-'+si+'"'
       +' style="width:72px;font-size:11px;padding:2px 4px;border:1px solid var(--border);border-radius:4px;text-align:right"'
-      +' onchange="updateProductWeight(\'' +cat+ '\',\'' +g+ '\',\'' +s+ '\',this.value'
-      +(!isFlatSheet ? (',document.getElementById(\'bndl-'+safecat+'-'+safeG+'-'+si+'\').value') : '')+')'+'" onblur="updateProductWeight(\'' +cat+ '\',\'' +g+ '\',\'' +s+ '\',this.value'
+      +' onchange="updateProductWeight(\'' +cat+ '\',\'' +g+ '\',' +si+ ',this.value'
+      +(!isFlatSheet ? (',document.getElementById(\'bndl-'+safecat+'-'+safeG+'-'+si+'\').value') : '')+')'+'" onblur="updateProductWeight(\'' +cat+ '\',\'' +g+ '\',' +si+ ',this.value'
       +(!isFlatSheet ? (',document.getElementById(\'bndl-'+safecat+'-'+safeG+'-'+si+'\').value') : '')+')"></td>'
       +'<td style="padding:4px 6px">'
       +bundleInput
@@ -9747,27 +9755,53 @@ function renderWeightRows(cat, g, sizes, isFlatSheet, safecat){
   }).join('');
 }
 
-function updateProductWeight(cat, gauge, size, wtVal, bundleVal){
+async function updateProductWeight(cat, gauge, sizeIdx, wtVal, bundleVal){
   const wt = parseFloat(wtVal)||0;
   const g = String(gauge).replace('ga','').trim();
+  // Look the current size name up by index rather than trusting a raw string
+  // passed through an HTML attribute — see note in renderWeightRows.
+  const size = PRODUCT_CATS[cat]?.sizes?.[gauge]?.[sizeIdx];
+  if(size===undefined){ console.warn('updateProductWeight: size not found', cat, gauge, sizeIdx); return; }
   const s = String(size).trim();
   const isFlatSheet = cat === 'Flat Sheet';
+  // Must match renderWeightRows' lookup key exactly, or the weight silently
+  // "disappears" from the table even though it saved — any size name
+  // containing " x " (e.g. Standing Seam's "5' x 1\" Stands") was mismatching
+  // before this normalization was applied consistently on both sides.
+  const key = g+'|'+s.replace(' x ','x').replace('×','x');
   if(isFlatSheet){
-    const key = g+'|'+s.replace(' x ','x').replace('×','x');
     if(wt>0) SHEET_WEIGHTS[key]=wt;
     else delete SHEET_WEIGHTS[key];
   } else {
-    const key = g+'|'+s;
     const bundle = parseInt(bundleVal)||0;
     if(wt>0) LINEAR_WEIGHTS[key]={wt, bundle:bundle||LINEAR_WEIGHTS[key]?.bundle||0};
     else delete LINEAR_WEIGHTS[key];
   }
-  sbSaveAdminConfig('linear_weights', LINEAR_WEIGHTS);
-  sbSaveAdminConfig('sheet_weights', SHEET_WEIGHTS);
-  toast('✓ Weight updated — '+gauge+' '+size+': '+(wt||'removed')+' lbs/pc');
+  // Wait for the actual save and report honestly — previously this showed
+  // "✓ Weight updated" unconditionally even if the network call silently
+  // failed, so a real failure looked identical to success until the next
+  // reload revealed it was never actually saved.
+  const ok = isFlatSheet
+    ? await sbSaveAdminConfig('sheet_weights', SHEET_WEIGHTS)
+    : await sbSaveAdminConfig('linear_weights', LINEAR_WEIGHTS);
+  if(ok){
+    toast('✓ Weight updated — '+gauge+' '+size+': '+(wt||'removed')+' lbs/pc');
+  } else {
+    toast('⚠ Save failed — check connection and re-enter this value', 5000);
+  }
 }
 
-function addCatGauge(cat){
+// PRODUCT_CATS (which gauges/sizes exist per category) and HARDWARE_PACKAGING
+// both start as hardcoded defaults in the source, but any admin edits need to
+// actually reach Supabase — otherwise they only live in the current browser
+// tab and vanish on the next reload, or never reach anyone else's device.
+async function saveProductCats(){
+  const r1 = await sbSaveAdminConfig('product_cats', PRODUCT_CATS);
+  const r2 = await sbSaveAdminConfig('hardware_packaging', HARDWARE_PACKAGING);
+  return r1 && r2;
+}
+
+async function addCatGauge(cat){
   const safeId=cat.replace(/\W/g,'');
   const inp=document.getElementById('new-gauge-'+safeId);
   const val=inp?inp.value.trim():'';
@@ -9775,45 +9809,86 @@ function addCatGauge(cat){
   if(PRODUCT_CATS[cat].gauges.includes(val)){toast('Gauge already exists');return;}
   PRODUCT_CATS[cat].gauges.push(val);
   if(!PRODUCT_CATS[cat].sizes[val])PRODUCT_CATS[cat].sizes[val]=[];
-  toast(`✓ ${val} added to ${cat}`);
+  const ok = await saveProductCats();
+  toast(ok ? `✓ ${val} added to ${cat}` : '⚠ Save failed — check connection and try again', ok?2500:5000);
   renderSettings(document.getElementById('content'));
 }
 
-function removeCatGauge(cat,gauge){
+async function removeCatGauge(cat,gauge){
   if(!confirm(`Remove gauge ${gauge} and all its sizes from ${cat}?`))return;
   PRODUCT_CATS[cat].gauges=PRODUCT_CATS[cat].gauges.filter(g=>g!==gauge);
   delete PRODUCT_CATS[cat].sizes[gauge];
+  const ok = await saveProductCats();
+  if(!ok) toast('⚠ Save failed — check connection and try again', 5000);
   renderSettings(document.getElementById('content'));
 }
 
-function addCatSize(cat,gauge){
+async function addCatSize(cat,gauge){
   const safeId=cat.replace(/\W/g,'');
   const sizeInp=document.getElementById(`new-size-${safeId}-${gauge}`);
   const wtInp=document.getElementById(`new-wt-${safeId}-${gauge}`);
+  const bndlInp=document.getElementById(`new-bndl-${safeId}-${gauge}`);
   const size=sizeInp?sizeInp.value.trim():'';
   const wt=wtInp?parseFloat(wtInp.value)||0:0;
+  const bundle=bndlInp?parseInt(bndlInp.value)||0:0;
   if(!size)return;
   if(!PRODUCT_CATS[cat].sizes[gauge])PRODUCT_CATS[cat].sizes[gauge]=[];
   PRODUCT_CATS[cat].sizes[gauge].push(size);
-  // Register weight if provided
+  let ok = await saveProductCats();
+  // Register weight (and bundle, for non-flat-sheet categories) if provided
   if(wt>0){
     const isFlatSheet=cat==='Flat Sheet';
+    const normKey = `${gauge}|${size.replace(' x ','x').replace('×','x')}`;
     if(isFlatSheet){
-      SHEET_WEIGHTS[`${gauge}|${size.replace(' x ','x').replace('×','x')}`]=wt;
+      SHEET_WEIGHTS[normKey]=wt;
+      ok = (await sbSaveAdminConfig('sheet_weights', SHEET_WEIGHTS)) && ok;
     } else {
-      LINEAR_WEIGHTS[`${gauge}|${size}`]={wt,bundle:1};
+      LINEAR_WEIGHTS[normKey]={wt,bundle:bundle||1};
+      ok = (await sbSaveAdminConfig('linear_weights', LINEAR_WEIGHTS)) && ok;
     }
   }
-  toast(`✓ ${size} added`);
+  toast(ok ? `✓ ${size} added` : '⚠ Save failed — check connection and try again', ok?2500:5000);
   renderSettings(document.getElementById('content'));
 }
 
-function removeCatSize(cat,gauge,idx){
+async function removeCatSize(cat,gauge,idx){
   PRODUCT_CATS[cat].sizes[gauge].splice(idx,1);
+  const ok = await saveProductCats();
+  if(!ok) toast('⚠ Save failed — check connection and try again', 5000);
   renderSettings(document.getElementById('content'));
 }
 
-function addHardwareItem(){
+async function renameCatSize(cat,gauge,idx){
+  const current=PRODUCT_CATS[cat].sizes[gauge][idx];
+  const input=prompt('Rename size:',current);
+  if(input===null)return; // cancelled
+  const next=input.trim();
+  if(!next||next===current)return;
+  if(PRODUCT_CATS[cat].sizes[gauge].includes(next)){toast('That size name already exists for this gauge');return;}
+
+  // Carry the existing weight/bundle over to the new name — otherwise a
+  // rename would silently orphan whatever was already saved for this size,
+  // same key-matching logic as the weight lookup/save elsewhere.
+  const isFlatSheet=cat==='Flat Sheet';
+  const gClean=String(gauge).replace('ga','').trim();
+  const oldKey=gClean+'|'+current.trim().replace(' x ','x').replace('×','x');
+  const newKey=gClean+'|'+next.replace(' x ','x').replace('×','x');
+  let ok=true;
+  if(isFlatSheet){
+    if(SHEET_WEIGHTS[oldKey]!==undefined){SHEET_WEIGHTS[newKey]=SHEET_WEIGHTS[oldKey];delete SHEET_WEIGHTS[oldKey];}
+    ok = await sbSaveAdminConfig('sheet_weights', SHEET_WEIGHTS);
+  } else {
+    if(LINEAR_WEIGHTS[oldKey]){LINEAR_WEIGHTS[newKey]=LINEAR_WEIGHTS[oldKey];delete LINEAR_WEIGHTS[oldKey];}
+    ok = await sbSaveAdminConfig('linear_weights', LINEAR_WEIGHTS);
+  }
+
+  PRODUCT_CATS[cat].sizes[gauge][idx]=next;
+  ok = (await saveProductCats()) && ok;
+  toast(ok ? `✓ Renamed to ${next}` : '⚠ Save failed — check connection and try again', ok?2500:5000);
+  renderSettings(document.getElementById('content'));
+}
+
+async function addHardwareItem(){
   const nameInp=document.getElementById('new-hw-item');
   const pkgInp=document.getElementById('new-hw-pkg');
   const name=nameInp?nameInp.value.trim():'';
@@ -9822,15 +9897,18 @@ function addHardwareItem(){
   if(!PRODUCT_CATS['Other / Hardware'].sizes['—'])PRODUCT_CATS['Other / Hardware'].sizes['—']=[];
   PRODUCT_CATS['Other / Hardware'].sizes['—'].push(name);
   if(pkg)HARDWARE_PACKAGING[name]=pkg;
-  toast(`✓ ${name} added`);
+  const ok = await saveProductCats();
+  toast(ok ? `✓ ${name} added` : '⚠ Save failed — check connection and try again', ok?2500:5000);
   renderSettings(document.getElementById('content'));
 }
 
-function removeHardwareItem(i){
+async function removeHardwareItem(i){
   const items=PRODUCT_CATS['Other / Hardware'].sizes['—']||[];
   const name=items[i];
   items.splice(i,1);
   if(name)delete HARDWARE_PACKAGING[name];
+  const ok = await saveProductCats();
+  if(!ok) toast('⚠ Save failed — check connection and try again', 5000);
   renderSettings(document.getElementById('content'));
 }
 
