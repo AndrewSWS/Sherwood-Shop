@@ -4698,18 +4698,16 @@ function openShopQueueBoard(){
   const frame = document.getElementById('shop-queue-frame');
   if(!modal||!frame) return;
   // shop-queue.html itself is completely untouched — the board just reaches
-  // into the (same-origin) iframe once it loads and disables its own
-  // showUserPicker() function, so the "Who are you?" prompt never appears
-  // on the shared TV. The per-user picker on iPads etc still works exactly
-  // as before since none of this runs there.
+  // into the (same-origin) iframe once it loads and quietly skips the
+  // "Who are you?" prompt, since this is a shared team display, not a
+  // person's own device. The normal per-user picker on iPads etc is
+  // completely unaffected — none of this runs there.
+  frame.setAttribute('scrolling','no'); // we fit content to the screen ourselves; no stray scrollbars
+  if(window._sqFitTimer){ clearInterval(window._sqFitTimer); window._sqFitTimer=null; }
   frame.onload = () => {
     try{
       const win = frame.contentWindow;
       const doc = frame.contentDocument;
-      // showUserPicker is a top-level function declaration, so it's a real
-      // property on the iframe's window — overwriting it here means every
-      // future call (from boot() once its data load finishes, or from the
-      // change-user button) becomes a no-op instead of opening the modal.
       if(win) win.showUserPicker = function(){};
       if(doc){
         const userModal = doc.getElementById('user-modal');
@@ -4718,16 +4716,41 @@ function openShopQueueBoard(){
         if(label) label.style.display = 'none';
       }
     }catch(e){ console.warn('shop-queue board injection failed', e); }
+    // Some TV browsers don't honor an embedded page's own viewport meta the
+    // way a tablet does, so shop-queue.html can render wider than the visible
+    // area on the 85" board. Rather than change that file, measure the actual
+    // rendered width here and scale the whole page down to fit — same idea
+    // as the board's own auto-fit logic for the delivery grid.
+    setTimeout(()=>fitShopQueueFrame(frame), 150);
+    window._sqFitTimer = setInterval(()=>fitShopQueueFrame(frame), 4000);
   };
   // (Re)load the frame fresh each time so it reflects current data — avoid stale state sitting open for hours on the board
   frame.src = 'shop-queue.html?t=' + Date.now();
   modal.style.display='flex';
 }
 
+function fitShopQueueFrame(frame){
+  try{
+    const doc = frame.contentDocument;
+    const win = frame.contentWindow;
+    if(!doc || !win) return;
+    const body = doc.body;
+    if(!body) return;
+    // Reset to measure the page's natural, unscaled width
+    body.style.zoom = '';
+    const contentW = doc.documentElement.scrollWidth;
+    const visibleW = frame.clientWidth;
+    if(contentW > visibleW + 2){
+      body.style.zoom = String((visibleW / contentW) * 0.995);
+    }
+  }catch(e){ /* cross-origin or not ready yet — ignore */ }
+}
+
 function closeShopQueueBoard(){
   const modal = document.getElementById('shop-queue-modal');
   const frame = document.getElementById('shop-queue-frame');
   if(modal) modal.style.display='none';
+  if(window._sqFitTimer){ clearInterval(window._sqFitTimer); window._sqFitTimer=null; }
   if(frame) frame.src = ''; // stop background polling/timers in the iframe once closed
 }
 
