@@ -4697,8 +4697,30 @@ function openShopQueueBoard(){
   const modal = document.getElementById('shop-queue-modal');
   const frame = document.getElementById('shop-queue-frame');
   if(!modal||!frame) return;
+  // shop-queue.html itself is completely untouched — the board just reaches
+  // into the (same-origin) iframe once it loads and disables its own
+  // showUserPicker() function, so the "Who are you?" prompt never appears
+  // on the shared TV. The per-user picker on iPads etc still works exactly
+  // as before since none of this runs there.
+  frame.onload = () => {
+    try{
+      const win = frame.contentWindow;
+      const doc = frame.contentDocument;
+      // showUserPicker is a top-level function declaration, so it's a real
+      // property on the iframe's window — overwriting it here means every
+      // future call (from boot() once its data load finishes, or from the
+      // change-user button) becomes a no-op instead of opening the modal.
+      if(win) win.showUserPicker = function(){};
+      if(doc){
+        const userModal = doc.getElementById('user-modal');
+        if(userModal) userModal.style.display = 'none';
+        const label = doc.getElementById('user-label');
+        if(label) label.style.display = 'none';
+      }
+    }catch(e){ console.warn('shop-queue board injection failed', e); }
+  };
   // (Re)load the frame fresh each time so it reflects current data — avoid stale state sitting open for hours on the board
-  frame.src = 'shop-queue.html?board=1&t=' + Date.now();
+  frame.src = 'shop-queue.html?t=' + Date.now();
   modal.style.display='flex';
 }
 
@@ -11344,18 +11366,13 @@ if("serviceWorker" in navigator){
   </div>
 </div>
 
-<!-- ══ SHOP QUEUE MODAL ══ -->
-<div id="shop-queue-modal" style="display:none;position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,.7);align-items:center;justify-content:center;padding:20px" onclick="if(event.target===this)closeShopQueueBoard()">
-  <div style="background:#0f1117;border:1px solid #333;border-radius:12px;width:100%;max-width:1100px;height:90vh;display:flex;flex-direction:column;box-shadow:0 12px 48px rgba(0,0,0,.6)">
-    <div style="padding:12px 20px;border-bottom:1px solid #333;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
-      <div>
-        <div style="font-size:16px;font-weight:800;color:#fff">🧰 Shop Queue</div>
-        <div style="font-size:11px;color:#888;margin-top:2px">Live shop floor queue</div>
-      </div>
-      <button onclick="closeShopQueueBoard()" style="background:#333;border:none;color:#aaa;border-radius:50%;width:28px;height:28px;font-size:16px;cursor:pointer">✕</button>
-    </div>
-    <iframe id="shop-queue-frame" src="" style="flex:1;width:100%;border:none;border-radius:0 0 12px 12px;background:#0f1117"></iframe>
+<!-- ══ SHOP QUEUE MODAL (fullscreen — sized for the board TV, not a small dialog) ══ -->
+<div id="shop-queue-modal" style="display:none;position:fixed;inset:0;z-index:10001;background:#0f1117;flex-direction:column">
+  <div style="padding:10px 20px;border-bottom:1px solid #333;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+    <div style="font-size:18px;font-weight:800;color:#fff">🧰 Shop Queue</div>
+    <button onclick="closeShopQueueBoard()" style="background:#333;border:none;color:#fff;border-radius:6px;padding:8px 16px;font-size:13px;cursor:pointer">✕ Close</button>
   </div>
+  <iframe id="shop-queue-frame" src="" style="flex:1;width:100%;height:100%;border:none;background:#0f1117"></iframe>
 </div>
 
 </body>
