@@ -2536,6 +2536,14 @@ function showDupWOModal(existing, incoming){
       <span style="color:var(--text2)">×${e.qty} → <strong>×${i.qty}</strong></span>
     </div>`).join('');
 
+  // Guard: if a duplicate-review popup is already pending a decision, opening a
+  // second one would silently overwrite window._dupIncomingWO (the pending review's
+  // data) with this new invoice's data — corrupting or losing whichever WO the user
+  // hasn't decided on yet. Make them resolve the current one first.
+  if(document.getElementById('dup-wo-modal')){
+    toast('⚠ Finish reviewing the duplicate for WO #'+existing.woNum+' first, then re-import this invoice.');
+    return;
+  }
   const modal = document.createElement('div');
   modal.id = 'dup-wo-modal';
   modal.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:20px';
@@ -2577,13 +2585,13 @@ function showDupWOModal(existing, incoming){
           </div>` : ''}
         <div style="display:flex;gap:8px;margin-bottom:16px">
           <button class="btn btn-primary" onclick="mergeDupWO(${existing.id})">✓ Apply Changes to WO #${existing.woNum}</button>
-          <button class="btn" onclick="document.getElementById('dup-wo-modal').remove()">Cancel</button>
+          <button class="btn" onclick="document.getElementById('dup-wo-modal').remove();window._dupIncomingWO=null">Cancel</button>
         </div>` : `
         <div style="color:var(--green);font-weight:600;margin-bottom:8px">✓ No changes — incoming WO matches existing.</div>
         <div style="font-size:12px;color:var(--text2);margin-bottom:12px">QB may have packing notes to sync even if items match.</div>
         <div style="display:flex;gap:8px;margin-bottom:16px">
           <button class="btn btn-primary" onclick="mergeDupWO(${existing.id})">📝 Sync Notes from QB</button>
-          <button class="btn" onclick="document.getElementById('dup-wo-modal').remove()">Close</button>
+          <button class="btn" onclick="document.getElementById('dup-wo-modal').remove();window._dupIncomingWO=null">Close</button>
         </div>`}
       <div style="border-top:1px solid var(--border);padding-top:12px">
         <div style="font-size:12px;font-weight:600;color:var(--text3);margin-bottom:8px">EXISTING WO — ${existing.items.length} items:</div>
@@ -2670,24 +2678,29 @@ async function mergeDupWO(existingId){
   Object.assign(existing, preservedFields);
 
   // Add new items — but first reload current DB rows to avoid double-inserts
-  // if user clicks "Import Anyway" multiple times before the poll refreshes state
+  // if user clicks "Import Anyway" multiple times before the poll refreshes state.
+  // IMPORTANT: match by the QB item code embedded in the packing note (e.g.
+  // "HVACAcsry:2896Slip" vs "HVACAcsry:2896Drive"), NOT by raw qty — two different
+  // line items commonly share the same qty (e.g. 500 pcs of Slip AND 500 pcs of
+  // Drive), and matching on qty alone means the pre-existing Slip row permanently
+  // looks like "Drive already got inserted", silently dropping Drive on every retry.
+  const _dupExtractCode = n=>{ if(!n) return null; const m=n.match(/^[A-Za-z]+:([A-Za-z0-9.]+)/); return m?m[1].toLowerCase():null; };
   if (newItems.length) {
-    const dbRows = await _sbGet('line_items', `wo_id=eq.${existing.id}&select=id,qty,status&order=id.asc`).catch(()=>null);
-    const dbQtyPool = (dbRows||[]).map(r=>String(r.qty||'').trim());
-    const dbUsed = new Set();
+    const dbRows = await _sbGet('line_items', `wo_id=eq.${existing.id}&select=id,qty,notes,status&order=id.asc`).catch(()=>null);
+    const dbCodeSet = new Set((dbRows||[]).map(r=>_dupExtractCode(r.notes)).filter(Boolean));
     newItems.forEach(item=>{
-      const q = String(item.qty||'').trim();
-      const idx = dbQtyPool.findIndex((dq,i)=>dq===q && !dbUsed.has(i));
-      if(idx !== -1){ dbUsed.add(idx); return; } // already exists in DB — skip
+      const itemCode = _dupExtractCode(item.notes);
+      if(itemCode && dbCodeSet.has(itemCode)) return; // this specific item is already in the DB — skip
       existing.items.push(item);
-      _sbPost('line_items',{
-      wo_id:existing.id, wo_num:existing.woNum, customer:existing.customer,
-      product_cat:item.productCat||null, type:item.type||null,
-      gauge:item.gauge||null, size:item.size||null, qty:item.qty||null,
-      weight:item.weight||null, station:item.station||null,
-      notes:item.notes||null,
-      status:'Pending', delivery:existing.delivery||null
-    }).catch(e=>console.warn('merge new item error',e));
+      // Use the shared row-mapping helper (same one sbCreateWO uses) instead of a
+      // hand-built partial object — the manual version above omitted wt_unit, bundle,
+      // is_dual, step1/step2 op+status, assignee, priority, waiting_vendor, etc.
+      // Missing NOT NULL columns caused Supabase to silently reject the insert
+      // (_sbPost only console.warns, doesn't throw), so the new item looked added
+      // locally but was never actually persisted and disappeared on the next
+      // poll/reload from the DB.
+      _sbPost('line_items', _liToRow(item, existing))
+        .catch(e=>console.warn('merge new item error',e));
   });
   }
 
