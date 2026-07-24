@@ -1689,6 +1689,11 @@ function updateQueueToggle(){
 }
 
 function nav(view,el){
+  // Clear any stale in-progress-edit flag left over from navigating away
+  // from an edit form without hitting Save/Cancel (was causing selectCust()
+  // to write into the edit form fields (#e-cust etc.) instead of the
+  // create form fields (#f-cust etc.) on the next QB import / new WO).
+  window._editingWOId = null;
   state.activeView=view;
   document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));
   if(el)el.classList.add('active');
