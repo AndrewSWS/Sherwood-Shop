@@ -3975,7 +3975,23 @@ function getWOTruck(woId){
 function getWOGroup(wo){
   if(!wo) return null;
   // Use getCustGroup which handles both explicit groupId and zone fallback
-  return getCustGroup(wo.customer);
+  const g = getCustGroup(wo.customer);
+  if(g) return g;
+  // Fallback: the customer master record may have no zone/groupId assigned
+  // (or its name may not exactly match wo.customer), but the WO itself often
+  // has its own `zone` stamped on it at import time — e.g. "PA Delaware County".
+  // Use that before giving up, so a WO with a perfectly good zone doesn't get
+  // dumped into "No Region Assigned" just because the customer record is out
+  // of sync. EXACT match via ZONE_TO_GROUP first, then full-name match —
+  // same discipline as getCustGroup, no truncated/loose matching.
+  if(wo.zone){
+    const gid = ZONE_TO_GROUP[wo.zone];
+    const g2 = gid ? state.deliveryGroups.find(gr=>gr.id===gid) : null;
+    if(g2) return g2;
+    const g3 = state.deliveryGroups.find(gr=>gr.name.toLowerCase()===wo.zone.toLowerCase());
+    if(g3) return g3;
+  }
+  return null;
 }
 
 function getWOGroupColor(wo){
@@ -8840,7 +8856,7 @@ function renderUnscheduledGrouped(unscheduled){
   // Group unscheduled by delivery group
   const byGroup={};
   unscheduled.forEach(wo=>{
-    const grp=getCustGroup(wo.customer);
+    const grp=getWOGroup(wo);
     const key=grp?grp.id:'__none__';
     if(!byGroup[key])byGroup[key]={grp,wos:[]};
     byGroup[key].wos.push(wo);
