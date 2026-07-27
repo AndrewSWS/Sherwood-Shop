@@ -1301,6 +1301,12 @@ function startSBPoll() {
           else if (state.activeView==='trucks') renderTrucks(c);
           else if (state.activeView==='truck') renderTruck(c);
           else if (state.activeView==='myview') renderMyView(c);
+          else if (state.activeView==='customers') {
+            renderCustomers(c);
+            // renderCustomers() always resets the right-side edit panel to its
+            // placeholder — restore whichever customer was open, if any.
+            if (custEditName) selectCustEdit(custEditName);
+          }
         } catch(e) { console.warn('poll render error', e); }
       }
       updateBadges();
@@ -8184,6 +8190,104 @@ function getCustMeta(name){
   return state.customerMeta[name]||{phone:'',email:'',contact:'',notify:false,groupId:'',notes:''};
 }
 
+// Looks up a region/zone directly from City + State via the Supabase-backed
+// city_zone_map table (state.cityZoneMap). Used by the QB import logic so
+// newly created customers/locations get a real zone from the start instead
+// of an inherited (possibly wrong) or blank one. Returns '' if no match.
+function lookupZoneByCity(city, st){
+  if(!city || !st || !state.cityZoneMap) return '';
+  const key = `${String(city).trim().toLowerCase()}|${String(st).trim().toLowerCase()}`;
+  return state.cityZoneMap[key] || '';
+}
+
+// County → zone. Small and stable — there are only ~15 counties across the
+// whole delivery footprint, versus hundreds of possible town names, so this
+// is a far more complete way to resolve a city we've genuinely never seen
+// before than trying to enumerate every town up front.
+const COUNTY_TO_ZONE = {
+  // PA
+  'bucks':'PA Bucks',
+  'montgomery':'PA Montgomery',
+  'delaware':'PA Delaware County',
+  'philadelphia':'PA Philadelphia',
+  'chester':'PA Chester/West',
+  'lehigh':'PA Lehigh Valley',
+  'northampton':'PA Lehigh Valley',
+  'berks':'PA Berks/Reading',
+  // any other PA county (Lancaster, York, Dauphin, Lebanon, etc.) falls
+  // through to PA Far West via the catch-all below.
+  // NJ
+  'camden':'NJ Camden Metro',
+  'burlington':'NJ Burlington/Mercer',
+  'mercer':'NJ Burlington/Mercer',
+  'gloucester':'NJ Gloucester/Salem',
+  'salem':'NJ Gloucester/Salem',
+  'atlantic':'NJ Shore South',
+  'cape may':'NJ Shore South',
+  'cumberland':'NJ Shore South',
+  'ocean':'NJ Shore North',
+  'monmouth':'NJ Shore North',
+  'middlesex':'NJ Central',
+  'somerset':'NJ Central',
+  'hunterdon':'NJ Central',
+  // any other NJ county (Bergen, Essex, Union, Passaic, Morris, Hudson,
+  // Sussex, Warren, etc.) falls through to NJ North via the catch-all.
+};
+
+// Live county-based lookup for a city we have no record of at all — the
+// zone equivalent of geocodeNewCustomerCity. Same discipline: only ever
+// called for a genuinely new city (checked against city_zone_map first),
+// result cached into state.cityZoneMap + Supabase's city_zone_map table so
+// it's never looked up live again, by this device or any other.
+async function deriveZoneFromCity(city, st){
+  if(!city || !st) return '';
+  const stU = st.trim().toUpperCase();
+  // DE/MD/NY are single-zone states in this scheme — no county lookup needed.
+  if(stU==='DE') return 'Delaware';
+  if(stU==='MD') return 'Maryland';
+  if(stU==='NY') return 'New York';
+  if(stU!=='PA' && stU!=='NJ') return ''; // outside delivery footprint
+  try{
+    const query = `${city}, ${st}`;
+    const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&country=US&format=json&addressdetails=1&limit=1`);
+    const geoData = await geoRes.json();
+    if(!geoData.length || !geoData[0].address) return '';
+    const countyRaw = (geoData[0].address.county||'').toLowerCase().replace(/\s*county$/,'').trim();
+    if(!countyRaw) return '';
+    let zone = COUNTY_TO_ZONE[countyRaw];
+    if(!zone) zone = stU==='PA' ? 'PA Far West' : 'NJ North'; // catch-all for counties outside the named list
+    // Cache so this city never needs a live lookup again.
+    const key = `${city.trim().toLowerCase()}|${st.trim().toLowerCase()}`;
+    if(!state.cityZoneMap) state.cityZoneMap = {};
+    state.cityZoneMap[key] = zone;
+    _sbPost('city_zone_map', { city: city.trim(), state: stU, zone })
+      .catch(e=>console.warn('city_zone_map cache insert error', e));
+    return zone;
+  } catch(e){
+    console.warn('deriveZoneFromCity error', e);
+    return '';
+  }
+}
+
+// Fire-and-forget: if a newly created customer/location ended up with no
+// zone (city wasn't in the fast city_zone_map cache), kick off a live
+// county-based lookup in the background and patch it in once resolved —
+// so the import UI never blocks waiting on a network call, but the record
+// self-heals a few seconds later instead of staying blank forever.
+function backfillZoneIfMissing(cust){
+  if(!cust || cust.zone || !cust.city || !cust.state) return;
+  deriveZoneFromCity(cust.city, cust.state).then(zone=>{
+    if(!zone) return;
+    cust.zone = zone;
+    saveState();
+    _sbPatch('customers', {name: cust.name}, {zone})
+      .catch(e=>console.warn('backfillZoneIfMissing patch error', e));
+    // Refresh the customer edit panel in place if it happens to be open
+    // on this exact customer right now.
+    if(typeof custEditName!=='undefined' && custEditName===cust.name) selectCustEdit(cust.name);
+  });
+}
+
 function getCustGroup(custName){
   const meta=getCustMeta(custName);
   if(meta.groupId){
@@ -8475,7 +8579,16 @@ function selectCustEdit(name){
   if(!panel)return;
   panel.innerHTML=`
   <div class="section-head">${name}</div>
-  <div style="font-size:12px;color:var(--text2);margin-bottom:12px">📍 ${cust.address||''}, ${cust.city||''}, ${cust.state||''} ${cust.zip||''} · ${cust.zone||''}</div>
+  <div class="grid2 gap12 mb12">
+    <div class="field" style="grid-column:1/-1"><label class="lbl">Address</label>
+      <input type="text" id="ce-address" value="${(cust.address||'').replace(/"/g,'&quot;')}" placeholder="Street address"></div>
+    <div class="field"><label class="lbl">City</label>
+      <input type="text" id="ce-city" value="${(cust.city||'').replace(/"/g,'&quot;')}" placeholder="City"></div>
+    <div class="field"><label class="lbl">State</label>
+      <input type="text" id="ce-state" value="${(cust.state||'').replace(/"/g,'&quot;')}" placeholder="PA" maxlength="2" style="text-transform:uppercase"></div>
+    <div class="field"><label class="lbl">Zip</label>
+      <input type="text" id="ce-zip" value="${(cust.zip||'').replace(/"/g,'&quot;')}" placeholder="19020"></div>
+  </div>
   <div class="grid2 gap12 mb12">
     <div class="field"><label class="lbl">Contact Name</label>
       <input type="text" id="ce-contact" value="${meta.contact||''}" placeholder="Primary contact"></div>
@@ -8486,7 +8599,13 @@ function selectCustEdit(name){
     <div class="field"><label class="lbl">Delivery Group</label>
       <select id="ce-group">${groupOpts}</select></div>
   </div>
-  <div class="field mb12"><label class="lbl">Zone / Region</label><select id="ce-zone"><option value="">— Unassigned —</option>${['NJ Camden Metro','NJ Burlington/Mercer','NJ Gloucester/Salem','NJ Shore South','NJ Shore North','NJ Central','NJ North','PA Bucks','PA Montgomery','PA Delaware County','PA Philadelphia','PA Chester/West','PA Lehigh Valley','PA Berks/Reading','PA Far West','Delaware','Maryland','New York'].map(z=>`<option value="${z}"${(cust.zone||'')==z?' selected':''}>${z}</option>`).join('')}</select></div><div class="field mb12">
+  <div class="field mb12">
+    <label class="lbl">Zone / Region
+      <button type="button" class="btn btn-xs" style="margin-left:6px" onclick="suggestZoneFromCity()" title="Look up region from City + State">📍 Suggest from city</button>
+    </label>
+    <select id="ce-zone"><option value="">— Unassigned —</option>${['NJ Camden Metro','NJ Burlington/Mercer','NJ Gloucester/Salem','NJ Shore South','NJ Shore North','NJ Central','NJ North','PA Bucks','PA Montgomery','PA Delaware County','PA Philadelphia','PA Chester/West','PA Lehigh Valley','PA Berks/Reading','PA Far West','Delaware','Maryland','New York'].map(z=>`<option value="${z}"${(cust.zone||'')==z?' selected':''}>${z}</option>`).join('')}</select>
+  </div>
+  <div class="field mb12">
     <label class="lbl">Notes</label>
     <textarea id="ce-notes" rows="2" placeholder="Delivery notes, special instructions...">${meta.notes||''}</textarea>
   </div>
@@ -8505,25 +8624,63 @@ function selectCustEdit(name){
   </div>`;
 }
 
+// Looks up the City + State currently typed in the edit panel against
+// city_zone_map (Supabase-backed). If not already known, falls back to a
+// live county-based lookup (deriveZoneFromCity) — same one-time-then-cached
+// pattern used for map coordinates. Does not save automatically — still
+// requires clicking Save.
+async function suggestZoneFromCity(){
+  const cityEl = document.getElementById('ce-city');
+  const stateEl = document.getElementById('ce-state');
+  const zoneEl = document.getElementById('ce-zone');
+  if(!cityEl || !stateEl || !zoneEl) return;
+  const city = cityEl.value.trim();
+  const st = stateEl.value.trim();
+  if(!city || !st){ toast('⚠ Enter City and State first'); return; }
+  const key = `${city.toLowerCase()}|${st.toLowerCase()}`;
+  let zone = (state.cityZoneMap||{})[key];
+  if(zone){
+    zoneEl.value = zone;
+    toast('✓ Suggested '+zone+' — click Save to apply');
+    return;
+  }
+  toast('🔍 Looking up region for '+city+', '+st.toUpperCase()+'...');
+  zone = await deriveZoneFromCity(city, st);
+  if(!zone){ toast('⚠ Could not determine a region for '+city+', '+st.toUpperCase()+' — set it manually'); return; }
+  zoneEl.value = zone;
+  saveState();
+  toast('✓ Suggested '+zone+' — click Save to apply');
+}
+
 function saveCustMeta(name){
   if(!state.customerMeta)state.customerMeta={};
   const groupId = document.getElementById('ce-group').value;
   const zone = (document.getElementById('ce-zone')||{}).value || '';
+  const address = document.getElementById('ce-address').value.trim();
+  const city = document.getElementById('ce-city').value.trim();
+  const custState = document.getElementById('ce-state').value.trim().toUpperCase();
+  const zip = document.getElementById('ce-zip').value.trim();
   const contact = document.getElementById('ce-contact').value.trim();
   const phone = document.getElementById('ce-phone').value.trim();
   const email = document.getElementById('ce-email').value.trim();
   const notes = document.getElementById('ce-notes').value.trim();
   const notify = document.getElementById('ce-notify').checked;
   state.customerMeta[name]={ contact, phone, email, groupId, notes, notify };
-  // Update zone in customers array
+  // Update address/city/state/zip/zone in the local customers array
   const custs = state.adminConfig && state.adminConfig.customers;
   if(custs){
     const cust = custs.find(c=>c.name===name);
-    if(cust && zone) cust.zone = zone;
+    if(cust){
+      cust.address = address;
+      cust.city = city;
+      cust.state = custState;
+      cust.zip = zip;
+      if(zone) cust.zone = zone;
+    }
   }
   saveState();
   // Sync to Supabase
-  _sbPatch('customers', {name}, { zone: zone||null, contact: contact||null, phone: phone||null, email: email||null, notes: notes||null, group_id: groupId||null, notify })
+  _sbPatch('customers', {name}, { address: address||null, city: city||null, state: custState||null, zip: zip||null, zone: zone||null, contact: contact||null, phone: phone||null, email: email||null, notes: notes||null, group_id: groupId||null, notify })
     .catch(e=>console.warn('saveCustMeta patch error',e));
   toast('\u2713 '+name+' updated');
   renderCustomers(document.getElementById('content'));
@@ -10896,7 +11053,7 @@ function importQBInvoice(invNum){
           if(alreadyExists){
             cust = alreadyExists;
           } else {
-            const newCust = { name: newName, address:'', city: qbCity, state: qbState, zip:'', zone: _exactMatch.zone||'' };
+            const newCust = { name: newName, address:'', city: qbCity, state: qbState, zip:'', zone: lookupZoneByCity(qbCity, qbState) || _exactMatch.zone||'' };
             getCustomers().push(newCust);
             if(!state.customerMeta) state.customerMeta={};
             state.customerMeta[newName] = { contact:'', phone:'', email:'', groupId:'', notify:false, notes:'' };
@@ -10904,6 +11061,7 @@ function importQBInvoice(invNum){
             _sbPost('customers', { name: newName, address:null, city: qbCity||null, state: qbState||null, zip:null, zone: newCust.zone||null })
               .catch(e=>console.warn('sbPost new customer error',e));
             cust = newCust;
+            backfillZoneIfMissing(newCust);
             const warn = document.createElement('div');
             warn.style.cssText='background:#fff3cd;border:1px solid #f0ad4e;border-radius:var(--rad);padding:8px 12px;margin-top:6px;font-size:12px;color:#856404';
             warn.innerHTML='⚠️ Ship-to city <strong>'+qbCity+'</strong> differs from existing <strong>'+_exactMatch.name+'</strong> ('+(_exactMatch.city||'no city on file')+'). Added <strong>'+newName+'</strong> as a new location — set Zone in <a href="#" onclick="nav(\'customers\');return false">Customer Admin</a>.';
@@ -10946,14 +11104,15 @@ function importQBInvoice(invNum){
             if(alreadyExists){
               cust = alreadyExists;
             } else {
-              const newCust = { name: newName, address:'', city: qbCity, state: qbState, zip:'', zone:'' };
+              const newCust = { name: newName, address:'', city: qbCity, state: qbState, zip:'', zone: lookupZoneByCity(qbCity, qbState) };
               getCustomers().push(newCust);
               if(!state.customerMeta) state.customerMeta={};
               state.customerMeta[newName] = { contact:'', phone:'', email:'', groupId:'', notify:false, notes:'' };
               saveState();
-              _sbPost('customers', { name: newName, address:null, city: qbCity||null, state: qbState||null, zip:null, zone:null })
+              _sbPost('customers', { name: newName, address:null, city: qbCity||null, state: qbState||null, zip:null, zone: newCust.zone||null })
                 .catch(e=>console.warn('sbPost new customer error',e));
               cust = newCust;
+              backfillZoneIfMissing(newCust);
               const warn = document.createElement('div');
               warn.style.cssText='background:#fff3cd;border:1px solid #f0ad4e;border-radius:var(--rad);padding:8px 12px;margin-top:6px;font-size:12px;color:#856404';
               warn.innerHTML='⚠️ Ship-to city <strong>'+qbCity+'</strong> differs from <strong>'+onlyMatch.name+'</strong> ('+onlyMatch.city+'). Added <strong>'+newName+'</strong> as a new location — set Zone in <a href="#" onclick="nav(\'customers\');return false">Customer Admin</a>.';
@@ -10988,14 +11147,15 @@ function importQBInvoice(invNum){
               if(existing){
                 cust = existing;
               } else {
-                const newCust = { name: newName, address:'', city: qbCity, state: qbState, zip:'', zone:'' };
+                const newCust = { name: newName, address:'', city: qbCity, state: qbState, zip:'', zone: lookupZoneByCity(qbCity, qbState) };
                 getCustomers().push(newCust);
                 if(!state.customerMeta) state.customerMeta={};
                 state.customerMeta[newName] = { contact:'', phone:'', email:'', groupId:'', notify:false, notes:'' };
                 saveState();
-                _sbPost('customers', { name: newName, address:null, city: qbCity||null, state: qbState||null, zip:null, zone:null })
+                _sbPost('customers', { name: newName, address:null, city: qbCity||null, state: qbState||null, zip:null, zone: newCust.zone||null })
                   .catch(e=>console.warn('sbPost new customer error',e));
                 cust = newCust;
+                backfillZoneIfMissing(newCust);
                 const warn = document.createElement('div');
                 warn.style.cssText='background:#fff3cd;border:1px solid #f0ad4e;border-radius:var(--rad);padding:8px 12px;margin-top:6px;font-size:12px;color:#856404';
                 warn.innerHTML='⚠️ Added <strong>'+newName+'</strong> as a new customer — set their <strong>Zone</strong> in <a href="#" onclick="nav(\'customers\');return false">Customer Admin</a>.';
@@ -11027,18 +11187,25 @@ function importQBInvoice(invNum){
           if(citystEl) citystEl.value = qbCityFinal + (qbStateFinal ? ', ' + qbStateFinal : '');
         }
       } else {
-        // Brand new customer not in system at all — auto-add with blank zone
-        const newCust = { name: inv.customer, address:'', city: inv.qbCity||'', state: inv.qbState||'', zip:'', zone:'' };
+        // Brand new customer not in system at all — auto-assign zone from
+        // ship-to city if we have one on file, blank otherwise.
+        const newCust = { name: inv.customer, address:'', city: inv.qbCity||'', state: inv.qbState||'', zip:'', zone: lookupZoneByCity(inv.qbCity, inv.qbState) };
         getCustomers().push(newCust);
         if(!state.customerMeta) state.customerMeta={};
         state.customerMeta[inv.customer] = { contact:'', phone:'', email:'', groupId:'', notify:false, notes:'' };
         saveState();
-        _sbPost('customers', { name: newCust.name, address:null, city: newCust.city||null, state: newCust.state||null, zip:null, zone:null })
+        _sbPost('customers', { name: newCust.name, address:null, city: newCust.city||null, state: newCust.state||null, zip:null, zone: newCust.zone||null })
           .catch(e=>console.warn('sbPost new customer error',e));
         selectCust(newCust);
+        backfillZoneIfMissing(newCust);
         const warn = document.createElement('div');
-        warn.style.cssText='background:#fff3cd;border:1px solid #f0ad4e;border-radius:var(--rad);padding:8px 12px;margin-top:6px;font-size:12px;color:#856404';
-        warn.innerHTML='⚠️ <strong>'+inv.customer+'</strong> added as a new customer — set their <strong>Zone</strong> in <a href="#" onclick="nav(\'customers\');return false">Customer Admin</a>.';
+        const noShipCity = !(inv.qbCity||'').trim();
+        warn.style.cssText = noShipCity
+          ? 'background:#fdecea;border:1px solid #e0524a;border-radius:var(--rad);padding:8px 12px;margin-top:6px;font-size:12px;color:#8a2318'
+          : 'background:#fff3cd;border:1px solid #f0ad4e;border-radius:var(--rad);padding:8px 12px;margin-top:6px;font-size:12px;color:#856404';
+        warn.innerHTML = noShipCity
+          ? '⚠️ No ship-to city on this invoice for <strong>'+inv.customer+'</strong> — the QB export left it off. Added as a new customer with no city/zone. Check QuickBooks and set their address in <a href="#" onclick="nav(\'customers\');return false">Customer Admin</a>.'
+          : '⚠️ <strong>'+inv.customer+'</strong> added as a new customer'+(newCust.zone?' in '+newCust.zone:'')+' — verify their <strong>Zone</strong> in <a href="#" onclick="nav(\'customers\');return false">Customer Admin</a>.';
         custInp.parentElement.appendChild(warn);
       }
     }
