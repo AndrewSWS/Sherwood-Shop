@@ -1178,31 +1178,33 @@ async function sbLoadState() {
       });
     }
 
-    // Merge customers from DB — Supabase is the source of truth for new additions,
-    // but the hardcoded snap list is the baseline. We merge: snap first, then
-    // any DB customer not already in snap gets added.
+    // Supabase is now the sole source of truth for customers — no more
+    // merging against the hardcoded snap, which previously caused zone/
+    // contact edits made through the Customers screen to be silently
+    // discarded on reload (the snap's non-blank zone always won). The
+    // snap was seeded into Supabase once via a migration; going forward
+    // every read and write goes through this table only.
     if (custsRaw && custsRaw.length) {
       if (!state.adminConfig) state.adminConfig = {};
-      const snapCusts = state.adminConfig.customers || [];
-      const snapNames = new Set(snapCusts.map(c => c.name.toLowerCase()));
-      const newFromDB = custsRaw
-        .filter(r => !snapNames.has((r.name||'').toLowerCase()))
-        .map(r => ({
-          name: r.name||'',
-          address: r.address||'',
-          city: r.city||'',
-          state: r.state||'',
-          zip: r.zip||'',
-          zone: r.zone||''
-        }));
-      if (newFromDB.length) {
-        state.adminConfig.customers = [...snapCusts, ...newFromDB];
-      }
-      // Also update zone for existing customers if DB has a zone set
+      state.adminConfig.customers = custsRaw.map(r => ({
+        name: r.name||'',
+        address: r.address||'',
+        city: r.city||'',
+        state: r.state||'',
+        zip: r.zip||'',
+        zone: r.zone||''
+      }));
+      // customerMeta (contact/phone/email/notes/groupId/notify) now comes
+      // from the same Supabase rows too, instead of localStorage-only —
+      // group_id and notify previously never left the browser they were
+      // set in.
+      if (!state.customerMeta) state.customerMeta = {};
       custsRaw.forEach(r => {
-        if (!r.zone) return;
-        const existing = (state.adminConfig.customers||[]).find(c => c.name.toLowerCase() === (r.name||'').toLowerCase());
-        if (existing && !existing.zone) existing.zone = r.zone;
+        if (!r.name) return;
+        state.customerMeta[r.name] = {
+          contact: r.contact||'', phone: r.phone||'', email: r.email||'',
+          notes: r.notes||'', groupId: r.group_id||'', notify: !!r.notify
+        };
       });
     }
 
@@ -8265,6 +8267,7 @@ function getDeliverySuggestions(){
 // ── RENDER getCustomers() VIEW ──────────────────────────────────────────────
 let custSearch_q='';
 let custSearch_zone='';
+let custSearch_group=''; // '' = no filter, '__unassigned__' = no region resolved, else a group id
 let custView='list'; // 'list' or 'map'
 let custEditName=null;
 
@@ -8288,7 +8291,9 @@ function renderCustomers(c){
     const mq=!custSearch_q||cu.name.toLowerCase().includes(custSearch_q.toLowerCase())||
       (cu.city||'').toLowerCase().includes(custSearch_q.toLowerCase());
     const mz=!custSearch_zone||custSearch_zone==='All Zones'||cu.zone===custSearch_zone;
-    return mq&&mz;
+    const custGrp=getCustGroup(cu.name);
+    const mg=!custSearch_group||(custSearch_group==='__unassigned__'?!custGrp:(custGrp&&custGrp.id===custSearch_group));
+    return mq&&mz&&mg;
   }).sort((a,b)=>a.name.localeCompare(b.name));
 
   const groupOpts=state.deliveryGroups.map(g=>`<option value="${g.id}">${g.name}</option>`).join('');
@@ -8313,6 +8318,10 @@ function renderCustomers(c){
           </div>
         </div>
       </div>
+      ${custSearch_group?`<div class="card card-sm mb8" style="padding:6px 12px;display:flex;align-items:center;justify-content:space-between;background:var(--blue-l)">
+        <span style="font-size:12px;color:var(--blue);font-weight:600">Filtered to: ${custSearch_group==='__unassigned__'?'⚠ Unassigned (no region)':(state.deliveryGroups.find(g=>g.id===custSearch_group)||{}).name||'—'}</span>
+        <button class="btn btn-xs" onclick="custSearch_group='';renderCustomers()">✕ Clear</button>
+      </div>`:''}
       ${custView==='map' ? `
       <div class="card card-sm mb8" style="padding:8px 12px">
         <div style="font-size:11px;color:var(--text3)">Showing ${filtered.length} customer${filtered.length===1?'':'s'} · colored by delivery region · click a pin for details</div>
@@ -8360,19 +8369,33 @@ function renderCustomers(c){
         ${state.deliveryGroups.map(g=>{
           const cnt=getCustomers().filter(c=>getCustGroup(c.name)&&getCustGroup(c.name).id===g.id).length;
           const notifyCnt=getCustomers().filter(c=>getCustGroup(c.name)&&getCustGroup(c.name).id===g.id&&getCustMeta(c.name).notify).length;
-          return`<div class="flex-between flex-wrap gap8" style="padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">
+          const active=custSearch_group===g.id;
+          return`<div class="flex-between flex-wrap gap8" style="padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;cursor:pointer;${active?'background:var(--blue-l);margin:0 -8px;padding-left:8px;padding-right:8px;border-radius:4px':''}"
+            onclick="custSearch_group=custSearch_group==='${g.id}'?'':'${g.id}';renderCustomers()" title="Click to show only ${g.name} customers">
             <div class="flex gap8" style="align-items:center">
               <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${g.color};flex-shrink:0"></span>
               <input type="text" value="${g.name}" style="border:none;background:transparent;font-size:13px;font-weight:500;padding:0;width:180px"
-                onchange="renameGroup('${g.id}',this.value)">
+                onclick="event.stopPropagation()" onchange="renameGroup('${g.id}',this.value)">
             </div>
-            <div class="flex gap6">
-              <span style="font-size:11px;color:var(--text3)">${cnt} customers</span>
+            <div class="flex gap6" onclick="event.stopPropagation()">
+              <span style="font-size:11px;color:var(--text3);cursor:pointer" onclick="custSearch_group=custSearch_group==='${g.id}'?'':'${g.id}';renderCustomers()">${cnt} customers</span>
               ${notifyCnt?`<span class="badge badge-amber">${notifyCnt} notify</span>`:''}
               ${!DEFAULT_GROUPS.find(dg=>dg.id===g.id)?`<button class="btn btn-xs btn-danger" onclick="deleteGroup('${g.id}')">✕</button>`:''}
             </div>
           </div>`;
         }).join('')}
+        ${(()=>{
+          const unassignedCnt=getCustomers().filter(c=>!getCustGroup(c.name)).length;
+          const active=custSearch_group==='__unassigned__';
+          return`<div class="flex-between flex-wrap gap8" style="padding:8px 0;font-size:13px;cursor:pointer;${active?'background:var(--amber-l);margin:0 -8px;padding-left:8px;padding-right:8px;border-radius:4px':''}"
+            onclick="custSearch_group=custSearch_group==='__unassigned__'?'':'__unassigned__';renderCustomers()" title="Click to show customers with no region assigned">
+            <div class="flex gap8" style="align-items:center">
+              <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:var(--amber);flex-shrink:0"></span>
+              <strong style="font-size:13px;color:var(--amber)">⚠ Unassigned</strong>
+            </div>
+            <span style="font-size:11px;color:${unassignedCnt?'var(--amber)':'var(--text3)'};font-weight:${unassignedCnt?'700':'400'}">${unassignedCnt} customer${unassignedCnt!==1?'s':''}</span>
+          </div>`;
+        })()}
       </div>
     </div>
   </div>`;
@@ -8500,7 +8523,7 @@ function saveCustMeta(name){
   }
   saveState();
   // Sync to Supabase
-  _sbPatch('customers', {name}, { zone: zone||null, contact: contact||null, phone: phone||null, email: email||null, notes: notes||null })
+  _sbPatch('customers', {name}, { zone: zone||null, contact: contact||null, phone: phone||null, email: email||null, notes: notes||null, group_id: groupId||null, notify })
     .catch(e=>console.warn('saveCustMeta patch error',e));
   toast('\u2713 '+name+' updated');
   renderCustomers(document.getElementById('content'));
