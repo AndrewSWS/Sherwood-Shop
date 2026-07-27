@@ -1130,7 +1130,7 @@ async function sbLoadState() {
 
     const trucks = (trucksRaw||[]).map(t => ({
       id: t.id, name: t.name, driver: t.driver||'', max: t.max_lbs||20000,
-      shipDate: t.ship_date||'', stops: stopsByTruck[t.id]||[]
+      shipDate: t.ship_date||'', stops: stopsByTruck[t.id]||[], active: t.active!==false
     }));
 
     // Apply WOs and trucks to state
@@ -6512,8 +6512,8 @@ function renderTruck(c){
     </div>
   </div>
 
-  <div class="${state.trucks.length<=2?'grid2':'grid3'} gap16">
-    ${state.trucks.map(t=>renderTruckCard(t, activeTruckDay)).join('')}
+  <div class="${getActiveTrucks().length<=2?'grid2':'grid3'} gap16">
+    ${getActiveTrucks().map(t=>renderTruckCard(t, activeTruckDay)).join('')}
   </div>
 
   ${(()=>{
@@ -6530,7 +6530,7 @@ function renderTruck(c){
           <div style="font-size:12px;color:var(--amber)">${wo.customer}</div>
           <div style="font-size:11px;color:var(--text3);margin:4px 0">${getWOWeight(wo.id).toLocaleString()} lbs</div>
           <div class="flex gap6" style="margin-top:6px">
-            ${state.trucks.map((t,i)=>`<button class="btn btn-xs${i===0?' btn-primary':''}" onclick="quickAssignTruck(${wo.id},${t.id})">\u2192 ${t.name.split(' ').slice(0,2).join(' ')}</button>`).join('')}
+            ${getActiveTrucks().map((t,i)=>`<button class="btn btn-xs${i===0?' btn-primary':''}" onclick="quickAssignTruck(${wo.id},${t.id})">\u2192 ${t.name.split(' ').slice(0,2).join(' ')}</button>`).join('')}
           </div>
         </div>`).join('')}
     </div>`;
@@ -7322,9 +7322,19 @@ function getWrapToggleBtn(iso){
 
 
 // ── Dynamic truck helpers — all selects/labels pull from state.trucks ────
+// Active trucks only — used for anywhere a truck can be newly assigned.
+// Archived trucks are excluded from these lists but their historical
+// truck_stops/WOs remain untouched in Supabase; see archiveTruckSetting.
+function getActiveTrucks(){
+  return (state.trucks||[]).filter(t=>t.active!==false);
+}
 function truckOptions(selectedId, includeEmpty=true){
   const opts = includeEmpty ? '<option value="">Unassigned</option>' : '';
-  const trucks = (state && state.trucks) || [];
+  const allTrucks = (state && state.trucks) || [];
+  // Show active trucks, plus the currently-selected one even if archived —
+  // so an existing assignment to a now-archived truck still displays
+  // correctly instead of silently vanishing from the dropdown.
+  const trucks = allTrucks.filter(t => t.active!==false || String(selectedId)===String(t.id));
   return opts + trucks.map(t =>
     '<option value="'+t.id+'"'+(String(selectedId)===String(t.id)?' selected':'')+'>'+t.name+' (max '+t.max.toLocaleString()+' lbs)</option>'
   ).join('');
@@ -9322,31 +9332,40 @@ function saveAnalyticsCode(){
 
 
 function renderSettingsTrucks(){
-  const trucks = state.trucks;
+  const activeTrucks = state.trucks.filter(t=>t.active!==false);
+  const archivedTrucks = state.trucks.filter(t=>t.active===false);
+  const truckRow = (t, isArchived) => `
+    <div class="card card-sm mb8" style="background:var(--page)${isArchived?';opacity:.65':''}">
+      <div class="flex gap8 flex-wrap" style="align-items:center">
+        <input type="text" value="${t.name}" style="flex:1;min-width:200px;font-weight:600" ${isArchived?'disabled':''}
+          onchange="renameTruckSetting(${t.id},this.value)">
+        <div style="display:flex;align-items:center;gap:6px">
+          <label style="font-size:12px;color:var(--text2)">Max lbs:</label>
+          <input type="number" value="${t.max}" style="width:100px" ${isArchived?'disabled':''}
+            onchange="setTruckMax(${t.id},this.value)">
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <label style="font-size:12px;color:var(--text2)">Driver:</label>
+          <input type="text" value="${t.driver||''}" style="width:120px" placeholder="Driver name" ${isArchived?'disabled':''}
+            onchange="setTruckDriver(${t.id},this.value)">
+        </div>
+        ${isArchived
+          ? `<button class="btn btn-xs btn-primary" onclick="unarchiveTruckSetting(${t.id})">↩ Restore</button>`
+          : (activeTrucks.length>1?`<button class="btn btn-xs btn-danger" onclick="archiveTruckSetting(${t.id})">Archive</button>`:'')}
+      </div>
+    </div>`;
   return `<div class="card">
     <div class="flex-between mb12">
       <div class="section-head" style="margin:0">🚚 Fleet Management</div>
       <button class="btn btn-primary" onclick="addTruckSetting()">+ Add Truck</button>
     </div>
-    <div style="font-size:12px;color:var(--text2);margin-bottom:16px">Add, rename, or remove trucks. Changes apply immediately across the truck planner and all WO assignment dropdowns.</div>
-    ${trucks.map(t=>`
-    <div class="card card-sm mb8" style="background:var(--page)">
-      <div class="flex gap8 flex-wrap" style="align-items:center">
-        <input type="text" value="${t.name}" style="flex:1;min-width:200px;font-weight:600"
-          onchange="renameTruckSetting(${t.id},this.value)">
-        <div style="display:flex;align-items:center;gap:6px">
-          <label style="font-size:12px;color:var(--text2)">Max lbs:</label>
-          <input type="number" value="${t.max}" style="width:100px"
-            onchange="setTruckMax(${t.id},this.value)">
-        </div>
-        <div style="display:flex;align-items:center;gap:6px">
-          <label style="font-size:12px;color:var(--text2)">Driver:</label>
-          <input type="text" value="${t.driver||''}" style="width:120px" placeholder="Driver name"
-            onchange="setTruckDriver(${t.id},this.value)">
-        </div>
-        ${trucks.length>1?`<button class="btn btn-xs btn-danger" onclick="deleteTruckSetting(${t.id})">Remove</button>`:''}
-      </div>
-    </div>`).join('')}
+    <div style="font-size:12px;color:var(--text2);margin-bottom:16px">Add, rename, or archive trucks. Changes apply immediately across the truck planner and all WO assignment dropdowns. Archiving hides a truck from the app without deleting its delivery history — its past records stay in Supabase and remain visible in Delivery History.</div>
+    ${activeTrucks.map(t=>truckRow(t,false)).join('')}
+    ${archivedTrucks.length ? `
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+      <div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">📦 Archived (${archivedTrucks.length}) — hidden from planner, history preserved</div>
+      ${archivedTrucks.map(t=>truckRow(t,true)).join('')}
+    </div>` : ''}
   </div>`;
 }
 
@@ -9389,19 +9408,39 @@ function setTruckDriver(id,val){
   saveState();
 }
 
-async function deleteTruckSetting(id){
+async function archiveTruckSetting(id){
   const t=state.trucks.find(t=>t.id===id);
   if(!t) return;
-  const assignedWOs=state.wos.filter(w=>getWOTruckId(w.id)===String(id));
-  if(assignedWOs.length){
-    if(!confirm(t.name+' has '+assignedWOs.length+' WO(s) assigned. Remove truck and unassign them?')) return;
-    assignedWOs.forEach(wo=>{ wo.truck=''; state.trucks.forEach(tk=>{ tk.stops=tk.stops.filter(s=>s.woId!==wo.id); }); });
+  // Only move UNDELIVERED WOs off this truck — completed deliveries stay
+  // attached to it permanently as history, exactly as Delivery History
+  // and Supabase already have them recorded.
+  const pendingWOs = state.wos.filter(w=>{
+    if(getWOTruckId(w.id)!==String(id)) return false;
+    const stop = (t.stops||[]).find(s=>s.woId===w.id);
+    return !stop || !stop.delivered;
+  });
+  if(pendingWOs.length){
+    if(!confirm(t.name+' has '+pendingWOs.length+' undelivered WO(s) assigned. Archive truck and move them back to unscheduled?\n\n(Already-completed deliveries on this truck are not affected and stay in its history.)')) return;
+    pendingWOs.forEach(wo=>{
+      wo.truck='';
+      t.stops = (t.stops||[]).filter(s=>s.woId!==wo.id);
+    });
   }
-  state.trucks=state.trucks.filter(t=>t.id!==id);
-  try{ await _sbDelete('trucks',{id}); }catch(e){console.warn(e);}
+  t.active = false;
+  try{ await _sbPatch('trucks',{id},{active:false}); }catch(e){console.warn(e);}
   saveState();
   renderSettings(document.getElementById('content'));
-  toast('Truck removed');
+  toast('📦 '+t.name+' archived — history preserved, hidden from active use');
+}
+
+async function unarchiveTruckSetting(id){
+  const t=state.trucks.find(t=>t.id===id);
+  if(!t) return;
+  t.active = true;
+  try{ await _sbPatch('trucks',{id},{active:true}); }catch(e){console.warn(e);}
+  saveState();
+  renderSettings(document.getElementById('content'));
+  toast('✓ '+t.name+' restored to active fleet');
 }
 
 function renderSettingsData(){
