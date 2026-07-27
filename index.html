@@ -1662,9 +1662,14 @@ function statusPill(s){
 }
 function updateBadges(){
   const today=new Date();today.setHours(0,0,0,0);
+  const todayStr=localISO(new Date());
   // Active = not complete AND (unscheduled OR delivery today or future)
   const activeWOs=state.wos.filter(w=>{
     if(woStatus(w)==='Complete')return false;
+    // Picked-up pickup orders can retain a non-Complete item status if they
+    // were set via direct pickup_date import rather than schedulePickup() —
+    // don't let those count as active once their pickup date has passed.
+    if(w.isPickup && w.pickupDate) return w.pickupDate>=todayStr;
     if(!w.delivery)return true;
     return new Date(w.delivery+'T00:00:00')>=today;
   });
@@ -7367,8 +7372,9 @@ function renderDashboard(c){
   const days=getWeekDays();
   const now=new Date();
   const todayISOf=now.toISOString().split('T')[0];
-  // Truck weights for TODAY only
-  const _truckStopsToday = state.trucks.map(t=>({
+  // Truck weights for TODAY only — active trucks only, archived ones
+  // shouldn't get a card on the dashboard even at 0 lbs.
+  const _truckStopsToday = getActiveTrucks().map(t=>({
     truck:t, stops:t.stops.filter(s=>s.delivery===todayISOf)
   }));
   const _truckWeightsToday = _truckStopsToday.map(({truck,stops})=>({
@@ -7422,7 +7428,7 @@ function renderDashboard(c){
                   onclick="event.stopPropagation()"
                   onchange="quickTruckAssign(${wo.id},this.value)">
                   <option value="" ${!liveTruck?'selected':''}>🚚 Truck</option>
-                  ${state.trucks.map(t=>`<option value="${t.id}"${String(liveTruck)===String(t.id)?' selected':''}>${t.name.split(' ').slice(0,2).join(' ')}</option>`).join('')}
+                  ${state.trucks.filter(t=>t.active!==false||String(liveTruck)===String(t.id)).map(t=>`<option value="${t.id}"${String(liveTruck)===String(t.id)?' selected':''}>${t.name.split(' ').slice(0,2).join(' ')}</option>`).join('')}
                 </select>
                 <button onclick="event.stopPropagation();toggleWOComplete(${wo.id})"
                   style="font-size:9px;padding:2px 6px;border-radius:10px;border:none;cursor:pointer;font-weight:700;
@@ -7456,7 +7462,7 @@ function renderDashboard(c){
                 onclick="event.stopPropagation()"
                 onchange="event.stopPropagation();quickPickupTruckAssign('${s.id}',this.value)">
                 <option value="" ${!currentTruckId?'selected':''}>🚚 Truck</option>
-                ${state.trucks.map(t=>`<option value="${t.id}"${String(currentTruckId)===String(t.id)?' selected':''}>${t.name.split(' ').slice(0,2).join(' ')}</option>`).join('')}
+                ${state.trucks.filter(t=>t.active!==false||String(currentTruckId)===String(t.id)).map(t=>`<option value="${t.id}"${String(currentTruckId)===String(t.id)?' selected':''}>${t.name.split(' ').slice(0,2).join(' ')}</option>`).join('')}
               </select>
             </div>
             <button onclick="event.stopPropagation();editVendorPickup('${s.id}')" style="margin-top:3px;font-size:9px;padding:2px 6px;border-radius:3px;border:1px solid #e8a000;background:#e8a000;color:#fff;cursor:pointer;font-weight:700">✏ Edit</button>
@@ -7491,7 +7497,7 @@ function renderDashboard(c){
                 onclick="event.stopPropagation()"
                 onchange="event.stopPropagation();quickPickupTruckAssign('${s.id}',this.value)">
                 <option value="" ${!currentTruckId?'selected':''}>🚚 Truck</option>
-                ${state.trucks.map(t=>`<option value="${t.id}"${String(currentTruckId)===String(t.id)?' selected':''}>${t.name.split(' ').slice(0,2).join(' ')}</option>`).join('')}
+                ${state.trucks.filter(t=>t.active!==false||String(currentTruckId)===String(t.id)).map(t=>`<option value="${t.id}"${String(currentTruckId)===String(t.id)?' selected':''}>${t.name.split(' ').slice(0,2).join(' ')}</option>`).join('')}
               </select>
             </div>
             <button onclick="event.stopPropagation();editVendorPickup('${s.id}')" style="margin-top:3px;font-size:9px;padding:2px 6px;border-radius:3px;border:1px solid #e8a000;background:#e8a000;color:#fff;cursor:pointer;font-weight:700">✏ Edit</button>
@@ -7604,8 +7610,16 @@ function renderDashboard(c){
       </div>
       ${(()=>{
         const today=new Date();today.setHours(0,0,0,0);
+        const todayStr=localISO(new Date());
         const filtered=state.wos.filter(wo=>{
           if(showAllWOs)return true;
+          // Picked-up pickup orders: hide once their actual pickup date has
+          // passed, regardless of wo.delivery (schedulePickup clears that
+          // field, so without this check every picked-up order looked
+          // "unscheduled" and stuck around forever). Matches renderAssign.
+          if(wo.isPickup && wo.pickupDate){
+            return wo.pickupDate>=todayStr;
+          }
           if(!wo.delivery)return true;
           const del=new Date(wo.delivery+'T00:00:00');
           return del>=today;
@@ -8626,12 +8640,69 @@ function selectCustEdit(name){
       <div style="font-size:11px;color:var(--text2)">When another customer in this delivery group has an open WO, suggest reaching out to this customer</div>
     </div>
   </div>
+  <div class="field mb12">
+    <label class="lbl">📋 Order History</label>
+    <div id="cust-order-history" style="max-height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--rad);padding:8px">
+      <div style="color:var(--text3);font-size:12px">Loading...</div>
+    </div>
+  </div>
   <div class="flex gap8">
     <button class="btn btn-primary" onclick="saveCustMeta('${name.replace(/'/g,"\'")}')">Save</button>
       <button class="btn" onclick="custEditName=null;renderCustomers(document.getElementById('content'))">Cancel</button>
     </div>
     <button class="btn btn-danger" style="margin-top:8px;width:100%" onclick="deleteCustomer('${name.replace(/'/g,"\'")}')">🗑 Delete Customer</button>
   </div>`;
+  loadCustomerOrderHistory(name);
+}
+
+// Pulls this customer's work orders directly from Supabase, on demand —
+// deliberately NOT from state.wos, so full order history is available
+// per-customer without needing to keep every historical WO loaded in
+// memory or polled every 90 seconds. Only fires when this panel opens.
+async function loadCustomerOrderHistory(custName){
+  const el = document.getElementById('cust-order-history');
+  if(!el) return;
+  try{
+    const rows = await _sbGet('work_orders',
+      `customer=eq.${encodeURIComponent(custName)}&select=id,wo_num,delivery,delivered,delivered_at,date&order=delivery.desc.nullslast,created_at.desc&limit=50`);
+    // Panel may have been closed/switched to a different customer by the
+    // time this resolves — bail out rather than writing into a stale DOM.
+    if(custEditName!==custName) return;
+    if(!rows || !rows.length){ el.innerHTML='<div style="color:var(--text3);font-size:12px">No past orders found.</div>'; return; }
+    el.innerHTML = rows.map(r=>{
+      const st = r.delivered ? 'Delivered' : (r.delivery ? 'Scheduled' : 'Unscheduled');
+      const stColor = r.delivered ? 'var(--green)' : (r.delivery ? 'var(--blue)' : 'var(--text3)');
+      return `<div style="border-bottom:1px solid var(--border)">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:12px;cursor:pointer" onclick="toggleCustOrderDetail(${r.id})">
+          <div><strong>WO #${r.wo_num}</strong><span style="color:var(--text3);margin-left:8px">${r.delivery||r.date||'no date'}</span></div>
+          <span style="color:${stColor};font-weight:600">${st}</span>
+        </div>
+        <div id="cust-order-detail-${r.id}" style="display:none;padding:2px 0 8px 12px;font-size:11px;color:var(--text2)"></div>
+      </div>`;
+    }).join('') + (rows.length===50?'<div style="font-size:11px;color:var(--text3);padding:6px 0 0">Showing most recent 50</div>':'');
+  }catch(e){
+    if(custEditName===custName) el.innerHTML='<div style="color:var(--red);font-size:12px">Error loading history</div>';
+  }
+}
+
+// Lazily fetches line items for a single historical WO only when its row
+// is expanded — never pulled as part of the routine poll or page load.
+async function toggleCustOrderDetail(woId){
+  const el = document.getElementById('cust-order-detail-'+woId);
+  if(!el) return;
+  if(el.style.display==='block'){ el.style.display='none'; return; }
+  el.style.display='block';
+  if(el.dataset.loaded) return;
+  el.innerHTML = 'Loading items...';
+  try{
+    const items = await _sbGet('line_items', `wo_id=eq.${woId}&order=id.asc`);
+    el.dataset.loaded='1';
+    if(!items || !items.length){ el.innerHTML='No line items.'; return; }
+    el.innerHTML = items.map(i=>{
+      const parts=[i.gauge,i.size||i.product_cat].filter(Boolean).join(' ');
+      return `${parts||'Item'} \u00d7 ${i.qty||1}`;
+    }).join('<br>');
+  }catch(e){ el.innerHTML='Error loading items'; }
 }
 
 // Looks up the City + State currently typed in the edit panel against
