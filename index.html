@@ -1073,7 +1073,7 @@ const _liDbIdMap = {};
 // ── SUPABASE: Load full state from DB ──
 async function sbLoadState() {
   try {
-    const [wosRaw, lisRaw, trucksRaw, stopsRaw, coilsRaw, configRaw, custsRaw, vendorsRaw] = await Promise.all([
+    const [wosRaw, lisRaw, trucksRaw, stopsRaw, coilsRaw, configRaw, custsRaw, vendorsRaw, cityZoneRaw] = await Promise.all([
       _sbGetAll('work_orders', 'order=created_at.asc'),
       _sbGetAll('line_items', 'order=id.asc'),
       _sbGet('trucks', 'order=id.asc'),
@@ -1081,7 +1081,8 @@ async function sbLoadState() {
       _sbGet('coil_records', 'order=priority.asc&limit=500'),
       _sbGet('admin_config', 'select=key,value'),
       _sbGetAll('customers', 'order=name.asc'),
-      _sbGet('vendors', 'order=name.asc').catch(()=>[])
+      _sbGet('vendors', 'order=name.asc').catch(()=>[]),
+      _sbGet('city_zone_map', 'select=city,state,zone').catch(()=>[])
     ]);
     if (!wosRaw) return false; // offline
 
@@ -1137,6 +1138,19 @@ async function sbLoadState() {
     if (trucks.length) state.trucks = trucks;
     state.unassignedPickups = unassignedPickups;
     if (Array.isArray(vendorsRaw)) state.vendors = vendorsRaw;
+
+    // Build city -> zone lookup (fallback tier for getCustGroup when a
+    // customer record has no explicit zone/groupId). Case-insensitive key
+    // since city casing has historically been inconsistent in this data
+    // (e.g. "langhorne" vs "Langhorne").
+    if (Array.isArray(cityZoneRaw)) {
+      const czm = {};
+      cityZoneRaw.forEach(r => {
+        if (!r.city || !r.state) return;
+        czm[`${r.city.trim().toLowerCase()}|${r.state.trim().toLowerCase()}`] = r.zone;
+      });
+      state.cityZoneMap = czm;
+    }
 
     // Load admin config from DB
     if (configRaw && configRaw.length) {
@@ -8195,6 +8209,21 @@ function getCustGroup(custName){
       g.name.toLowerCase().includes(cust.zone.toLowerCase())
     );
     if(g)return g;
+  }
+  // Last-resort fallback: no explicit groupId AND no zone set on the customer
+  // record at all. Look up city+state in state.cityZoneMap (Supabase-backed,
+  // see city_zone_map table) — same exact-match-first discipline as above,
+  // no substring matching.
+  if(cust&&cust.city&&cust.state&&state.cityZoneMap){
+    const key=`${cust.city.trim().toLowerCase()}|${cust.state.trim().toLowerCase()}`;
+    const zoneName=state.cityZoneMap[key];
+    if(zoneName){
+      const gid=ZONE_TO_GROUP[zoneName];
+      const g4=gid?state.deliveryGroups.find(g=>g.id===gid):null;
+      if(g4)return g4;
+      const g5=state.deliveryGroups.find(g=>g.name.toLowerCase()===zoneName.toLowerCase());
+      if(g5)return g5;
+    }
   }
   return null;
 }
