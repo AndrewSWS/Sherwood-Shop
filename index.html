@@ -1192,6 +1192,33 @@ async function sbLoadState() {
       state.deliveryGroups = groupsRaw.map(g => ({ id: g.id, name: g.name, color: g.color }));
     }
 
+    // Detect a shop password change and force re-login on this device if so.
+    // Handled separately from the admin_config loop below (not via the
+    // JSON.parse'd `val`) because the password is stored as a plain string —
+    // JSON.parse would throw on it and get silently swallowed by that
+    // loop's catch block, same reasoning doLogin() already follows.
+    if (configRaw && configRaw.length) {
+      const pwRow = configRaw.find(r => r.key === 'shop_password');
+      if (pwRow) {
+        const rawPw = typeof pwRow.value === 'string' ? pwRow.value : JSON.stringify(pwRow.value).replace(/^"|"$/g,'');
+        const storedSnapshot = localStorage.getItem(_SESSION_PW_KEY);
+        if (storedSnapshot && rawPw && storedSnapshot !== rawPw) {
+          localStorage.removeItem(_SESSION_KEY);
+          localStorage.removeItem(_SESSION_PW_KEY);
+          alert('The shop password was changed by an administrator. Please log in again.');
+          location.reload();
+          return false;
+        }
+        // Sessions that were already logged in before this check existed
+        // won't have a snapshot yet — establish one now (as a baseline,
+        // not a mismatch) so future password changes are caught for them
+        // too, rather than only for logins that happen after this update.
+        if (!storedSnapshot && rawPw && localStorage.getItem(_SESSION_KEY)==='authenticated') {
+          localStorage.setItem(_SESSION_PW_KEY, rawPw);
+        }
+      }
+    }
+
     // Load admin config from DB
     if (configRaw && configRaw.length) {
       if (!state.adminConfig) state.adminConfig = {};
@@ -11546,6 +11573,7 @@ function importSnapshot(input){
 // ══════════════════════════════════════════════════════
 // ── LOGIN ─────────────────────────────────────────────────────────────────
 const _SESSION_KEY = 'kzn_session';
+const _SESSION_PW_KEY = 'kzn_session_pw'; // snapshot of the password valid when this device logged in — used to detect a later password change and force re-login
 const _DEFAULT_PASSWORD = 'sherwood'; // change in Settings → Data
 
 function isLoggedIn(){
@@ -11585,6 +11613,7 @@ async function doLogin(){
 
   if(pw === correct || pw === _DEFAULT_PASSWORD && !config?.length){
     localStorage.setItem(_SESSION_KEY, 'authenticated');
+    localStorage.setItem(_SESSION_PW_KEY, correct);
     document.getElementById('login-overlay')?.remove();
     launchApp();
   } else {
@@ -11596,6 +11625,7 @@ async function doLogin(){
 
 function logout(){
   localStorage.removeItem(_SESSION_KEY);
+  localStorage.removeItem(_SESSION_PW_KEY);
   location.reload();
 }
 
