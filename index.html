@@ -1676,6 +1676,30 @@ function loadState(){
 // ══════════════════════════════════════════════════════
 // UTILS
 // ══════════════════════════════════════════════════════
+// Short two-note "ding" played when a shop board item is marked complete.
+// Synthesized via Web Audio API rather than an external sound file, so it
+// works reliably even on flaky shop-floor wifi.
+let _dingCtx = null;
+function playDing(){
+  try{
+    if(!_dingCtx) _dingCtx = new (window.AudioContext||window.webkitAudioContext)();
+    if(_dingCtx.state==='suspended') _dingCtx.resume();
+    const now = _dingCtx.currentTime;
+    [[1046.5, now, 0.14], [1568, now+0.09, 0.16]].forEach(([freq, start, dur])=>{
+      const osc = _dingCtx.createOscillator();
+      const gain = _dingCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(0.3, start+0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start+dur);
+      osc.connect(gain).connect(_dingCtx.destination);
+      osc.start(start);
+      osc.stop(start+dur+0.02);
+    });
+  }catch(e){ console.warn('playDing error', e); }
+}
+
 function toast(msg,dur=2500){
   const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'),dur);
@@ -3125,6 +3149,7 @@ function renderDualStepPanel(wo,item){
 function updateLIStep(woId,itemId,field,val){
   const wo=state.wos.find(w=>w.id===woId);if(!wo)return;
   const item=wo.items.find(i=>i.id==itemId);if(!item)return;
+  const prevOverall=item.status;
   item[field]=val;
   // Track who completed each step
   if(field==='step1Status'&&val==='Complete')item.step1CompletedBy=state.currentUser||'?';
@@ -3134,7 +3159,9 @@ function updateLIStep(woId,itemId,field,val){
   // Auto-update overall status based on steps
   if(item.isDual){
     if(item.step1Status==='Complete'&&item.step2Status==='Complete'){
-      item.status='Complete';item.completedBy=state.currentUser||'?';item.completedAt=new Date().toISOString();
+      item.status='Complete';
+      if(prevOverall!=='Complete') playDing();
+      item.completedBy=state.currentUser||'?';item.completedAt=new Date().toISOString();
     } else if(item.step1Status==='In Process'||item.step2Status==='In Process'||item.step1Status==='Complete'){
       item.status='In Process';
     } else {
@@ -3181,8 +3208,10 @@ function updateLI(woId,itemId,field,val){
 function setLIStatus(woId,itemId,status){
   const wo=state.wos.find(w=>w.id===woId);if(!wo)return;
   const item=wo.items.find(i=>i.id==itemId);if(!item)return;
+  const prevStatus=item.status;
   item.status=status;
   if(status==='Complete'){
+    if(prevStatus!=='Complete') playDing();
     item.completedBy=state.currentUser||'?';
     item.completedAt=new Date().toISOString();
   } else {
@@ -3301,8 +3330,10 @@ function boardToggleLI(woId, itemId, newStatus){
   if(!wo) return;
   const item = wo.items.find(i=>String(i.id)===String(itemId));
   if(!item) return;
+  const prevStatus = item.status;
   item.status = newStatus;
   if(newStatus==='Complete'){
+    if(prevStatus!=='Complete') playDing();
     item.completedBy = state.currentUser||'Board';
     item.completedAt = new Date().toISOString();
     // For dual-station items, mark both steps complete
