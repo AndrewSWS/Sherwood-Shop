@@ -1073,7 +1073,7 @@ const _liDbIdMap = {};
 // ── SUPABASE: Load full state from DB ──
 async function sbLoadState() {
   try {
-    const [wosRaw, lisRaw, trucksRaw, stopsRaw, coilsRaw, configRaw, custsRaw, vendorsRaw, cityZoneRaw] = await Promise.all([
+    const [wosRaw, lisRaw, trucksRaw, stopsRaw, coilsRaw, configRaw, custsRaw, vendorsRaw, cityZoneRaw, groupsRaw] = await Promise.all([
       _sbGetAll('work_orders', 'order=created_at.asc'),
       _sbGetAll('line_items', 'order=id.asc'),
       _sbGet('trucks', 'order=id.asc'),
@@ -1082,7 +1082,8 @@ async function sbLoadState() {
       _sbGet('admin_config', 'select=key,value'),
       _sbGetAll('customers', 'order=name.asc'),
       _sbGet('vendors', 'order=name.asc').catch(()=>[]),
-      _sbGet('city_zone_map', 'select=city,state,zone').catch(()=>[])
+      _sbGet('city_zone_map', 'select=city,state,zone').catch(()=>[]),
+      _sbGet('delivery_groups', 'select=id,name,color,sort_order&order=sort_order.asc').catch(()=>[])
     ]);
     if (!wosRaw) return false; // offline
 
@@ -1152,6 +1153,14 @@ async function sbLoadState() {
       state.cityZoneMap = czm;
     }
 
+    // Delivery groups are now Supabase-backed (delivery_groups table) rather
+    // than rebuilt from the hardcoded DEFAULT_GROUPS constant every load —
+    // that constant is only ever used as a first-run seed (see initGroups)
+    // or an offline fallback if this fetch fails.
+    if (Array.isArray(groupsRaw) && groupsRaw.length) {
+      state.deliveryGroups = groupsRaw.map(g => ({ id: g.id, name: g.name, color: g.color }));
+    }
+
     // Load admin config from DB
     if (configRaw && configRaw.length) {
       if (!state.adminConfig) state.adminConfig = {};
@@ -1167,6 +1176,7 @@ async function sbLoadState() {
             case 'mgmt_users':       state.adminConfig.mgmtUsers = val; break;
             case 'rain_start_hour':  state.adminConfig.rainStartHour = val; break;
             case 'acknowledged_gaps': state.adminConfig.acknowledgedGaps = val; break;
+            case 'types':             state.adminConfig.types = val; break;
             case 'linear_weights': {const lw=typeof val==='string'?JSON.parse(val):val;if(lw&&typeof lw==='object'){Object.assign(LINEAR_WEIGHTS,lw);console.log('[adminConfig] loaded linear_weights, keys:',Object.keys(lw).length);}} break;
             case 'sheet_weights':  {const sw=typeof val==='string'?JSON.parse(val):val;if(sw&&typeof sw==='object')Object.assign(SHEET_WEIGHTS,sw);} break;
             case 'product_cats': {const pcSaved=typeof val==='string'?JSON.parse(val):val;if(pcSaved&&typeof pcSaved==='object'&&typeof settingsProdCat!=='undefined'&&!settingsProdCat){Object.keys(pcSaved).forEach(cat=>{if(PRODUCT_CATS[cat])PRODUCT_CATS[cat]=pcSaved[cat];});}} break;
@@ -8804,11 +8814,18 @@ function addDeliveryGroup(){
   state.deliveryGroups.push({id,name:name.trim(),color});
   saveState();
   renderCustomers(document.getElementById('content'));
+  _sbPost('delivery_groups', {id, name:name.trim(), color, sort_order: state.deliveryGroups.length-1})
+    .catch(e=>console.warn('addDeliveryGroup sbPost error',e));
 }
 
 function renameGroup(id,name){
   const g=state.deliveryGroups.find(g=>g.id===id);
-  if(g){g.name=name;saveState();}
+  if(g){
+    g.name=name;
+    saveState();
+    _sbPatch('delivery_groups', {id}, {name})
+      .catch(e=>console.warn('renameGroup sbPatch error',e));
+  }
 }
 
 function deleteGroup(id){
@@ -8820,7 +8837,10 @@ function deleteGroup(id){
   });
   saveState();
   renderCustomers(document.getElementById('content'));
+  _sbDelete('delivery_groups', {id})
+    .catch(e=>console.warn('deleteGroup sbDelete error',e));
 }
+
 
 function addNewCustomer(){
   openAddCustomerModal();
@@ -9959,16 +9979,19 @@ function addType(){
   if(!val)return;
   state.adminConfig.types.push(val);
   saveState();renderSettings(document.getElementById('content'));
+  sbSaveAdminConfig('types', state.adminConfig.types);
 }
 
 function removeType(i){
   state.adminConfig.types.splice(i,1);
   saveState();renderSettings(document.getElementById('content'));
+  sbSaveAdminConfig('types', state.adminConfig.types);
 }
 
 function updateType(i,val){
   state.adminConfig.types[i]=val;
   saveState();
+  sbSaveAdminConfig('types', state.adminConfig.types);
 }
 
 function moveType(i,dir){
@@ -9976,6 +9999,7 @@ function moveType(i,dir){
   const ni=i+dir;if(ni<0||ni>=arr.length)return;
   [arr[i],arr[ni]]=[arr[ni],arr[i]];
   saveState();renderSettings(document.getElementById('content'));
+  sbSaveAdminConfig('types', state.adminConfig.types);
 }
 
 // ── PRODUCTS TAB ──────────────────────────────────────────────────────────
