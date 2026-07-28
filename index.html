@@ -6727,6 +6727,15 @@ function renderTruckCard(t, filterDay){
       }
       const bc=grp?grp.color:'var(--border)';
       const woDelivered = wo ? (wo.delivered||false) : (s.delivered||false);
+      // Show the customer's CURRENT city/zone, not whatever was snapshotted
+      // on this stop row when it was created — those can go stale (e.g. an
+      // old ship-to address from a past import) even though the section
+      // header above already correctly reflects the live customer profile.
+      const liveCust = wo ? getCustomers().find(c=>c.name===wo.customer) : null;
+      const liveCityst = liveCust && (liveCust.city||liveCust.state)
+        ? [liveCust.city, liveCust.state].filter(Boolean).join(', ')
+        : (s.cityst||s.address||'');
+      const liveZone = liveCust && liveCust.zone ? liveCust.zone : (s.zone||'');
       const stopBg = woDelivered ? 'background:#f0faf0;' : '';
       const stopOpacity = woDelivered ? 'opacity:0.75;' : '';
       const dayIdxArr=dayStops.map((_,di)=>di);
@@ -6740,7 +6749,7 @@ function renderTruckCard(t, filterDay){
           ${s.customer} <span style="font-size:10px;color:var(--text3)">▾</span>
         </div>
         <div style="font-size:11px;color:var(--text2)">WO #${s.woNum}</div>
-        <div class="stop-zone" style="margin-top:2px">${s.zone||''} · ${s.cityst||s.address||''}</div>
+        <div class="stop-zone" style="margin-top:2px">${liveZone} · ${liveCityst}</div>
         <div style="font-size:12px;font-weight:600;color:var(--blue);margin-top:2px">${getWOWeight(s.woId)?getWOWeight(s.woId).toLocaleString()+' lbs':''}</div>
         ${s.notes?`<div class="stop-zone">📝 ${s.notes}</div>`:''}
       </div>
