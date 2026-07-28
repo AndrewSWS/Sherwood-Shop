@@ -1332,8 +1332,12 @@ function startSBPoll() {
       // Refresh board view if active
       if (overlay && overlay.classList.contains('active')) {
         sbLoadStockNeeds().catch(()=>{});  // keep stock needs badge live
-        renderBoardView();
+        // renderBoardView()'s auto-fit measures the pickup bar's height to
+        // size the day columns — must run AFTER renderBoardPickups updates
+        // that bar's actual content, or the fit is computed against stale
+        // (last-cycle) pickup content and drifts out of sync over time.
         renderBoardPickups();
+        renderBoardView();
         return;
       }
       // Refresh whichever regular view is currently showing
@@ -3287,6 +3291,7 @@ function enterBoardView(){
   // Clear scale fingerprint so the fresh open always re-measures from scratch
   window._boardScaleFingerprint = null;
   window._boardScaleApplied = false;
+  renderBoardPickups();
   renderBoardView();
   // Auto-refresh every 15 seconds — pulls from Supabase for live multi-user sync
   _boardTimer = setInterval(async ()=>{
@@ -3295,6 +3300,11 @@ function enterBoardView(){
     else {
       try{ const s=localStorage.getItem('kzn_state'); if(s){const p=JSON.parse(s);state.wos=p.wos||state.wos;state.trucks=p.trucks||state.trucks;} }catch(e){}
     }
+    // Update pickup bar content BEFORE renderBoardView measures its height
+    // for the fit-to-screen calculation — same ordering fix as the main
+    // 90-second poll, so this independent timer can't drift out of sync
+    // with it.
+    renderBoardPickups();
     renderBoardView();
   }, 15000);
   // Live clock
