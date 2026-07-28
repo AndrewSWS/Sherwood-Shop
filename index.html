@@ -6748,7 +6748,7 @@ function renderTruckCard(t, filterDay){
       </div>`;
       }
 
-      const grp=wo?getCustGroup(wo.customer):null;
+      const grp=wo?getWOGroup(wo):null;
       const grpId=grp?grp.id:'__none__';
       let sep='';
       if(grpId!==lastGrpId){
