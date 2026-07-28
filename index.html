@@ -1073,9 +1073,8 @@ const _liDbIdMap = {};
 // ── SUPABASE: Load full state from DB ──
 async function sbLoadState() {
   try {
-    const [wosRaw, lisRaw, trucksRaw, stopsRaw, coilsRaw, configRaw, custsRaw, vendorsRaw, cityZoneRaw, groupsRaw] = await Promise.all([
+    const [wosRaw, trucksRaw, stopsRaw, coilsRaw, configRaw, custsRaw, vendorsRaw, cityZoneRaw, groupsRaw] = await Promise.all([
       _sbGetAll('work_orders', 'order=created_at.asc'),
-      _sbGetAll('line_items', 'order=id.asc'),
       _sbGet('trucks', 'order=id.asc'),
       _sbGetAll('truck_stops', 'order=seq.asc'),
       _sbGet('coil_records', 'order=priority.asc&limit=500'),
@@ -1086,6 +1085,38 @@ async function sbLoadState() {
       _sbGet('delivery_groups', 'select=id,name,color,sort_order&order=sort_order.asc').catch(()=>[])
     ]);
     if (!wosRaw) return false; // offline
+
+    // Line items are fetched separately, scoped to only WOs with no
+    // delivery date yet (unscheduled — always active), or a delivery date
+    // that's today, upcoming, or within the trailing week. Deliberately
+    // based on the delivery DATE rather than the `delivered` checkbox —
+    // that flag isn't always reliably set even for orders that are
+    // genuinely long done (the same gap found in pickup orders earlier),
+    // so date is the more trustworthy signal for what's actually old.
+    // Older WOs keep their header info (WO#, customer, dates — needed for
+    // gap analysis and QB import duplicate-detection, which must see full
+    // history), just not their line items on every 90-second poll. Any WO
+    // opened directly self-heals its items on demand (see toggleWO), and
+    // full history including line items is always available on-demand via
+    // Customer Order History regardless of what's loaded here.
+    const _weekAgoStr = localISO(new Date(Date.now() - 7*24*60*60*1000));
+    const _activeOrRecentIds = wosRaw
+      .filter(r => !r.delivery || r.delivery >= _weekAgoStr)
+      .map(r => r.id);
+
+    let lisRaw = [];
+    if (_activeOrRecentIds.length) {
+      // Chunk the id list so the filter URL never gets unreasonably long.
+      const CHUNK = 200;
+      const chunks = [];
+      for (let i=0; i<_activeOrRecentIds.length; i+=CHUNK) {
+        chunks.push(_activeOrRecentIds.slice(i, i+CHUNK));
+      }
+      const liResults = await Promise.all(chunks.map(ids =>
+        _sbGetAll('line_items', `wo_id=in.(${ids.join(',')})&order=id.asc`)
+      ));
+      lisRaw = liResults.flat();
+    }
 
     // Build WOs with items, populate DB ID map
     const lisByWO = {};
@@ -2934,6 +2965,24 @@ function toggleWO(id){
   det.innerHTML=renderWODetail(wo);
   det.style.display='block';
   _openWOId = id;
+  // Safety net: the routine poll only pulls line items for undelivered or
+  // recently-delivered WOs (see sbLoadState). If this WO's items are empty
+  // — either because it's older than that window, or because its
+  // `delivered` flag was never actually set even though it's long done —
+  // fetch its real items directly and re-render, rather than showing an
+  // incorrectly-empty order.
+  if((!wo.items || !wo.items.length)){
+    _sbGetAll('line_items', `wo_id=eq.${id}&order=id.asc`).then(rows=>{
+      if(!rows || !rows.length || _openWOId!==id) return;
+      wo.items = rows.map(li=>{
+        const item=_rowToItem(li);
+        _liDbIdMap[`${li.wo_id}:${li.id}`] = li.id;
+        return item;
+      });
+      const stillOpenDet=document.getElementById(`wo-detail-${id}`);
+      if(stillOpenDet) stillOpenDet.innerHTML=renderWODetail(wo);
+    }).catch(e=>console.warn('toggleWO item backfill error',e));
+  }
 }
 
 function renderWODetail(wo){
