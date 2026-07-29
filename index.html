@@ -7556,7 +7556,9 @@ function renderDashboard(c){
           const st=woStatus(wo);
           const sc=st==='Complete'?'s-complete':st==='In Process'?'s-inprocess':'s-pending';
           const liveTruck=getWOTruckId(wo.id);
-          const grpColor=getWOGroupColor(wo);
+          const chipGrp=getWOGroup(wo);
+          const grpColor=chipGrp?chipGrp.color:null;
+          const chipWt=getWOWeight(wo.id);
           const miniStyle=grpColor?`border-left-color:${grpColor};background:${grpColor}22`:'';
           return`<div class="mini-wo ${sc}" draggable="true"
             style="${miniStyle}"
@@ -7567,6 +7569,7 @@ function renderDashboard(c){
               <div style="flex:1;min-width:0;cursor:pointer" onclick="event.stopPropagation();openDashWOPopout(${wo.id})">
                 <div class="mini-wo-cust" style="${woStatus(wo)==='Complete'?'text-decoration:line-through;opacity:0.6;':''}">${wo.customer} <span style="font-size:9px;color:var(--text3)">▸</span></div>
                 <div class="mini-wo-num" style="color:var(--text3)">WO #${wo.woNum}</div>
+                <div style="font-size:9px;color:var(--text3);margin-top:1px">${chipWt?chipWt.toLocaleString()+' lbs':''}${chipWt&&chipGrp?' · ':''}${chipGrp?chipGrp.name:''}</div>
               </div>
               <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0">
                 <select style="font-size:10px;padding:2px 4px;border:1px solid var(--border);border-radius:var(--rad);background:var(--surface);color:var(--text);max-width:72px"
@@ -9333,7 +9336,7 @@ function renderUnscheduledGrouped(unscheduled){
           <div style="font-size:10px;color:var(--text3);margin-bottom:3px">↔ drag to schedule</div>
           <div style="font-weight:700;font-size:13px;cursor:pointer" onclick="event.stopPropagation();openDashWOPopout(${wo.id})">${wo.customer}</div>
           <div style="font-size:11px;color:var(--text2);margin:2px 0;cursor:pointer" onclick="event.stopPropagation();openDashWOPopout(${wo.id})">${stoplightDot(wo)} WO #${wo.woNum}</div>
-          <div style="font-size:11px;color:var(--text3)">${getWOWeight(wo.id)?getWOWeight(wo.id).toLocaleString()+' lbs':''} ${wo.zone||''}</div>
+          <div style="font-size:11px;color:var(--text3)">${getWOWeight(wo.id)?getWOWeight(wo.id).toLocaleString()+' lbs':''} ${(grp?grp.name:wo.zone)||''}</div>
           <div style="margin-top:6px"><input type="date" onclick="event.stopPropagation()" onchange="setDeliveryFromCard(${wo.id},this.value)"
             style="font-size:11px;padding:3px 6px;width:100%;border:1px solid ${grp?grp.color:'#FAC775'};border-radius:4px;background:#fff" placeholder="Pick a date"></div>
           <div style="margin-top:5px">
