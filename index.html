@@ -3596,7 +3596,12 @@ function renderBoardView(){
         ? state.trucks.map((t,i)=>{
             const colors=['#4AA8D8','#4CAF7D','#9B59B6','#E67E22'];
             const icons=['🚚','🚛','🛻','🚜'];
-            const tWOs=dayWOs.filter(w=>getWOTruckId(w.id)===String(t.id));
+            const tWOs=dayWOs.filter(w=>getWOTruckId(w.id)===String(t.id))
+              .sort((a,b)=>{
+                const sa=(t.stops.find(s=>s.woId===a.id)||{}).seq;
+                const sb=(t.stops.find(s=>s.woId===b.id)||{}).seq;
+                return (sa??999999)-(sb??999999);
+              });
             const tPickups=(t.stops||[]).filter(s=>s.type==='pickup'&&s.delivery===day.iso&&!s.delivered);
             return truckSection(icons[i%icons.length]+' '+t.name.toUpperCase(),colors[i%colors.length],tWOs,tPickups);
           }).join('')
@@ -7619,7 +7624,12 @@ function renderDashboard(c){
         const _tColors=['#185FA5','#2D6A2D','#7B3F00','#5A0080'];
         const _tIcons=['🚚','🚛','🛻','🚜'];
         return state.trucks.map((t,i)=>{
-          const tWOs=dayWOs.filter(w=>getWOTruckId(w.id)===String(t.id));
+          const tWOs=dayWOs.filter(w=>getWOTruckId(w.id)===String(t.id))
+            .sort((a,b)=>{
+              const sa=(t.stops.find(s=>s.woId===a.id)||{}).seq;
+              const sb=(t.stops.find(s=>s.woId===b.id)||{}).seq;
+              return (sa??999999)-(sb??999999);
+            });
           const tPickups=(t.stops||[]).filter(s=>s.type==='pickup'&&s.delivery===iso&&!s.delivered);
           if(!tWOs.length && !tPickups.length) return '';
           return divider(_tIcons[i%4]+' '+t.name,_tColors[i%4])+tWOs.map(renderChip).join('')+tPickups.map(s=>renderPickupChip(s,t.id)).join('');
@@ -7924,7 +7934,12 @@ function toggleDayDetail(iso, forceOpen=false){
 
       const colors=['#185FA5','#2D6A2D','#7B3F00','#5A0080'];
       return state.trucks.map((t,i)=>{
-        const tWOs=dayWOs.filter(w=>getWOTruckId(w.id)===String(t.id));
+        const tWOs=dayWOs.filter(w=>getWOTruckId(w.id)===String(t.id))
+          .sort((a,b)=>{
+            const sa=(t.stops.find(s=>s.woId===a.id)||{}).seq;
+            const sb=(t.stops.find(s=>s.woId===b.id)||{}).seq;
+            return (sa??999999)-(sb??999999);
+          });
         return truckSection(t.name,colors[i%colors.length],tWOs,i===0?'🚚':'🚛');
       }).join('')
            + (noTruckWOs.length?truckSection('⚠ No Truck Assigned','#BA7517',noTruckWOs,'📋'):'');
