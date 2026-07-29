@@ -8750,7 +8750,9 @@ function selectCustEdit(name){
   const panel=document.getElementById('cust-edit-panel');
   if(!panel)return;
   panel.innerHTML=`
-  <div class="section-head">${name}</div>
+  <div class="section-head">${name}
+    <span onclick="renameCustomer('${name.replace(/'/g,"\\'")}')" style="cursor:pointer;color:var(--text3);font-size:12px;margin-left:4px;font-weight:400" title="Rename this customer">✎</span>
+  </div>
   <div class="grid2 gap12 mb12">
     <div class="field" style="grid-column:1/-1"><label class="lbl">Address</label>
       <input type="text" id="ce-address" value="${(cust.address||'').replace(/"/g,'&quot;')}" placeholder="Street address"></div>
@@ -8879,6 +8881,43 @@ async function suggestZoneFromCity(){
   zoneEl.value = zone;
   saveState();
   toast('✓ Suggested '+zone+' — click Save to apply');
+}
+
+async function renameCustomer(oldName){
+  const input = prompt('Rename customer:', oldName);
+  if(input===null) return; // cancelled
+  const newName = input.trim();
+  if(!newName || newName===oldName) return;
+  if(getCustomers().some(c=>c.name===newName)){
+    toast('⚠ A customer named "'+newName+'" already exists — merge them instead of renaming into a duplicate', 5000);
+    return;
+  }
+  if(!confirm(`Rename "${oldName}" to "${newName}"?\n\nThis updates the customer record and repoints all of their existing work orders (open and delivered) to the new name.`)) return;
+
+  const custOk = await _sbPatch('customers', {name: oldName}, {name: newName});
+  if(!custOk){ toast('⚠ Rename failed — check connection and try again', 5000); return; }
+
+  // Repoint every WO under the old name — both currently-loaded ones and
+  // any older ones not in memory (the routine poll only loads a trailing
+  // window of line items, but this repoints the customer field on ALL
+  // matching work_orders in Supabase regardless of age).
+  await _sbPatch('work_orders', {customer: oldName}, {customer: newName})
+    .catch(e=>console.warn('renameCustomer WO repoint error',e));
+
+  // Update local state immediately so the UI reflects this without
+  // waiting for the next poll.
+  const cust = getCustomers().find(c=>c.name===oldName);
+  if(cust) cust.name = newName;
+  if(state.customerMeta && state.customerMeta[oldName]){
+    state.customerMeta[newName] = state.customerMeta[oldName];
+    delete state.customerMeta[oldName];
+  }
+  state.wos.forEach(w=>{ if(w.customer===oldName) w.customer=newName; });
+  custEditName = newName;
+  saveState();
+  toast(`✓ Renamed to ${newName}`);
+  renderCustomers(document.getElementById('content'));
+  selectCustEdit(newName);
 }
 
 function saveCustMeta(name){
