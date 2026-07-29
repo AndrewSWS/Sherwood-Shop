@@ -477,6 +477,8 @@ select{cursor:pointer}
 .ob-lpend{background:#ccc}
 .ob-lnote{font-size:10px;color:#8B6020;margin-top:2px;font-style:italic}
 .ob-lby{font-size:9px;color:#2D6A2D;margin-top:2px}
+.truck-map-label{background:#1a1a1a;color:#fff;border:none;border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.truck-map-label::before{border-top-color:#1a1a1a}
 </style>
 </head>
 <body>
@@ -1269,7 +1271,10 @@ async function sbLoadState() {
         city: r.city||'',
         state: r.state||'',
         zip: r.zip||'',
-        zone: r.zone||''
+        zone: r.zone||'',
+        lat: r.lat!=null ? Number(r.lat) : null,
+        lon: r.lon!=null ? Number(r.lon) : null,
+        geoPrecision: r.geo_precision||null
       }));
       // customerMeta (contact/phone/email/notes/groupId/notify) now comes
       // from the same Supabase rows too, instead of localStorage-only —
@@ -6580,6 +6585,8 @@ function startItemMyView(woId,itemId){
 // TRUCK PLANNER VIEW
 // ══════════════════════════════════════════════════════
 let activeTruckDay = null; // selected delivery day ISO string
+let truckPlannerView = 'cards'; // 'cards' or 'map' — which layout shows the day's stops
+const TRUCK_MAP_COLORS = ['#185FA5','#E24B4A','#3D9D6C','#9C6EBB','#BA7517','#4AA8D8','#E85D75','#78909C'];
 
 function renderTruck(c){
   if(!c)c=document.getElementById('content');
@@ -6651,16 +6658,31 @@ function renderTruck(c){
     <div style="display:flex;border-bottom:1px solid var(--border)">${dayTabs}</div>
     <div style="padding:12px 16px;background:var(--blue-l);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
       <div style="font-size:14px;font-weight:700;color:var(--blue)">📅 ${fmtDate(activeTruckDay)}</div>
-      <div class="flex gap8 flex-wrap">
+      <div class="flex gap8 flex-wrap" style="align-items:center">
         ${_dayTrucks.map(o=>`<span style="font-size:13px;color:var(--text2)">${o.t.name}: <strong>${o.w.toLocaleString()} lbs</strong></span>`).join('')}
         <span style="font-size:13px;color:var(--text2)">WOs scheduled: <strong>${selWOs.length}</strong></span>
+        <div class="flex gap4 no-print" style="margin-left:4px">
+          <button class="btn btn-sm${truckPlannerView==='cards'?' btn-primary':''}" style="padding:4px 10px" onclick="truckPlannerView='cards';renderTruck(document.getElementById('content'))">Cards</button>
+          <button class="btn btn-sm${truckPlannerView==='map'?' btn-primary':''}" style="padding:4px 10px" onclick="truckPlannerView='map';renderTruck(document.getElementById('content'))">🗺 Map</button>
+        </div>
       </div>
     </div>
   </div>
 
+  ${truckPlannerView==='map' ? `
+  <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px">
+    <div id="truck-map" style="height:560px;border-radius:var(--rad2);overflow:hidden"></div>
+  </div>
+  <div class="flex gap12 flex-wrap mb16" style="font-size:12px;color:var(--text2);align-items:center">
+    <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:50%;background:#1C2E1C;display:inline-block"></span>Shop</span>
+    ${getActiveTrucks().map((t,i)=>`<span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:50%;background:${TRUCK_MAP_COLORS[i%TRUCK_MAP_COLORS.length]};display:inline-block"></span>${t.name}</span>`).join('')}
+    <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:50%;background:#999;display:inline-block"></span>Unassigned</span>
+  </div>
+  ` : `
   <div class="${getActiveTrucks().length<=2?'grid2':'grid3'} gap16">
     ${getActiveTrucks().map(t=>renderTruckCard(t, activeTruckDay)).join('')}
   </div>
+  `}
 
   ${(()=>{
     const noTruckSelWOs = selWOs.filter(w=>!getWOTruckId(w.id));
@@ -6693,11 +6715,221 @@ function renderTruck(c){
       <button class="btn btn-primary" onclick="quickAddToTruck()">Add to Truck</button>
     </div>
   </div>`;
+
+  if(truckPlannerView==='map') renderTruckMap(activeTruckDay);
 }
 
 function switchTruckDay(iso){
   activeTruckDay=iso;
   renderTruck(document.getElementById('content'));
+}
+
+// Renders the Truck Planner map view using Leaflet + OpenStreetMap tiles —
+// same tile source and CITY_COORDS lookup as the Customer Admin map, but
+// pins are colored by TRUCK (route) instead of delivery region, numbered in
+// stop order, and connected with a polyline so the day's route is visible
+// at a glance. WOs scheduled for the day but not yet assigned to a truck
+// are plotted in gray so they're not lost from the picture.
+let _truckMapInstance = null;
+function renderTruckMap(dayISO){
+  const container = document.getElementById('truck-map');
+  if(!container || typeof L === 'undefined') return;
+
+  if(_truckMapInstance){ _truckMapInstance.remove(); _truckMapInstance = null; }
+
+  const map = L.map(container, { scrollWheelZoom: true }).setView([40.0, -75.1], 8);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 18,
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(map);
+  _truckMapInstance = map;
+
+  L.circleMarker([BENSALEM_LAT, BENSALEM_LON], {
+    radius: 8, color: '#1C2E1C', fillColor: '#1C2E1C', fillOpacity: 1, weight: 2
+  }).addTo(map).bindPopup('<strong>Sherwood Steel — Bensalem, PA</strong><br>Shop location');
+
+  const bounds = [[BENSALEM_LAT, BENSALEM_LON]];
+  const skippedList = []; // { truckName, woNum, customer } for stops we couldn't plot
+
+  // Two stops in the SAME city resolve to identical lat/lng — without this,
+  // the later marker just renders directly on top of the earlier one and
+  // the first stop silently disappears (looks like a missing stop when it's
+  // really just hidden underneath). Nudge each repeat out along a small
+  // spiral so every stop stays visible and independently clickable.
+  const _usedCoordCounts = {};
+  function jitterCoords(coords){
+    const key = coords[0].toFixed(4)+','+coords[1].toFixed(4);
+    const count = _usedCoordCounts[key] || 0;
+    _usedCoordCounts[key] = count + 1;
+    if(count===0) return coords;
+    const angle = count * 137.5 * Math.PI/180; // golden-angle spread
+    const radius = 0.0018 * Math.min(count, 6);
+    return [coords[0] + radius*Math.sin(angle), coords[1] + radius*Math.cos(angle)];
+  }
+
+  // Pulls City/State out of a "City, State Zip" string, e.g. the cityst
+  // field captured on the WO/stop itself at the time it was created.
+  function parseCitySt(cityst){
+    if(!cityst) return null;
+    const commaIdx = cityst.indexOf(',');
+    if(commaIdx===-1) return null;
+    const city = cityst.slice(0,commaIdx).trim();
+    const stateMatch = cityst.slice(commaIdx+1).trim().match(/^([A-Za-z]{2})\b/);
+    if(!city || !stateMatch) return null;
+    return { city, state: stateMatch[1].toUpperCase() };
+  }
+
+  // QB exports don't always include a ship-to STATE (common for in-state
+  // jobs) — when that happens cityst ends up as a bare city name with no
+  // comma at all, e.g. "Douglassville". Zone names are reliably
+  // state-scoped ("PA Berks/Reading", "NJ Camden Metro", or the bare state
+  // names "Delaware"/"Maryland"/"New York"), so use the WO's own zone to
+  // recover the missing state instead of giving up.
+  function inferStateFromZone(zone){
+    if(!zone) return '';
+    const m = zone.trim().match(/^(NJ|PA|NY|DE|MD)\b/i);
+    if(m) return m[1].toUpperCase();
+    const zLow = zone.trim().toLowerCase();
+    if(zLow==='delaware') return 'DE';
+    if(zLow==='maryland') return 'MD';
+    if(zLow==='new york') return 'NY';
+    return '';
+  }
+
+  // ALWAYS prefer the customer's CURRENT city/state over whatever was
+  // snapshotted onto the stop/WO row at creation time — this is the same
+  // rule renderTruckCard already follows for its "liveCityst" display
+  // (see the comment there: a stop's cityst can go stale if the customer's
+  // address was corrected LATER, e.g. after a bad QB ship-to import). Using
+  // the stale snapshot here reintroduces exactly the bug that fix prevents
+  // on the card view — a corrected customer address wouldn't show up on
+  // the map even though the card next to it is showing the right city.
+  function findCustForWO(wo){
+    if(!wo) return null;
+    const custs = getCustomers();
+    let cust = custs.find(c=>c.name===wo.customer);
+    if(cust) return cust;
+    const candidates = custs.filter(c=>custNamesMatch(c.name, wo.customer));
+    if(candidates.length>1){
+      // Multiple locations share this root name (e.g. "Riley Sales, Inc."
+      // has 8+ suffixed records) — narrow using the WO's resolved delivery
+      // region (same groupId/zone/cityZoneMap fallback chain the route
+      // header already uses), which is more reliable than comparing raw
+      // zone strings directly.
+      const grp = getWOGroup(wo);
+      if(grp){
+        const grpMatches = candidates.filter(c=>getCustGroup(c.name)?.id===grp.id);
+        if(grpMatches.length===1) return grpMatches[0];
+      }
+      if(wo.zone){
+        const zoneMatch = candidates.find(c=>c.zone===wo.zone);
+        if(zoneMatch) return zoneMatch;
+      }
+    }
+    return candidates[0] || null;
+  }
+
+  function stopCoords(wo, stop){
+    const cust = findCustForWO(wo);
+    if(cust){
+      const coords = getCustCoords(cust);
+      if(coords) return coords;
+    }
+    // No live customer coordinates on file — fall back to whatever city
+    // was captured on the stop/WO itself when it was created.
+    const cityst = (stop&&stop.cityst) || (wo&&wo.cityst) || '';
+    const zone = (stop&&stop.zone) || (wo&&wo.zone) || '';
+    const overrides = state.adminConfig?.cityCoordsOverride;
+
+    let parsed = parseCitySt(cityst);
+    if(!parsed && cityst.trim()){
+      // Bare city, no comma/state — try to recover the state from the zone.
+      const inferredState = inferStateFromZone(zone);
+      if(inferredState) parsed = { city: cityst.trim(), state: inferredState };
+    }
+    if(parsed){
+      const key = `${parsed.city}|${parsed.state}`;
+      if(CITY_COORDS[key]) return CITY_COORDS[key];
+      if(overrides && overrides[key]) return overrides[key];
+    }
+    // Last resort: search by city name alone, ignoring state — city names
+    // rarely collide across this delivery footprint, and this beats
+    // reporting "no coordinates" for a city we clearly have on file.
+    const bareCity = (parsed ? parsed.city : cityst).trim();
+    if(bareCity){
+      const foundKey = Object.keys(CITY_COORDS).find(k=>k.split('|')[0]===bareCity);
+      if(foundKey) return CITY_COORDS[foundKey];
+      if(overrides){
+        const foundOverrideKey = Object.keys(overrides).find(k=>k.split('|')[0]===bareCity);
+        if(foundOverrideKey) return overrides[foundOverrideKey];
+      }
+    }
+    return null;
+  }
+
+  function numberedIcon(num, color){
+    return L.divIcon({
+      className: '',
+      html: `<div style="width:26px;height:26px;border-radius:50%;background:${color};color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4)">${num}</div>`,
+      iconSize: [26,26], iconAnchor: [13,13]
+    });
+  }
+
+  getActiveTrucks().forEach((t,ti)=>{
+    const color = TRUCK_MAP_COLORS[ti % TRUCK_MAP_COLORS.length];
+    // Include ALL of the day's stops (pickups too) when computing stop
+    // number "i" — this must match the Cards view's numbering exactly
+    // (renderTruckCard numbers off the unfiltered dayStops array), or a
+    // pickup earlier in the route silently shifts every later delivery's
+    // number down by one relative to what's printed on the load sheet/card.
+    const dayStops = t.stops.filter(s=>s.delivery===dayISO);
+    const line = [];
+    dayStops.forEach((s,i)=>{
+      if(s.type==='pickup') return; // no customer address to plot, but "i" still counted above
+      const wo = state.wos.find(w=>w.id===s.woId);
+      const rawCoords = stopCoords(wo, s);
+      if(!rawCoords){ skippedList.push({ truckName: t.name, woNum: wo?wo.woNum:'?', customer: wo?wo.customer:(s.customer||'?') }); return; }
+      const coords = jitterCoords(rawCoords);
+      const marker = L.marker(coords, { icon: numberedIcon(i+1, color) }).addTo(map);
+      marker.bindPopup(
+        `<strong>${t.name} — Stop ${i+1}</strong><br>`+
+        (wo?`WO #${wo.woNum} — ${wo.customer}<br>${getWOWeight(wo.id).toLocaleString()} lbs`:'')
+      );
+      // Permanent label on the FIRST plotted stop so the truck is identifiable
+      // straight off the map, without needing to cross-reference the color
+      // legend below it (which can scroll out of view on the TV boards).
+      if(line.length===0){
+        marker.bindTooltip(t.name, { permanent: true, direction: 'top', offset: [0,-14], className: 'truck-map-label' });
+      }
+      line.push(coords);
+      bounds.push(coords);
+    });
+    if(line.length>1){
+      L.polyline([[BENSALEM_LAT,BENSALEM_LON], ...line], { color, weight: 3, opacity: 0.6, dashArray: '6,6' }).addTo(map);
+    }
+  });
+
+  // Day's WOs with no truck assigned yet — shown gray so they're still visible.
+  const noTruckWOs = state.wos.filter(w=>w.delivery===dayISO && !getWOTruckId(w.id));
+  noTruckWOs.forEach(wo=>{
+    const rawCoords = stopCoords(wo, null);
+    if(!rawCoords){ skippedList.push({ truckName: 'Unassigned', woNum: wo.woNum, customer: wo.customer }); return; }
+    const coords = jitterCoords(rawCoords);
+    const marker = L.circleMarker(coords, { radius: 7, color: '#999', fillColor: '#999', fillOpacity: 0.85, weight: 1.5 }).addTo(map);
+    marker.bindPopup(`<strong>Unassigned</strong><br>WO #${wo.woNum} — ${wo.customer}<br>${getWOWeight(wo.id).toLocaleString()} lbs`);
+    bounds.push(coords);
+  });
+
+  if(bounds.length>1) map.fitBounds(bounds, { padding:[30,30], maxZoom: 12 });
+
+  if(skippedList.length>0){
+    const note = document.createElement('div');
+    note.style.cssText='position:absolute;bottom:8px;left:8px;max-width:280px;background:#fff8e6;border:1px solid #FAC775;border-radius:4px;padding:6px 10px;font-size:11px;color:#b8860b;z-index:1000';
+    note.innerHTML = `⚠ ${skippedList.length} stop${skippedList.length===1?'':'s'} not shown (no coordinates on file):<br>`+
+      skippedList.map(s=>`&nbsp;&nbsp;${s.truckName} — WO #${s.woNum} (${s.customer})`).join('<br>');
+    container.style.position='relative';
+    container.appendChild(note);
+  }
 }
 
 function renderTruckCard(t, filterDay){
@@ -7323,7 +7555,7 @@ async function resolveWeatherCoords(zip){
   }
   const cache = state.adminConfig?.weatherGeocodeCache || {};
   if(cache[zip]) return cache[zip];
-  const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?postalcode=${zip}&country=US&format=json&limit=1`);
+  const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?postalcode=${zip}&countrycodes=us&format=json&limit=1`);
   const geoData = await geoRes.json();
   if(!geoData.length) throw new Error('No geocode result for zip '+zip);
   const coords = { lat: parseFloat(geoData[0].lat), lon: parseFloat(geoData[0].lon) };
@@ -8326,17 +8558,193 @@ const CITY_COORDS = {
   'langhorne|PA':[40.1745538,-74.9226665]
 };
 
-// Live lookup: city+state -> [lat, lon]. Checks the static CITY_COORDS table
+// Live lookup: precise street address (cust.lat/cust.lon, geocoded once via
+// geocodeCustomerAddress — see below) takes priority when we have it, since
+// it pinpoints the actual building instead of a city-wide approximation.
+// Falls back to city+state -> [lat, lon]: the static CITY_COORDS table
 // first, then a runtime overlay (state.adminConfig.cityCoordsOverride) that
 // holds cities geocoded on-the-fly when a NEW customer is added in a town
 // not already in the static table — see geocodeNewCustomerCity below.
 function getCustCoords(cust){
   if(!cust) return null;
+  if(cust.lat!=null && cust.lon!=null && !isNaN(cust.lat) && !isNaN(cust.lon)){
+    return [cust.lat, cust.lon];
+  }
   const key = `${cust.city||''}|${cust.state||''}`;
   if(CITY_COORDS[key]) return CITY_COORDS[key];
   const overrides = state.adminConfig?.cityCoordsOverride;
   if(overrides && overrides[key]) return overrides[key];
   return null;
+}
+
+// Single Nominatim free-form query — returns the first hit or null.
+// Broken out so geocodeCustomerAddress can try several query shapes.
+async function nominatimSearch(query){
+  try{
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&countrycodes=us&format=json&limit=1`);
+    const data = await res.json();
+    return (data && data.length) ? data[0] : null;
+  }catch(e){
+    console.warn('nominatim fetch error', e);
+    return null;
+  }
+}
+
+// One-time geocode of a customer's full STREET ADDRESS (not just city) —
+// gives a precise map pin instead of a city-level approximation. Only
+// fired by a deliberate user action (saving a changed address, or clicking
+// "📍 Locate address" on an existing record) — NEVER from a page-load or
+// polling path, same discipline as geocodeNewCustomerCity below.
+//
+// OSM's address data is crowdsourced and often has streets mapped without
+// every individual house number on them, especially for small commercial
+// buildings in smaller towns — an exact "2990 Clymer Ave" query can come
+// back completely empty even though the street itself is mapped. Try
+// progressively looser queries rather than giving up after one empty
+// result, and record which precision tier actually succeeded so the UI
+// can be honest about it instead of implying every hit is exact.
+async function geocodeCustomerAddress(cust){
+  if(!cust || !cust.address || !cust.city || !cust.state) return false;
+  const addr = cust.address.trim();
+  const cityState = `${cust.city}, ${cust.state}`;
+  const pause = () => new Promise(r=>setTimeout(r, 1100)); // respect Nominatim's ~1 req/sec usage policy
+
+  // Tier 1: full address with zip.
+  let hit = await nominatimSearch(`${addr}, ${cityState} ${cust.zip||''}`.trim());
+  let precision = 'address';
+
+  // Tier 2: full address without zip — sometimes the zip conflicts with a
+  // slightly different postal boundary than the street's actual point.
+  if(!hit){
+    await pause();
+    hit = await nominatimSearch(`${addr}, ${cityState}`);
+  }
+
+  // Tier 3: drop the house number and geocode the street itself — a
+  // street-level pin is still far better than falling all the way back to
+  // the city center, and this succeeds far more often than exact
+  // house-number lookups for smaller towns.
+  if(!hit){
+    const streetOnly = addr.replace(/^\s*\d+[\s,-]*/, '').trim();
+    if(streetOnly && streetOnly!==addr){
+      await pause();
+      hit = await nominatimSearch(`${streetOnly}, ${cityState}`);
+      precision = 'street';
+    }
+  }
+
+  if(!hit) return false;
+  cust.lat = parseFloat(hit.lat);
+  cust.lon = parseFloat(hit.lon);
+  cust.geoPrecision = precision;
+  saveState();
+  await _sbPatch('customers', {name: cust.name}, {lat: cust.lat, lon: cust.lon, geo_precision: precision});
+  return precision;
+}
+
+// Manual trigger for backfilling an EXISTING customer who already has a
+// street address on file but no precise lat/lon yet — lets Andrew opt a
+// customer into precise geocoding without needing to re-edit and re-save
+// every field just to fire the address-changed path in saveCustMeta.
+async function locateCustomerAddress(name){
+  const cust = getCustomers().find(c=>c.name===name);
+  if(!cust){ toast('Customer not found'); return; }
+  if(!cust.address || !cust.city || !cust.state){
+    toast('⚠ Add a street address, city, and state first, then Save before locating');
+    return;
+  }
+  toast('📍 Looking up address...');
+  const precision = await geocodeCustomerAddress(cust);
+  if(precision==='address'){
+    toast('✓ Exact address located for '+name);
+  } else if(precision==='street'){
+    toast('✓ Located on '+cust.address.replace(/^\s*\d+[\s,-]*/,'').trim()+' — OpenStreetMap doesn\'t have that exact house number, this is street-level');
+  } else {
+    toast('⚠ OpenStreetMap has no data for that address or street — keeping city-level location');
+  }
+  if(precision){
+    if(custEditName===name) selectCustEdit(name);
+    if(custView==='map') renderCustomerMap(getCustomers());
+  }
+}
+
+// Click-to-place map picker — the reliable fallback when OpenStreetMap
+// simply doesn't have this building indexed. Starts centered on whatever
+// we already have (precise pin > city-level > shop) and lets the user drop
+// the marker exactly where the building actually is, no geocoding needed.
+let _pickerMapInstance = null;
+function openLocationPicker(name){
+  const cust = getCustomers().find(c=>c.name===name);
+  if(!cust){ toast('Customer not found'); return; }
+  if(typeof L === 'undefined'){ toast('⚠ Map library not loaded'); return; }
+
+  const existing = document.getElementById('loc-picker-modal');
+  if(existing) existing.remove();
+
+  const startCoords = (cust.lat!=null && cust.lon!=null) ? [cust.lat, cust.lon] : (getCustCoords(cust) || [BENSALEM_LAT, BENSALEM_LON]);
+
+  const modal = document.createElement('div');
+  modal.id = 'loc-picker-modal';
+  modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.45);z-index:600;display:flex;align-items:center;justify-content:center;padding:16px';
+  modal.innerHTML = `
+  <div style="background:var(--surface);border-radius:var(--rad2);padding:20px;width:100%;max-width:720px;box-shadow:0 8px 32px rgba(0,0,0,.2)">
+    <div class="flex-between mb8">
+      <div style="font-size:16px;font-weight:700">📍 Set exact location — ${name}</div>
+      <button class="btn btn-sm" onclick="closeLocationPicker()">✕ Cancel</button>
+    </div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:10px">Click anywhere on the map to drop the pin on the building, or drag the pin to fine-tune it.</div>
+    <div id="loc-picker-map" style="height:420px;border-radius:var(--rad);overflow:hidden;border:1px solid var(--border)"></div>
+    <div class="flex-between mt12">
+      <div id="loc-picker-coords" style="font-size:11px;color:var(--text3)"></div>
+      <div class="flex gap8">
+        <button class="btn" onclick="closeLocationPicker()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveLocationPicker('${name.replace(/'/g,"\\'")}')">💾 Save Location</button>
+      </div>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+
+  setTimeout(()=>{
+    const mapEl = document.getElementById('loc-picker-map');
+    if(!mapEl) return;
+    const map = L.map(mapEl).setView(startCoords, 16);
+    _pickerMapInstance = map;
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19, attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+    const marker = L.marker(startCoords, { draggable: true }).addTo(map);
+    const coordsEl = document.getElementById('loc-picker-coords');
+    function updateCoordsLabel(){
+      const p = marker.getLatLng();
+      if(coordsEl) coordsEl.textContent = `${p.lat.toFixed(6)}, ${p.lng.toFixed(6)}`;
+    }
+    updateCoordsLabel();
+    marker.on('dragend', updateCoordsLabel);
+    map.on('click', (e)=>{ marker.setLatLng(e.latlng); updateCoordsLabel(); });
+    map._pickerMarker = marker;
+  }, 50);
+}
+
+function closeLocationPicker(){
+  if(_pickerMapInstance){ _pickerMapInstance.remove(); _pickerMapInstance = null; }
+  const modal = document.getElementById('loc-picker-modal');
+  if(modal) modal.remove();
+}
+
+function saveLocationPicker(name){
+  const cust = getCustomers().find(c=>c.name===name);
+  if(!cust || !_pickerMapInstance || !_pickerMapInstance._pickerMarker){ toast('⚠ Something went wrong — try again'); return; }
+  const p = _pickerMapInstance._pickerMarker.getLatLng();
+  cust.lat = p.lat;
+  cust.lon = p.lng;
+  cust.geoPrecision = 'manual';
+  saveState();
+  _sbPatch('customers', {name: cust.name}, {lat: cust.lat, lon: cust.lon, geo_precision: 'manual'})
+    .catch(e=>console.warn('saveLocationPicker patch error',e));
+  closeLocationPicker();
+  toast('✓ Location set for '+name);
+  if(custEditName===name) selectCustEdit(name);
+  if(custView==='map') renderCustomerMap(getCustomers());
 }
 
 // One-time geocode for a NEW customer's city, only called from
@@ -8352,7 +8760,7 @@ async function geocodeNewCustomerCity(city, state_, zip){
   if(state.adminConfig?.cityCoordsOverride?.[key]) return; // already geocoded before
   try{
     const query = zip ? `${city}, ${state_} ${zip}` : `${city}, ${state_}`;
-    const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&country=US&format=json&limit=1`);
+    const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&countrycodes=us&format=json&limit=1`);
     const geoData = await geoRes.json();
     if(!geoData.length) return; // no result — customer just won't have a pin until manually added
     const coords = [parseFloat(geoData[0].lat), parseFloat(geoData[0].lon)];
@@ -8436,7 +8844,7 @@ async function deriveZoneFromCity(city, st){
   if(stU!=='PA' && stU!=='NJ') return ''; // outside delivery footprint
   try{
     const query = `${city}, ${st}`;
-    const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&country=US&format=json&addressdetails=1&limit=1`);
+    const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&countrycodes=us&format=json&addressdetails=1&limit=1`);
     const geoData = await geoRes.json();
     if(!geoData.length || !geoData[0].address) return '';
     const countyRaw = (geoData[0].address.county||'').toLowerCase().replace(/\s*county$/,'').trim();
@@ -8769,7 +9177,11 @@ function selectCustEdit(name){
     <span onclick="renameCustomer('${name.replace(/'/g,"\\'")}')" style="cursor:pointer;color:var(--text3);font-size:12px;margin-left:4px;font-weight:400" title="Rename this customer">✎</span>
   </div>
   <div class="grid2 gap12 mb12">
-    <div class="field" style="grid-column:1/-1"><label class="lbl">Address</label>
+    <div class="field" style="grid-column:1/-1"><label class="lbl">Address
+      <button type="button" class="btn btn-xs" style="margin-left:6px" onclick="locateCustomerAddress('${name.replace(/'/g,"\\'")}')" title="Geocode this exact street address for a precise map pin">📍 Locate address</button>
+      <button type="button" class="btn btn-xs" style="margin-left:4px" onclick="openLocationPicker('${name.replace(/'/g,"\\'")}')" title="Drop the pin on the map yourself — best when OpenStreetMap doesn't have this building">🗺 Pick on map</button>
+      ${cust.lat!=null&&cust.geoPrecision==='manual'?'<span style="font-size:10px;color:var(--green);margin-left:6px">✓ Manually placed</span>':cust.lat!=null&&cust.geoPrecision==='street'?'<span style="font-size:10px;color:var(--amber);margin-left:6px">✓ Street-level location on file (exact house number not in OpenStreetMap)</span>':cust.lat!=null?'<span style="font-size:10px;color:var(--green);margin-left:6px">✓ Precise location on file</span>':'<span style="font-size:10px;color:var(--text3);margin-left:6px">Using city-level location</span>'}
+      </label>
       <input type="text" id="ce-address" value="${(cust.address||'').replace(/"/g,'&quot;')}" placeholder="Street address"></div>
     <div class="field"><label class="lbl">City</label>
       <input type="text" id="ce-city" value="${(cust.city||'').replace(/"/g,'&quot;')}" placeholder="City"></div>
@@ -8951,9 +9363,12 @@ function saveCustMeta(name){
   state.customerMeta[name]={ contact, phone, email, groupId, notes, notify };
   // Update address/city/state/zip/zone in the local customers array
   const custs = state.adminConfig && state.adminConfig.customers;
+  let cust = null;
+  let addressChanged = false;
   if(custs){
-    const cust = custs.find(c=>c.name===name);
+    cust = custs.find(c=>c.name===name);
     if(cust){
+      addressChanged = (cust.address||'')!==address || (cust.city||'')!==city || (cust.state||'')!==custState || (cust.zip||'')!==zip;
       cust.address = address;
       cust.city = city;
       cust.state = custState;
@@ -8965,6 +9380,15 @@ function saveCustMeta(name){
   // Sync to Supabase
   _sbPatch('customers', {name}, { address: address||null, city: city||null, state: custState||null, zip: zip||null, zone: zone||null, contact: contact||null, phone: phone||null, email: email||null, notes: notes||null, group_id: groupId||null, notify })
     .catch(e=>console.warn('saveCustMeta patch error',e));
+  // Address/city/state/zip changed (or was never geocoded) — refresh the
+  // precise lat/lon for a map pin on the actual building, not just the
+  // city. Fire-and-forget: the customer record still saves immediately
+  // above even if this Nominatim lookup is slow or fails.
+  if(cust && address && city && custState && (addressChanged || cust.lat==null)){
+    geocodeCustomerAddress(cust).then(ok=>{
+      if(ok && custView==='map') renderCustomerMap(getCustomers());
+    });
+  }
   toast('\u2713 '+name+' updated');
   renderCustomers(document.getElementById('content'));
 }
