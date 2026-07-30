@@ -419,7 +419,7 @@ async function loadStops() {
     // location's lat/lon instead of silently finding nothing.
     let allCustomersForMap = [];
     try {
-      const acr = await fetch(`${SB_URL}/rest/v1/customers?select=name,zone,lat,lon`, { headers: HDR });
+      const acr = await fetch(`${SB_URL}/rest/v1/customers?select=name,zone,city,lat,lon`, { headers: HDR });
       const acs = await acr.json();
       if (Array.isArray(acs)) allCustomersForMap = acs;
     } catch(e) { console.warn('customer coords lookup failed', e); }
@@ -434,12 +434,28 @@ async function loadStops() {
       return false;
     }
     function findStopCoords(s, cityStr){
+      const stopCity = cityStr ? cityStr.split(',')[0].trim().toLowerCase() : '';
       if(s.customer){
         let cust = allCustomersForMap.find(c=>c.name===s.customer);
         if(!cust){
           const candidates = allCustomersForMap.filter(c=>custNamesMatch(c.name, s.customer));
-          if(candidates.length>1 && s.zone){
-            cust = candidates.find(c=>c.zone===s.zone) || candidates[0];
+          if(candidates.length>1){
+            // Multi-location customer (e.g. "Associate Refrigeration, Inc."
+            // has 7 separate location records). Prefer matching by CITY —
+            // we already resolved this stop's actual city a moment ago
+            // (from its own cityst/WO/name-variant), and that's a far more
+            // direct signal than comparing zone strings, which can differ
+            // in formatting or be blank on the stop. Only fall back to the
+            // weaker zone-string match, then first-match, if city doesn't
+            // narrow it down.
+            const cityMatch = stopCity && candidates.find(c => (c.city||'').trim().toLowerCase() === stopCity);
+            if(cityMatch){
+              cust = cityMatch;
+            } else if(s.zone){
+              cust = candidates.find(c=>c.zone===s.zone) || candidates[0];
+            } else {
+              cust = candidates[0];
+            }
           } else {
             cust = candidates[0];
           }
