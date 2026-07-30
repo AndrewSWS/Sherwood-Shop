@@ -261,6 +261,35 @@ const BENSALEM_LON = -74.9494;
 let scheduleView = 'list'; // 'list' or 'map'
 let _stopsMapInstance = null;
 
+// City-level fallback coordinates — shared with index.html via the
+// city_coords table (seeded once from index.html's static CITY_COORDS
+// object) plus the cityCoordsOverride blob in admin_config (cities
+// geocoded on-the-fly for brand-new customers). Loaded ONCE, not on every
+// poll — this table barely changes and there's no reason to re-fetch 155+
+// rows every 60 seconds.
+let CITY_COORDS_MAP = null;
+async function loadCityCoordsOnce(){
+  if(CITY_COORDS_MAP) return CITY_COORDS_MAP;
+  const map = {};
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/city_coords?select=city,state,lat,lon`, { headers: HDR });
+    const rows = await r.json();
+    if(Array.isArray(rows)){
+      rows.forEach(row => { map[`${row.city}|${row.state}`] = [Number(row.lat), Number(row.lon)]; });
+    }
+  } catch(e) { console.warn('city_coords lookup failed', e); }
+  try {
+    const r2 = await fetch(`${SB_URL}/rest/v1/admin_config?key=eq.cityCoordsOverride&select=value`, { headers: HDR });
+    const rows2 = await r2.json();
+    if(Array.isArray(rows2) && rows2[0] && rows2[0].value){
+      const overrides = typeof rows2[0].value === 'string' ? JSON.parse(rows2[0].value) : rows2[0].value;
+      if(overrides && typeof overrides === 'object') Object.assign(map, overrides);
+    }
+  } catch(e) { console.warn('cityCoordsOverride lookup failed', e); }
+  CITY_COORDS_MAP = map;
+  return map;
+}
+
 let driverName = ''; // pulled from truck record on selection
 let activeTruck = localStorage.getItem('sw_truck') || '';
 let activeDate  = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
@@ -333,6 +362,7 @@ async function loadStops() {
   if (!activeTruck) return;
   setSyncStatus('amber');
   try {
+    await loadCityCoordsOnce();
     // Get stops for this truck on the selected date
     const r = await fetch(
       `${SB_URL}/rest/v1/truck_stops?truck_id=eq.${activeTruck}&delivery=eq.${activeDate}&order=seq,wo_num`,
@@ -403,18 +433,33 @@ async function loadStops() {
       if(qbLow.startsWith(sysLow)) return true;
       return false;
     }
-    function findStopCoords(s){
-      if(!s.customer) return null;
-      let cust = allCustomersForMap.find(c=>c.name===s.customer);
-      if(!cust){
-        const candidates = allCustomersForMap.filter(c=>custNamesMatch(c.name, s.customer));
-        if(candidates.length>1 && s.zone){
-          cust = candidates.find(c=>c.zone===s.zone) || candidates[0];
-        } else {
-          cust = candidates[0];
+    function findStopCoords(s, cityStr){
+      if(s.customer){
+        let cust = allCustomersForMap.find(c=>c.name===s.customer);
+        if(!cust){
+          const candidates = allCustomersForMap.filter(c=>custNamesMatch(c.name, s.customer));
+          if(candidates.length>1 && s.zone){
+            cust = candidates.find(c=>c.zone===s.zone) || candidates[0];
+          } else {
+            cust = candidates[0];
+          }
+        }
+        if(cust && cust.lat!=null && cust.lon!=null) return [Number(cust.lat), Number(cust.lon)];
+      }
+      // No precise customer location on file — fall back to the shared
+      // city-level table (same source index.html's Truck Planner map uses),
+      // parsed from the resolved "City, State" string for this stop.
+      if(cityStr && CITY_COORDS_MAP){
+        const commaIdx = cityStr.indexOf(',');
+        if(commaIdx!==-1){
+          const city = cityStr.slice(0,commaIdx).trim();
+          const stateMatch = cityStr.slice(commaIdx+1).trim().match(/^([A-Za-z]{2})\b/);
+          if(city && stateMatch){
+            const key = `${city}|${stateMatch[1].toUpperCase()}`;
+            if(CITY_COORDS_MAP[key]) return CITY_COORDS_MAP[key];
+          }
         }
       }
-      if(cust && cust.lat!=null && cust.lon!=null) return [Number(cust.lat), Number(cust.lon)];
       return null;
     }
 
@@ -448,7 +493,7 @@ async function loadStops() {
         cityst: city,
         wo,
         items: liMap[s.wo_id] || [],
-        coords: findStopCoords(s)
+        coords: findStopCoords(s, city)
       };
     });
 
