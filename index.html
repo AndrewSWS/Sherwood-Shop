@@ -2938,21 +2938,36 @@ function renderAssign(search='',c){
   });
   if(!showAllAssign) wos=wos.filter(w=>!w.delivery||new Date(w.delivery+'T00:00:00')>=today);
 
-  // Exclude pickups with past pickup dates
+  // Exclude pickups with past pickup dates — but only when NOT showing all,
+  // same as the delivery-date filter above. This used to run unconditionally
+  // regardless of showAllAssign, so a completed pickup stayed hidden even
+  // after clicking "Show All".
   const _todayStr = new Date().toISOString().split('T')[0];
-  wos = wos.filter(w=>{
-    if(w.isPickup && w.pickupDate){
-      return w.pickupDate >= _todayStr;
-    }
-    return true;
-  });
+  const pastPickups = showAllAssign ? [] : wos.filter(w=>w.isPickup && w.pickupDate && w.pickupDate < _todayStr);
+  if(!showAllAssign){
+    wos = wos.filter(w=>{
+      if(w.isPickup && w.pickupDate){
+        return w.pickupDate >= _todayStr;
+      }
+      return true;
+    });
+  }
 
-  // Sort: scheduled by date asc then truck, unscheduled at bottom
+  // Sort: pickups and deliveries merged into ONE date-ordered list, rather
+  // than pickups sitting in their own bucket below all deliveries. Each WO's
+  // "sort date" is its expected pickup date if it's a pickup, or its
+  // delivery date otherwise — the same unified-date convention the Shop
+  // Queue view already uses (wo.isPickup ? wo.pickupExpectedDate :
+  // wo.delivery). Soonest-first for active WOs (prioritize upcoming work),
+  // newest-first when Show All is on (browsing history). WOs with neither
+  // date at all sink to the very bottom.
+  const sortDate = w => w.isPickup ? (w.pickupExpectedDate||'') : (w.delivery||'');
   wos.sort((a,b)=>{
-    if(!a.delivery && !b.delivery) return 0;
-    if(!a.delivery) return 1;
-    if(!b.delivery) return -1;
-    const dateDiff = a.delivery.localeCompare(b.delivery);
+    const da = sortDate(a), db = sortDate(b);
+    if(!da && !db) return 0;
+    if(!da) return 1;
+    if(!db) return -1;
+    const dateDiff = showAllAssign ? db.localeCompare(da) : da.localeCompare(db);
     if(dateDiff!==0) return dateDiff;
     const ta=getWOTruckId(a.id)||'9';
     const tb=getWOTruckId(b.id)||'9';
@@ -2964,7 +2979,7 @@ function renderAssign(search='',c){
     return;
   }
 
-  const hiddenCount=!showAllAssign?past.length:0;
+  const hiddenCount=!showAllAssign?(past.length+pastPickups.length):0;
   const hiddenNote=hiddenCount?`<div style="text-align:center;padding:10px;font-size:12px;color:var(--text3);background:var(--gray-l);border-radius:var(--rad);margin-bottom:10px">${hiddenCount} past WO${hiddenCount!==1?'s':''} hidden · <button class="btn btn-xs" onclick="showAllAssign=true;updateAssignToggle();renderAssign(document.getElementById('assign-search')?.value||'')">Show All</button></div>`:'';
 
   c.innerHTML=hiddenNote+(wos.length?wos.map(wo=>renderWOCard(wo)).join(''):`<div style="text-align:center;padding:40px 0;color:var(--text3);font-size:13px">No active WOs${hiddenCount?' — click Show All to see past WOs':''}</div>`);
@@ -10206,6 +10221,7 @@ function renderSettingsData(){
     <div style="display:flex;gap:8px;margin-bottom:12px">
       <button class="btn btn-primary" onclick="loadDeliveryHistory()">🔍 Load</button>
       <button class="btn" onclick="exportDeliveryHistory()">⬇ Export CSV</button>
+      <button class="btn" onclick="printDeliveryHistory()">🖨 Print Report</button>
     </div>
     <div id="dh-results" style="font-size:13px;color:var(--text3)">Select filters and click Load.</div>
   </div>
@@ -10289,21 +10305,28 @@ async function loadDeliveryHistory(){
 function exportDeliveryHistory(){
   const stops = window._dhStops || [];
   if(!stops.length){ toast('No data to export — click Load first'); return; }
-  const header = 'Customer,Date,WO#,Address,Arrived,Departed,On Site (min),Odometer,Driver';
+  // Every field gets quoted, no exceptions. arrived_at/departed_at use
+  // toLocaleString(), which embeds a comma between the date and time
+  // (e.g. "7/29/2026, 12:49:31 PM") — left unquoted, that comma reads as an
+  // extra CSV column and shifts every field after it by one, which is
+  // exactly why "Departed" was showing Arrived's time, "On Site" was
+  // showing Departed's date, etc.
+  const q = v => `"${String(v??'').replace(/"/g,'""')}"`;
+  const header = ['Customer','Date','WO#','Address','Arrived','Departed','On Site (min)','Odometer','Driver'].map(q).join(',');
   const rows = stops.map(s => {
     const arrived  = s.arrived_at  ? new Date(s.arrived_at).toLocaleString()  : '';
     const departed = s.departed_at ? new Date(s.departed_at).toLocaleString() : '';
     const duration = (s.arrived_at && s.departed_at)
       ? Math.round((new Date(s.departed_at)-new Date(s.arrived_at))/60000) : '';
     return [
-      `"${(s.customer||'').replace(/"/g,'""')}"`,
+      s.customer||'',
       s.delivery||'',
       s.wo_num||'',
-      `"${((s.address||'')+(s.cityst?' '+s.cityst:'')).replace(/"/g,'""')}"`,
+      (s.address||'')+(s.cityst?' '+s.cityst:''),
       arrived, departed, duration,
       s.mileage||'',
-      `"${(s.driver_name||'').replace(/"/g,'""')}"`
-    ].join(',');
+      s.driver_name||''
+    ].map(q).join(',');
   });
   const csv = [header,...rows].join('\n');
   const blob = new Blob([csv],{type:'text/csv'});
@@ -10312,6 +10335,57 @@ function exportDeliveryHistory(){
   a.href=url; a.download='delivery-history-'+new Date().toISOString().split('T')[0]+'.csv';
   a.click(); URL.revokeObjectURL(url);
   toast('✓ Exported '+stops.length+' deliveries');
+}
+
+function printDeliveryHistory(){
+  const stops = window._dhStops || [];
+  if(!stops.length){ toast('No data to export — click Load first'); return; }
+
+  const truckId = document.getElementById('dh-truck')?.value || '';
+  const from    = document.getElementById('dh-from')?.value || '';
+  const to      = document.getElementById('dh-to')?.value || '';
+  const truckName = truckId ? (state.trucks.find(t=>String(t.id)===truckId)?.name || 'Truck') : 'All Trucks';
+  const rangeLabel = (from||to) ? `${from?fmtDate(from):'Start'} – ${to?fmtDate(to):'Today'}` : 'All Dates';
+
+  const rows = stops.map(s => {
+    const arrived  = s.arrived_at  ? new Date(s.arrived_at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}) : '—';
+    const departed = s.departed_at ? new Date(s.departed_at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}) : '—';
+    const duration = (s.arrived_at && s.departed_at)
+      ? Math.round((new Date(s.departed_at)-new Date(s.arrived_at))/60000)+' min' : '—';
+    return `<tr>
+      <td>${s.customer||'—'}</td>
+      <td>${s.wo_num||'—'}</td>
+      <td>${(s.address||'')+(s.cityst?', '+s.cityst:'')||'—'}</td>
+      <td>${s.delivery?fmtDate(s.delivery):'—'}</td>
+      <td>${arrived}</td>
+      <td>${departed}</td>
+      <td>${duration}</td>
+      <td>${s.mileage?s.mileage.toLocaleString():'—'}</td>
+      <td>${s.driver_name||'—'}</td>
+    </tr>`;
+  }).join('');
+
+  const win = window.open('','_blank');
+  const html = `<!DOCTYPE html><html><head><title>Delivery History Report</title>
+  <style>body{font-family:Arial,sans-serif;font-size:12px;margin:24px;color:#111}
+  h2{font-size:18px;margin-bottom:4px}p{font-size:12px;color:#555;margin-bottom:12px}
+  table{width:100%;border-collapse:collapse;margin-bottom:16px}
+  th{background:#2D6A2D;color:#fff;padding:7px 8px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.04em}
+  td{padding:6px 8px;border-bottom:1px solid #ddd;font-size:11px;vertical-align:top}
+  tr:nth-child(even) td{background:#f9f9f9}
+  @media print{button{display:none}}</style></head><body>
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+    <div><h2>DELIVERY HISTORY REPORT</h2><p>Sherwood Steel — Metal Fabrication</p></div>
+    <div style="text-align:right;font-size:12px"><strong>Truck:</strong> ${truckName}<br><strong>Range:</strong> ${rangeLabel}<br><strong>Generated:</strong> ${fmtDate(new Date().toISOString().split('T')[0])}</div>
+  </div>
+  <table>
+    <thead><tr><th>Customer</th><th>WO#</th><th>Address</th><th>Date</th><th>Arrived</th><th>Departed</th><th>On Site</th><th>Odometer</th><th>Driver</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <div style="font-size:11px;color:#777;margin-bottom:16px">${stops.length} deliveries</div>
+  <button onclick="window.print()" style="margin-top:8px;padding:10px 20px;background:#2D6A2D;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px">🖨 Print</button>
+  </body></html>`;
+  win.document.write(html); win.document.close();
 }
 
 function renderSettingsOperators(){
