@@ -7620,6 +7620,33 @@ async function fetchWeather(){
   }
 }
 
+// ── WEATHER AUTO-REFRESH ──────────────────────────────────────────────────
+// fetchWeather() only ran once at login, so boards left open for hours/days
+// (office TV, wall PC) were showing a stale forecast forever. This keeps it
+// current and re-renders whichever weather-aware view is on screen.
+let _weatherPollTimer = null;
+function startWeatherPoll(){
+  if(_weatherPollTimer) return;
+  _weatherPollTimer = setInterval(async () => {
+    await fetchWeather();
+    refreshWeatherViews();
+  }, 30 * 60 * 1000); // every 30 min
+}
+function refreshWeatherViews(){
+  const overlay = document.getElementById('board-overlay');
+  if(overlay && overlay.classList.contains('active')){
+    renderBoardPickups();
+    renderBoardView();
+  }
+  if(document.getElementById('ob-overlay')?.classList.contains('ob-active')){
+    _obRender();
+  }
+  if(state.activeView === 'dashboard'){
+    const c = document.getElementById('content');
+    if(c) renderDashboard(c);
+  }
+}
+
 function isMonday(iso){
   return new Date(iso+'T12:00:00').getDay() === 1;
 }
@@ -12279,6 +12306,7 @@ function logout(){
 
 async function launchApp(){
   fetchWeather();
+  startWeatherPoll();
   loadState();
   try {
     const ok = await sbLoadState();
@@ -12354,6 +12382,7 @@ function enterOfficeBoardView(){
     if(document.visibilityState==='visible' && document.getElementById('ob-overlay')?.classList.contains('ob-active')){
       const ok=await sbLoadState();
       if(ok){try{localStorage.setItem('kzn_state',JSON.stringify(state));}catch(e){}}
+      fetchWeather().then(_obRender); // throttled setInterval means weather can be stale on wake too
       _obRender();
       _obSetSync(ok);
     }
