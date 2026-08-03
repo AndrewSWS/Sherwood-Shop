@@ -313,8 +313,11 @@ async function init() {
       setSyncStatus('red');
       return;
     }
-    trucks = await r.json();
-    console.log('Trucks loaded:', trucks);
+    const allTrucks = await r.json();
+    console.log('Trucks loaded:', allTrucks);
+    // Match index.html's archive logic: active === false means archived/hidden.
+    // null/undefined/true all count as active.
+    trucks = allTrucks.filter(t => t.active !== false);
     if (!Array.isArray(trucks) || trucks.length === 0) {
       showToast('No trucks found in system');
       setSyncStatus('amber');
