@@ -11395,9 +11395,49 @@ function expandQBModal(){
   `;
 }
 
-function showQBSelector(invoices){
-  const existing = document.getElementById('qb-modal');
-  if(existing)existing.remove();
+// Ensure duplicate-matched WOs have their real line items loaded before the
+// QB import comparison runs. The routine poll only keeps items in memory
+// for undelivered/recently-delivered WOs (see the _activeOrRecentIds filter
+// in sbLoadState) — older already-processed WOs are otherwise invisible
+// client-side, so the comparison sees "0 items" and falsely flags a clean,
+// already-imported invoice as "DUPLICATE — REVIEW NEEDED". Same self-heal
+// pattern as toggleWO's on-demand backfill, just applied before rendering
+// the QB list instead of on open.
+async function backfillDupeWOItems(invoices){
+  const existingWONums = new Set(state.wos.map(w=>String(w.woNum)));
+  const needsBackfill = invoices
+    .filter(inv=>existingWONums.has(inv.invNum))
+    .map(inv=>state.wos.find(w=>String(w.woNum)===String(inv.invNum)))
+    .filter(wo=>wo && (!wo.items || !wo.items.length));
+  if(!needsBackfill.length) return;
+
+  toast('⏳ Checking ' + needsBackfill.length + ' existing order' + (needsBackfill.length!==1?'s':'') + '...', 1500);
+  const ids = needsBackfill.map(wo=>wo.id);
+  try{
+    const rows = await _sbGetAll('line_items', `wo_id=in.(${ids.join(',')})&order=id.asc`);
+    const byWO = {};
+    (rows||[]).forEach(li=>{
+      if(!byWO[li.wo_id]) byWO[li.wo_id] = [];
+      byWO[li.wo_id].push(li);
+    });
+    needsBackfill.forEach(wo=>{
+      const woRows = byWO[wo.id] || [];
+      wo.items = woRows.map(li=>{
+        const item = _rowToItem(li);
+        _liDbIdMap[`${li.wo_id}:${li.id}`] = li.id;
+        return item;
+      });
+    });
+  }catch(e){ console.warn('QB dupe item backfill error', e); }
+}
+
+async function showQBSelector(invoices){
+  const existingModal = document.getElementById('qb-modal');
+  if(existingModal)existingModal.remove();
+
+  // Backfill items for any duplicate-matched WOs whose items aren't loaded
+  // client-side yet, so the dupe comparison below reflects real data.
+  await backfillDupeWOItems(invoices);
 
   const modal = document.createElement('div');
   modal.id='qb-modal';
