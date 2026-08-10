@@ -1311,8 +1311,21 @@ async function sbLoadState() {
   }
 }
 
+// ── Shop hours helper (Mon–Fri, 5am–8pm local) ──────────────────────────────
+// Used to throttle background polling outside actual working hours — nobody's
+// watching the boards at 2am on a Saturday, so there's no reason to keep
+// re-fetching the full dataset on the same cadence as during a working shift.
+function _inShopHours() {
+  const now = new Date();
+  const day = now.getDay(); // 0=Sun, 6=Sat
+  if (day === 0 || day === 6) return false;
+  const hour = now.getHours();
+  return hour >= 5 && hour < 20;
+}
+
 // ── Poll Supabase every 15s for changes (for board view & multi-user sync) ──
 let _sbPollTimer = null;
+let _lastPollFetchAt = 0; // last time this timer actually hit the DB (not just ticked)
 // Pause polling when tab is hidden to save bandwidth
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
@@ -1328,6 +1341,15 @@ function startSBPoll() {
     // Skip entire poll cycle if user is actively editing — don't overwrite state
     const editingNow = !!window._editingWOId || !!document.querySelector('#e-wonum') || !!document.querySelector('.wo-edit-form');
     if(editingNow){ updateBadges(); return; }
+    // Outside shop hours (nights/weekends), don't fetch on the normal 90s
+    // cadence — the Board View doesn't need to stay this fresh when the
+    // shop's closed. Still check in every 30min in case someone genuinely
+    // is using the app off-hours, so it doesn't go fully stale.
+    if (!_inShopHours() && (Date.now() - _lastPollFetchAt) < 30*60*1000) {
+      updateBadges();
+      return;
+    }
+    _lastPollFetchAt = Date.now();
     const ok = await sbLoadState();
     if (ok) {
       // Save fresh state to localStorage as backup
@@ -12408,19 +12430,21 @@ function enterOfficeBoardView(){
   if(document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(()=>{});
   _obRender();
   _obSetSync(true); // show initial sync time immediately on entry
-  // Slowed from 10s to 60min — this was the single biggest egress driver by
-  // far (a full unscoped sbLoadState() 6x/minute on a screen that's on all
-  // day). This is a view-only display: the ✓/⚠ sync timestamp (_obSetSync)
-  // and the ↻ manual refresh button (obManualRefresh) already let anyone
-  // force a fresh pull anytime, and the wake/visibility handler below still
-  // refreshes immediately when the TV comes back from sleep — this interval
-  // just catches a long-idle stretch with the screen already awake.
+  // Slowed from 10s to 60min in an earlier pass, now reduced further and
+  // paused entirely outside shop hours (nights + weekends), since this
+  // screen isn't being watched then. During Mon–Fri 5am–8pm it still checks
+  // in every 4hrs; the rest of the time it does nothing automatically. The
+  // ✓/⚠ sync timestamp (_obSetSync) and the ↻ manual refresh button
+  // (obManualRefresh) still let anyone force a fresh pull anytime, and the
+  // wake/visibility handler below still refreshes immediately when the TV
+  // comes back from sleep during shop hours.
   _obTimer=setInterval(async()=>{
+    if (!_inShopHours()) return; // outside shop hours — leave the sync timestamp as-is, don't fake a fresh sync
     const ok = await sbLoadState();
     if(ok){try{localStorage.setItem('kzn_state',JSON.stringify(state));}catch(e){}}else{try{const s=localStorage.getItem('kzn_state');if(s){const p=JSON.parse(s);state.wos=p.wos||state.wos;state.trucks=p.trucks||state.trucks;}}catch(e){}}
     _obRender();
     _obSetSync(ok);
-  },3600000);
+  },4*3600000);
   _obClockTimer=setInterval(()=>{const el=document.getElementById('ob-clock');if(el)el.textContent=new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});},1000);
   const cl=document.getElementById('ob-clock');if(cl)cl.textContent=new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
   // Force refresh when TV screen wakes from sleep / tab becomes visible again
