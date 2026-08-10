@@ -12408,12 +12408,19 @@ function enterOfficeBoardView(){
   if(document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(()=>{});
   _obRender();
   _obSetSync(true); // show initial sync time immediately on entry
+  // Slowed from 10s to 60min — this was the single biggest egress driver by
+  // far (a full unscoped sbLoadState() 6x/minute on a screen that's on all
+  // day). This is a view-only display: the ✓/⚠ sync timestamp (_obSetSync)
+  // and the ↻ manual refresh button (obManualRefresh) already let anyone
+  // force a fresh pull anytime, and the wake/visibility handler below still
+  // refreshes immediately when the TV comes back from sleep — this interval
+  // just catches a long-idle stretch with the screen already awake.
   _obTimer=setInterval(async()=>{
     const ok = await sbLoadState();
     if(ok){try{localStorage.setItem('kzn_state',JSON.stringify(state));}catch(e){}}else{try{const s=localStorage.getItem('kzn_state');if(s){const p=JSON.parse(s);state.wos=p.wos||state.wos;state.trucks=p.trucks||state.trucks;}}catch(e){}}
     _obRender();
     _obSetSync(ok);
-  },10000);
+  },3600000);
   _obClockTimer=setInterval(()=>{const el=document.getElementById('ob-clock');if(el)el.textContent=new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});},1000);
   const cl=document.getElementById('ob-clock');if(cl)cl.textContent=new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
   // Force refresh when TV screen wakes from sleep / tab becomes visible again

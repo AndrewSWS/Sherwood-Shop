@@ -228,6 +228,7 @@
     <input type="date" id="date-picker" onchange="selectDate(this.value)">
     <button onclick="shiftDate(1)">›</button>
     <button id="today-btn" onclick="goToday()">Today</button>
+    <button id="refresh-btn" onclick="loadStops()" title="Refresh now" style="background:var(--surface);border:1px solid var(--border);color:var(--text2);padding:6px 12px;border-radius:8px;font-size:14px;cursor:pointer;margin-left:auto">↻</button>
   </div>
 </div>
 
@@ -527,7 +528,11 @@ async function loadStops() {
 
 function startPoll() {
   clearInterval(pollTimer);
-  pollTimer = setInterval(() => { if(activeTruck && !document.hidden) loadStops(); }, 60000);
+  // Slowed from 60s to 60min — driver stops rarely change mid-shift, and the
+  // visibilitychange listener below + manual ↻ button already cover the cases
+  // that actually need a fresh pull (reopening the app, or a driver wanting
+  // to force-check). This just catches the rare case of a long-idle foreground tab.
+  pollTimer = setInterval(() => { if(activeTruck && !document.hidden) loadStops(); }, 3600000);
 }
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && activeTruck) loadStops();

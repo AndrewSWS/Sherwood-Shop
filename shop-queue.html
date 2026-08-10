@@ -1318,9 +1318,20 @@ async function boot() {
 
   if (!currentUser) showUserPicker();
 
-  // Poll every 20s
-  pollTimer = setInterval(loadData, 20000);
+  // Slowed from 20s to 60min for now (was the single biggest egress driver —
+  // every iPad re-pulling the full active-WO/line-item set 3x/minute all day).
+  // The visibilitychange handler below + the manual ↻ button already in the
+  // header cover reopening the app / waking from sleep and force-checking;
+  // this interval just catches a long-idle foreground tab. Revisit if floor
+  // staff report stale data between devices before someone manually refreshes.
+  pollTimer = setInterval(loadData, 3600000);
 }
+
+// Pull fresh data the moment the iPad wakes up / app comes back to the
+// foreground, rather than waiting up to 60min for the next poll tick.
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) loadData();
+});
 
 boot();
 </script>
