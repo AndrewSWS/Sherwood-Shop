@@ -2551,13 +2551,26 @@ function getLIs(){
   return items;
 }
 
-function saveWO(){
+async function saveWO(){
   const woNum=document.getElementById('f-wonum').value.trim();
   const cust=document.getElementById('f-cust').value.trim();
   if(!woNum){toast('⚠ WO Number required');return}
   if(!cust){toast('⚠ Customer required');return}
   const items=getLIs();
   if(!items.length){toast('⚠ Add at least one line item');return}
+
+  // Live duplicate check against Supabase — state.wos can be stale across
+  // devices/tabs (90s poll), so an in-memory-only check can race and let
+  // two clients both create the same WO number. Check the DB directly.
+  const saveBtn=document.querySelector('#content .btn-primary[onclick="saveWO()"]');
+  if(saveBtn){saveBtn.disabled=true;saveBtn.textContent='Checking…';}
+  const liveMatch = await _sbGet('work_orders', `wo_num=eq.${encodeURIComponent(woNum)}&select=id,wo_num,customer,created_at`);
+  if(saveBtn){saveBtn.disabled=false;saveBtn.textContent='💾 Save Work Order';}
+  if(liveMatch===null){
+    // Supabase unreachable — don't silently allow a possible duplicate through.
+    toast('⚠ Could not verify WO number is unique — check connection and try again');
+    return;
+  }
   const wo={
     id:Date.now(),woNum,po:document.getElementById('f-po').value.trim(),
     customer:cust,address:document.getElementById('f-addr').value,
@@ -2568,6 +2581,18 @@ function saveWO(){
     notes:document.getElementById('f-notes').value,
     items,created:new Date().toISOString()
   };
+
+  if(liveMatch.length){
+    // Duplicate confirmed against live DB — prefer the fuller in-memory
+    // record for the diff modal if we have it (has full items array),
+    // otherwise fall back to a minimal stub built from the live row.
+    const existingLive = state.wos.find(w=>w.woNum===woNum) || {
+      id: liveMatch[0].id, woNum: liveMatch[0].wo_num, customer: liveMatch[0].customer, items: []
+    };
+    showDupWOModal(existingLive, wo);
+    return;
+  }
+
   // Auto-add to truck planner if truck assigned
   if(wo.truck){
     const t=state.trucks.find(t=>t.id==wo.truck);
@@ -2575,13 +2600,6 @@ function saveWO(){
       const totalW=items.reduce((s,i)=>s+i.weight,0);
       t.stops.push({woId:wo.id,woNum,customer:cust,address:wo.address,cityst:wo.cityst,zone:wo.zone,delivery:wo.delivery,notes:wo.notes});
     }
-  }
-  // Check for duplicate WO number
-  const existing = state.wos.find(w=>w.woNum===woNum);
-  if(existing){
-    // Show diff modal
-    showDupWOModal(existing, wo);
-    return;
   }
 
   // Capture current max BEFORE pushing new WO for gap check
