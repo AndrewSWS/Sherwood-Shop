@@ -2,10 +2,6 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<link rel="apple-touch-icon" href="icon_inventory.png">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Inventory">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sherwood Steel — Inventory</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -804,7 +800,7 @@ function parseAlumStain(ws){
   for(let i=0;i<Math.min(10,rows.length);i++){const r=rows[i].map(c=>String(c||'').toLowerCase());if(r.some(c=>c.includes('gauge')||c.includes('type'))){hi=i;break;}}
   if(hi<0)return[];
   const h=rows[hi].map(c=>String(c||'').trim().toLowerCase());
-  const tp=colIdx(h,'type'),g=colIdx(h,'gauge'),sz=colIdx(h,'size'),vd=colIdx(h,'vendor','vndr'),pc=colIdx(h,'pcs','qty'),dc=colIdx(h,'desc'),bn=colIdx(h,'bundle'),plb=colIdx(h,'/lb','per lb'),pea=colIdx(h,'/ea','per ea','price ea'),to=colIdx(h,'total');
+  const tp=colIdx(h,'type'),g=colIdx(h,'gauge'),sz=colIdx(h,'size'),vd=colIdx(h,'vendor','vndr'),pc=colIdx(h,'pcs','qty'),dc=colIdx(h,'desc'),bn=colIdx(h,'bundle'),plb=colIdx(h,'/lb','per lb','price/#'),pea=(()=>{const i=colIdx(h,'/ea','per ea','price ea');if(i>=0)return i;return h.findIndex((hh,idx)=>hh.trim()==='price'&&idx!==plb);})(),to=colIdx(h,'total');
   const TYPE_HEADERS=['ALUM','STAIN','PERF','DIAM','GVNL','GALV'];
   const res=[];let type='ALUM';
   for(let i=hi+1;i<rows.length;i++){
