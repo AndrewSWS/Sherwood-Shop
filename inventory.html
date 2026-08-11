@@ -597,7 +597,8 @@ function renderAlumSS(){
       <td class="td-num"><input class="pcs-input" type="number" min="0" value="${r.pcs??''}"
         onblur="updatePcs('alumStain','${r.bundleNum||''}',this.value||'${r.pcs??0}')"></td>
       <td>${r.desc||'—'}</td><td style="font-size:11px;color:var(--text-muted)">${r.bundleNum||'—'}</td>
-      <td class="td-money">${r.pricePerLb?fmt$(r.pricePerLb)+'/lb':r.priceEa?fmt$(r.priceEa)+'/ea':'—'}</td>
+      <td class="td-money">${r.pricePerLb?fmt$(r.pricePerLb):'—'}</td>
+      <td class="td-money">${r.priceEa?fmt$(r.priceEa):'—'}</td>
       <td class="td-total">${fmt$(r.total)}</td></tr>`;
   }).join('');
   document.getElementById('tab-content-alum-ss').innerHTML=`
@@ -612,8 +613,8 @@ function renderAlumSS(){
       <div class="toolbar-right"><button class="btn-sm" onclick="exportTab('alum-ss')">Export CSV</button></div>
     </div>
     <div class="table-wrap"><div class="table-container"><table>
-      <thead><tr><th>Type</th><th>Gauge</th><th>Size</th><th>Vendor</th><th>Pcs</th><th>Description</th><th>Bundle #</th><th>Price</th><th>Total</th></tr></thead>
-      <tbody>${tbody||emptyState(9)}</tbody>
+      <thead><tr><th>Type</th><th>Gauge</th><th>Size</th><th>Vendor</th><th>Pcs</th><th>Description</th><th>Bundle #</th><th>Price/#</th><th>Price</th><th>Total</th></tr></thead>
+      <tbody>${tbody||emptyState(10)}</tbody>
     </table></div>
     <div class="table-footer"><span>Showing <strong>${rows.length}</strong> of <strong>${state.alumStain.length}</strong></span><span>Value: <strong>${fmt$(sumField(rows,'total'))}</strong></span></div></div>`;
 }
