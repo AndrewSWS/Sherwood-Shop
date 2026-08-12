@@ -504,6 +504,10 @@ select{cursor:pointer}
       <span class="icon">⚙</span> Shop Queue
       <span class="nav-badge" id="badge-queue">42</span>
     </div>
+    <div class="nav-item" onclick="nav('stock',this)">
+      <span class="icon">📦</span> Fabricated Stock
+      <span class="nav-badge" id="badge-stock" style="display:none"></span>
+    </div>
     <div class="nav-item" onclick="nav('myview',this)">
       <span class="icon">👤</span> My Tasks
       <span class="nav-badge" id="badge-my">0</span>
@@ -873,7 +877,7 @@ function _woToRow(wo) {
     id: wo.id, wo_num: wo.woNum, po: wo.po||null, customer: wo.customer||null,
     address: wo.address||null, cityst: wo.cityst||null, zone: wo.zone||null,
     date: wo.date||null, delivery: wo.delivery||null, truck: wo.truck||null,
-    notes: wo.notes||null, is_pickup: wo.isPickup||false,
+    notes: wo.notes||null, is_pickup: wo.isPickup||false, is_stock: wo.isStock||false,
     pickup_date: wo.pickupDate||null, delivered: wo.delivered||false,
     delivered_at: wo.deliveredAt||null, delivered_by: wo.deliveredBy||null,
     ready_for_pickup: wo.readyForPickup||false,
@@ -898,7 +902,8 @@ function _liToRow(item, wo) {
     assignee: item.assignee||null, status: item.status||'Pending',
     completed_by: item.completedBy||null, completed_at: item.completedAt||null,
     delivery: item.delivery||wo.delivery||null, priority: item.priority||null,
-    waiting_vendor: item.waitingVendor||null
+    waiting_vendor: item.waitingVendor||null,
+    sourced_from_stock: item.sourcedFromStock||false, stock_note: item.stockNote||null
   };
 }
 
@@ -916,6 +921,7 @@ function _rowToItem(row) {
     woNum: row.wo_num, customer: row.customer, woId: row.wo_id,
     waitingVendor: row.waiting_vendor||'',
     coilNum: row.coil_num||'',
+    sourcedFromStock: row.sourced_from_stock||false, stockNote: row.stock_note||'',
     skidSplits: row.skid_splits ? (typeof row.skid_splits === 'string' ? JSON.parse(row.skid_splits) : row.skid_splits) : []
   };
 }
@@ -926,7 +932,7 @@ function _rowToWO(row, items=[]) {
     id: row.id, woNum: row.wo_num, po: row.po||'', customer: row.customer||'',
     address: row.address||'', cityst: row.cityst||'', zone: row.zone||'',
     date: row.date||'', delivery: row.delivery||'', truck: row.truck||'',
-    notes: row.notes||'', isPickup: row.is_pickup||false,
+    notes: row.notes||'', isPickup: row.is_pickup||false, isStock: row.is_stock||false,
     pickupDate: row.pickup_date||'', delivered: row.delivered||false,
     deliveredAt: row.delivered_at||'', deliveredBy: row.delivered_by||'',
     readyForPickup: row.ready_for_pickup||false,
@@ -943,7 +949,16 @@ async function sbCreateWO(wo) {
   if (!row) return;
   // Insert line items
   const liRows = wo.items.map(item => _liToRow(item, wo));
-  if (liRows.length) await _sbPost('line_items', liRows);
+  if (liRows.length) {
+    const insertedLis = await _sbPost('line_items', liRows);
+    if (Array.isArray(insertedLis)) {
+      insertedLis.forEach((r,idx) => { if (wo.items[idx]) wo.items[idx]._dbId = r.id; });
+      // Commit any stock fills picked during entry now that items have real DB ids
+      for (const item of wo.items) {
+        if (item._stockFill) await applyPendingStockFill(wo, item).catch(e=>console.warn('applyPendingStockFill error',e));
+      }
+    }
+  }
   // Insert truck stops if assigned
   if (wo.truck) {
     const t = state.trucks.find(t=>String(t.id)===String(wo.truck));
@@ -996,7 +1011,7 @@ async function sbUpdateLI(woId, itemId, fields) {
     coilNum:'coil_num', skidSplits:'skid_splits', station:'station',
     productCat:'product_cat', gauge:'gauge', size:'size', type:'type',
     waitingVendor:'waiting_vendor',
-    wtUnit:'wt_unit'
+    wtUnit:'wt_unit', sourcedFromStock:'sourced_from_stock', stockNote:'stock_note'
   };
   for (const [k,v] of Object.entries(fields)) {
     if (fieldMap[k]) {
@@ -1083,7 +1098,7 @@ const _liDbIdMap = {};
 // ── SUPABASE: Load full state from DB ──
 async function sbLoadState() {
   try {
-    const [wosRaw, trucksRaw, stopsRaw, coilsRaw, configRaw, custsRaw, vendorsRaw, cityZoneRaw, groupsRaw] = await Promise.all([
+    const [wosRaw, trucksRaw, stopsRaw, coilsRaw, configRaw, custsRaw, vendorsRaw, cityZoneRaw, groupsRaw, stockUsageRaw] = await Promise.all([
       _sbGetAll('work_orders', 'order=created_at.asc'),
       _sbGet('trucks', 'order=id.asc'),
       _sbGetAll('truck_stops', 'order=seq.asc'),
@@ -1092,7 +1107,8 @@ async function sbLoadState() {
       _sbGetAll('customers', 'order=name.asc'),
       _sbGet('vendors', 'order=name.asc').catch(()=>[]),
       _sbGet('city_zone_map', 'select=city,state,zone').catch(()=>[]),
-      _sbGet('delivery_groups', 'select=id,name,color,sort_order&order=sort_order.asc').catch(()=>[])
+      _sbGet('delivery_groups', 'select=id,name,color,sort_order&order=sort_order.asc').catch(()=>[]),
+      _sbGetAll('stock_usage', 'order=created_at.asc').catch(()=>[])
     ]);
     if (!wosRaw) return false; // offline
 
@@ -1180,6 +1196,7 @@ async function sbLoadState() {
     if (trucks.length) state.trucks = trucks;
     state.unassignedPickups = unassignedPickups;
     if (Array.isArray(vendorsRaw)) state.vendors = vendorsRaw;
+    if (Array.isArray(stockUsageRaw)) window._stockUsage = stockUsageRaw;
 
     // Build city -> zone lookup (fallback tier for getCustGroup when a
     // customer record has no explicit zone/groupId). Case-insensitive key
@@ -1811,6 +1828,12 @@ function updateBadges(){
   const waitingCount=activeWOs.flatMap(w=>w.items||[]).filter(i=>i.waitingVendor&&i.status!=='Complete').length;
   const wBadge=document.getElementById('badge-waiting');
   if(wBadge)wBadge.textContent=waitingCount;
+  const stockBadge=document.getElementById('badge-stock');
+  if(stockBadge){
+    const stockCount=getAvailableStockItems('').length;
+    stockBadge.textContent=stockCount;
+    stockBadge.style.display=stockCount?'':'none';
+  }
   const me=state.currentUser;
   const myTasks=me?activeWOs.flatMap(w=>w.items||[]).filter(i=>i.assignee===me&&i.status!=='Complete').length:0;
   document.getElementById('badge-my').textContent=myTasks;
@@ -1825,6 +1848,7 @@ const VIEWS = {
   stockneeds:{title:'Stock Needs',actions:''},
   assign:{title:'Assign & Manage WOs',actions:'<div class="flex gap8" style="align-items:center"><input type="text" id="assign-search" placeholder="Search WO, customer..." oninput="filterAssignInPlace(this.value)" style="width:200px;padding:6px 10px;font-size:13px"><button id="assign-toggle" class="btn btn-sm" onclick="showAllAssign=!showAllAssign;updateAssignToggle();renderAssign(document.getElementById(\'assign-search\').value)">Show All</button></div>'},
   queue:{title:'Shop Queue — Unassigned',actions:'<div class="flex gap8"><button id="queue-toggle" class="btn btn-sm" onclick="showAllQueue=!showAllQueue;updateQueueToggle();scheduleRenderQueue()">Show All</button><button class="btn btn-sm" onclick="resetQueuePriorities()" title="Clear manual priorities — revert to delivery date order">↺ Reset Order</button><button class="btn btn-sm" style="background:#2a0a0a;color:#e05555;border:1px solid #5a1a1a;position:relative" onclick="showWaitingModal()">⏳ Waiting <span id="badge-waiting" style="background:#e05555;color:#fff;border-radius:10px;padding:1px 6px;font-size:11px;font-weight:700;margin-left:4px">0</span></button></div>'},
+  stock:{title:'Fabricated Stock',actions:'<input type="text" id="stock-search" placeholder="Search customer, WO#, spec..." oninput="renderStockView(this.value)" style="width:220px;padding:6px 10px;font-size:13px">'},
   myview:{title:'My Tasks',actions:''},
   truck:{title:'Truck Planner',actions:'<button class="btn btn-primary no-print" onclick="printTruck()">🖨 Print Load Sheet</button> <a href="https://app03.linxup.com/ng/portal/index.html" target="_blank" rel="noopener" class="btn no-print" style="text-decoration:none">📡 Linxup Tracking</a>'},
   dashboard:{title:'Master Dashboard',actions:'<button class="btn" onclick="enterBoardView()" style="background:#1C2E1C;color:#fff;border:none">📺 Board View</button> <button class="btn" onclick="enterOfficeBoardView()" style="background:#0f1f3f;color:#A8D5A8;border:1px solid #2D6A2D">🖥 Office Board</button>'},
@@ -1882,6 +1906,7 @@ function nav(view,el){
   else if(view==='stockneeds')renderStockNeeds(c);
   else if(view==='assign')renderAssign('',c);
   else if(view==='queue')renderQueue(c);
+  else if(view==='stock')renderStockView('',c);
   else if(view==='myview')renderMyView(c);
   else if(view==='truck')renderTruck(c);
   else if(view==='dashboard')renderDashboard(c);
@@ -1966,12 +1991,19 @@ function renderCreate(c){
       <div class="field"><label class="lbl">PO Number</label><input type="text" id="f-po" placeholder="Customer PO #"></div>
       <div class="field"><label class="lbl">Order Date</label><input type="date" id="f-date" value="${todayISO()}"></div>
     </div>
+    <div class="field mt8" style="margin-bottom:12px">
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--text2);cursor:pointer">
+        <input type="checkbox" id="f-stock" onchange="toggleStockMode(this.checked)">
+        📦 Stock Order <span style="font-weight:400;color:var(--text3)">— internal fabrication, held until a real order needs it</span>
+      </label>
+    </div>
     <div class="grid3 mb12">
       <div class="field" style="grid-column:span 2"><label class="lbl">Customer *</label>
         <div class="autocomplete-wrap">
           <input type="text" id="f-cust" placeholder="Type to search 275 customers..." oninput="custSearch(this.value)" autocomplete="off">
           <div class="autocomplete-list" id="cust-drop" style="display:none"></div>
         </div>
+        <div id="f-stock-note" style="display:none;margin-top:6px;font-size:11px;color:var(--text3)">Defaults to Sherwood Steel for internal stock — change it if this is customer-specific stock.</div>
       </div>
       <div class="field"><label class="lbl">Delivery Date</label>
         <div style="display:flex;align-items:center;gap:10px">
@@ -1992,12 +2024,13 @@ function renderCreate(c){
       <div class="field"><label class="lbl">City / State</label><input type="text" id="f-cityst" placeholder="Auto-filled" readonly style="background:#f7f8fc"></div>
       <div class="field"><label class="lbl">Zone</label><input type="text" id="f-zone" placeholder="Auto-filled" readonly style="background:#f7f8fc"></div>
     </div>
-    <div class="field mt8"><label class="lbl">Truck Assignment</label>
+    <div class="field mt8" id="f-truck-wrap"><label class="lbl">Truck Assignment</label>
       <select id="f-truck" style="width:280px">
         <option value="">Assign after WO complete</option>
         ${truckOptions("")}
       </select>
     </div>
+    <div id="f-truck-stock-note" style="display:none;margin-top:8px;padding:8px 12px;background:#f7f8fc;border:1px solid var(--border);border-radius:var(--rad);font-size:12px;color:var(--text3)">📦 Stock orders aren't assigned a truck — once the shop completes it, it'll land in Fabricated Stock instead.</div>
     <div class="field mt8"><label class="lbl">Delivery / Packing Notes</label>
       <textarea id="f-notes" placeholder="Special delivery instructions, loading order, fragile items..."></textarea>
     </div>
@@ -2016,6 +2049,29 @@ function renderCreate(c){
   </div>`;
   document.getElementById('f-cust').value='';
   hideCustDrop();
+}
+
+function toggleStockMode(checked){
+  const truckWrap=document.getElementById('f-truck-wrap');
+  const truckNote=document.getElementById('f-truck-stock-note');
+  const custNote=document.getElementById('f-stock-note');
+  const truckSel=document.getElementById('f-truck');
+  const custInp=document.getElementById('f-cust');
+  if(checked){
+    if(truckWrap) truckWrap.style.display='none';
+    if(truckNote) truckNote.style.display='block';
+    if(custNote) custNote.style.display='block';
+    if(truckSel) truckSel.value='';
+    // Only auto-fill if customer is empty — don't clobber a customer-specific stock pick
+    if(custInp && !custInp.value.trim()){
+      const sherwood=getCustomers().find(c=>c.name.toLowerCase()==='sherwood steel');
+      if(sherwood) selectCust(sherwood);
+    }
+  } else {
+    if(truckWrap) truckWrap.style.display='';
+    if(truckNote) truckNote.style.display='none';
+    if(custNote) custNote.style.display='none';
+  }
 }
 
 function custSearch(q){
@@ -2208,8 +2264,12 @@ function addLI(data){
       <div class="li-num-dot">${n}</div>
       <span style="font-weight:600;font-size:13px">Line Item ${n}</span>
     </div>
-    <button class="btn btn-sm btn-danger" onclick="document.getElementById('li-${n}').remove();checkLIEmpty()">Remove</button>
+    <div class="flex gap6">
+      <button class="btn btn-sm" style="background:#e8f2fa;color:#185FA5;border:1px solid #b5d4f4" onclick="openStockFillModal('${n}')">📦 Fill from Stock</button>
+      <button class="btn btn-sm btn-danger" onclick="document.getElementById('li-${n}').remove();checkLIEmpty()">Remove</button>
+    </div>
   </div>
+  <div id="li-stockfill-${n}" style="display:none;margin:-2px 0 8px;padding:6px 10px;background:#e8f2fa;border:1px solid #b5d4f4;border-radius:var(--rad);font-size:11px;color:#185FA5"></div>
   <div style="display:grid;grid-template-columns:1.4fr 1fr 1.4fr 0.8fr 0.8fr;gap:8px;margin-bottom:8px">
     <div class="field"><label class="lbl">Product Category</label>
       <select class="li-cat" onchange="liCatChange('${n}',this.value)">
@@ -2269,6 +2329,14 @@ function addLI(data){
   if(data && data.notes){
     const notesInp = div.querySelector('.li-notes');
     if(notesInp) notesInp.value = data.notes;
+  }
+  // Show already-committed stock sourcing (read-only — the pull already happened)
+  if(data && data.sourcedFromStock){
+    const badge=document.getElementById('li-stockfill-'+n);
+    if(badge){
+      badge.style.display='block';
+      badge.innerHTML=`✓ ${data.stockNote||'Sourced from stock'}`;
+    }
   }
   // Populate gauge dropdown for initial category
   liCatChange(n, initCat, initGauge, initSize, data?data.qty||1:1, data?data.wtUnit||0:0);
@@ -2545,10 +2613,232 @@ function getLIs(){
       step2CompletedBy:'',
       notes:el.querySelector('.li-notes').value,
       waitingVendor:(el.querySelector('.li-waiting-chk')&&el.querySelector('.li-waiting-chk').checked)?el.querySelector('.li-waiting-vendor').value.trim():'',
-      assignee:'',status:'Pending',completedBy:'',completedAt:''
+      assignee:'',status:'Pending',completedBy:'',completedAt:'',
+      _stockFill: el.dataset.stockFill ? JSON.parse(el.dataset.stockFill) : null
     });
   });
   return items;
+}
+
+// ══════════════════════════════════════════════════════
+// FABRICATED STOCK — fill line items from stock WOs
+// ══════════════════════════════════════════════════════
+window._stockUsage = window._stockUsage || [];
+
+// Remaining qty on a stock line item = its qty minus everything logged against it in stock_usage
+function getStockRemaining(item){
+  const dbId = item._dbId;
+  const total = parseFloat(item.qty)||0;
+  if(!dbId) return total; // not yet saved — assume fully available (rare edge case)
+  const used = (window._stockUsage||[]).filter(u=>String(u.stock_line_item_id)===String(dbId))
+    .reduce((s,u)=>s+(parseFloat(u.qty_used)||0),0);
+  return Math.max(0, total-used);
+}
+
+// All available (remaining>0) stock line items, optionally prioritizing a given customer
+function getAvailableStockItems(customerName){
+  const results=[];
+  state.wos.forEach(wo=>{
+    if(!wo.isStock) return;
+    (wo.items||[]).forEach(item=>{
+      if(!item._dbId) return; // not saved yet — can't be linked to as a source
+      const remaining=getStockRemaining(item);
+      if(remaining<=0) return;
+      results.push({wo,item,remaining});
+    });
+  });
+  results.sort((a,b)=>{
+    const rank=r=>customerName&&r.wo.customer===customerName?0:r.wo.customer==='Sherwood Steel'?1:2;
+    const ra=rank(a),rb=rank(b);
+    if(ra!==rb) return ra-rb;
+    return b.remaining-a.remaining;
+  });
+  return results;
+}
+
+function _stockFillLabel(r){
+  const i=r.item;
+  const parts=[i.productCat||'',i.gauge||'',i.size||''].filter(Boolean).join(' ');
+  return `${r.wo.customer} — WO #${r.wo.woNum} · ${parts} · ${r.remaining} avail`;
+}
+
+function openStockFillModal(n){
+  const existing=document.getElementById('stockfill-modal');
+  if(existing)existing.remove();
+  const custEl=document.getElementById('f-cust')||document.getElementById('e-cust');
+  const customerName=custEl?custEl.value.trim():'';
+  window._stockFillTargetLI=n;
+  window._stockFillResults=getAvailableStockItems(customerName);
+  const modal=document.createElement('div');
+  modal.id='stockfill-modal';
+  modal.style.cssText='position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:16px';
+  modal.onclick=e=>{if(e.target===modal)closeStockFillModal();};
+  modal.innerHTML=`
+  <div style="background:var(--surface);border-radius:var(--rad2);padding:20px;width:100%;max-width:520px;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.2)">
+    <div class="flex-between mb12">
+      <div style="font-size:15px;font-weight:700">📦 Fill from Stock</div>
+      <button class="btn btn-sm" onclick="closeStockFillModal()">✕ Cancel</button>
+    </div>
+    <input type="text" id="stockfill-search" placeholder="Search customer, WO#, category..." autocomplete="off"
+      style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--rad);margin-bottom:10px" oninput="renderStockFillList(this.value)">
+    <div id="stockfill-list" style="overflow-y:auto;flex:1;min-height:100px"></div>
+  </div>`;
+  document.body.appendChild(modal);
+  renderStockFillList('');
+  setTimeout(()=>document.getElementById('stockfill-search')?.focus(),50);
+}
+
+function closeStockFillModal(){
+  const m=document.getElementById('stockfill-modal');
+  if(m)m.remove();
+}
+
+function renderStockFillList(q){
+  const list=document.getElementById('stockfill-list');
+  if(!list)return;
+  const lq=(q||'').toLowerCase();
+  const results=(window._stockFillResults||[]).filter(r=>!lq||_stockFillLabel(r).toLowerCase().includes(lq));
+  if(!results.length){
+    list.innerHTML='<div style="text-align:center;padding:24px;color:var(--text3);font-size:13px">No matching stock available.</div>';
+    return;
+  }
+  list.innerHTML=results.map((r,i)=>{
+    const idx=(window._stockFillResults||[]).indexOf(r);
+    const isSherwood=r.wo.customer==='Sherwood Steel';
+    return `<div onclick="pickStockFillItem(${idx})" style="padding:10px 12px;border:1px solid var(--border);border-radius:var(--rad);margin-bottom:6px;cursor:pointer" onmouseover="this.style.background='var(--blue-l)'" onmouseout="this.style.background=''">
+      <div style="font-weight:600;font-size:13px">${r.wo.customer}${isSherwood?' <span style="font-weight:400;color:var(--text3)">(internal)</span>':''}</div>
+      <div style="font-size:12px;color:var(--text2)">WO #${r.wo.woNum} · ${[r.item.productCat,r.item.gauge,r.item.size].filter(Boolean).join(' ')}</div>
+      <div style="font-size:11px;color:var(--blue);font-weight:600;margin-top:2px">${r.remaining} available</div>
+    </div>`;
+  }).join('');
+}
+
+function pickStockFillItem(idx){
+  const r=(window._stockFillResults||[])[idx];
+  if(!r)return;
+  const n=window._stockFillTargetLI;
+  const liEl=document.getElementById('li-'+n);
+  const curQty=parseFloat(liEl?.querySelector('.li-qty')?.value)||0;
+  const suggested=Math.min(r.remaining,curQty||r.remaining);
+  const entered=prompt(`Qty to pull from WO #${r.wo.woNum} (${r.remaining} available):`,suggested);
+  if(entered===null)return;
+  const qty=parseFloat(entered);
+  if(!qty||qty<=0){toast('⚠ Enter a valid quantity');return;}
+  if(qty>r.remaining){toast('⚠ Only '+r.remaining+' available');return;}
+  setStockFill(n,r,qty);
+  closeStockFillModal();
+}
+
+function setStockFill(n,r,qty){
+  const el=document.getElementById('li-'+n);
+  if(!el)return;
+  el.dataset.stockFill=JSON.stringify({
+    stockLineItemDbId:r.item._dbId, stockWoId:r.wo.id, stockWoNum:r.wo.woNum,
+    stockCustomer:r.wo.customer, qty
+  });
+  const badge=document.getElementById('li-stockfill-'+n);
+  if(badge){
+    badge.style.display='flex';
+    badge.style.justifyContent='space-between';
+    badge.style.alignItems='center';
+    badge.innerHTML=`<span>📦 Pulling ${qty} from WO #${r.wo.woNum} (${r.wo.customer})</span>`
+      +`<span onclick="clearStockFill('${n}')" style="cursor:pointer;font-weight:700">✕</span>`;
+  }
+  toast(`✓ Will pull ${qty} from WO #${r.wo.woNum}`);
+}
+
+function clearStockFill(n){
+  const el=document.getElementById('li-'+n);
+  if(!el)return;
+  delete el.dataset.stockFill;
+  const badge=document.getElementById('li-stockfill-'+n);
+  if(badge){badge.style.display='none';badge.innerHTML='';}
+}
+
+// Called after a line item has a real _dbId (post-save) to actually commit any
+// stock fill picked during entry — writes the ledger row and, if the pull fully
+// covers the ordered qty, marks the item Complete so it never queues in the shop.
+async function applyPendingStockFill(wo,item){
+  const fill=item._stockFill;
+  if(!fill||!fill.stockLineItemDbId||!item._dbId)return;
+  const record={
+    stock_line_item_id: fill.stockLineItemDbId, stock_wo_id: fill.stockWoId,
+    stock_wo_num: fill.stockWoNum, stock_customer: fill.stockCustomer,
+    consuming_line_item_id: item._dbId, consuming_wo_id: wo.id,
+    consuming_wo_num: wo.woNum, consuming_customer: wo.customer,
+    qty_used: fill.qty, created_by: state.currentUser||null
+  };
+  const rows=await _sbPost('stock_usage', record).catch(e=>{console.warn('applyPendingStockFill error',e);return null;});
+  if(rows&&rows[0]) window._stockUsage.push(rows[0]);
+  const ordered=parseFloat(item.qty)||0;
+  const fullyCovered=fill.qty>=ordered;
+  item.sourcedFromStock=true;
+  item.stockNote=`${fill.qty} of ${ordered} filled from stock WO #${fill.stockWoNum} (${fill.stockCustomer})`+(fullyCovered?'':' — remainder still needs to be built');
+  const patch={sourcedFromStock:true,stockNote:item.stockNote};
+  if(fullyCovered){
+    item.status='Complete';item.completedBy=state.currentUser||'Stock';item.completedAt=new Date().toISOString();
+    patch.status='Complete';patch.completedBy=item.completedBy;patch.completedAt=item.completedAt;
+  }
+  await sbUpdateLI(wo.id,item.id,patch).catch(e=>console.warn('sbUpdateLI stockfill error',e));
+  delete item._stockFill;
+}
+
+// ── Fabricated Stock browsing view ──
+function renderStockView(search,c){
+  if(!c)c=document.getElementById('content');
+  const q=(search||'').toLowerCase();
+  let items=getAvailableStockItems('');
+  if(q){
+    items=items.filter(r=>{
+      const hay=[r.wo.customer,r.wo.woNum,r.item.productCat,r.item.gauge,r.item.size,r.item.notes].filter(Boolean).join(' ').toLowerCase();
+      return hay.includes(q);
+    });
+  }
+  if(!items.length){
+    c.innerHTML=`<div style="text-align:center;padding:60px 0;color:var(--text3)"><div style="font-size:40px;margin-bottom:12px">📦</div><div style="font-size:16px;font-weight:600;margin-bottom:6px">No stock on hand</div><div style="font-size:13px">${search?'No matches for your search.':'Fabricated stock will show up here once a Stock Order is completed.'}</div></div>`;
+    return;
+  }
+  // Group by customer
+  const byCust={};
+  items.forEach(r=>{
+    const k=r.wo.customer||'Unknown';
+    (byCust[k]||(byCust[k]=[])).push(r);
+  });
+  // Sherwood Steel (internal) first, then alphabetical
+  const custNames=Object.keys(byCust).sort((a,b)=>{
+    if(a==='Sherwood Steel')return -1;
+    if(b==='Sherwood Steel')return 1;
+    return a.localeCompare(b);
+  });
+  const totalRemaining=items.reduce((s,r)=>s+r.remaining,0);
+  c.innerHTML=`<div style="margin-bottom:14px;font-size:13px;color:var(--text3)">${items.length} stock item${items.length!==1?'s':''} on hand across ${custNames.length} customer${custNames.length!==1?'s':''} · ${totalRemaining.toLocaleString()} total units available</div>`
+    +custNames.map(cust=>{
+      const rows=byCust[cust];
+      const isInternal=cust==='Sherwood Steel';
+      return `<div class="card mb16">
+        <div class="section-head" style="display:flex;align-items:center;gap:8px">
+          ${isInternal?'🏭':'👤'} ${cust}${isInternal?' <span style="font-weight:400;color:var(--text3);font-size:11px">(internal)</span>':''}
+          <span style="font-weight:400;color:var(--text3);font-size:12px;margin-left:auto">${rows.length} item${rows.length!==1?'s':''}</span>
+        </div>
+        ${rows.map(r=>{
+          const i=r.item,wo=r.wo;
+          const spec=[i.productCat,i.gauge,i.size].filter(Boolean).join(' · ')||'—';
+          const completedDate=i.completedAt?fmtDate(i.completedAt.split('T')[0]):(wo.date?fmtDate(wo.date):'—');
+          return `<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
+            <div style="min-width:0;flex:1">
+              <div style="font-weight:600;font-size:13px">${spec}</div>
+              <div style="font-size:12px;color:var(--text3);margin-top:2px">WO #${wo.woNum} · made ${i.qty} · completed ${completedDate}</div>
+              ${i.notes?`<div style="font-size:11px;color:var(--text3);margin-top:2px">${i.notes}</div>`:''}
+            </div>
+            <div style="text-align:right;flex-shrink:0">
+              <div style="font-size:18px;font-weight:800;color:var(--blue)">${r.remaining}</div>
+              <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">remaining</div>
+            </div>
+            <button class="btn btn-sm" onclick="editWO(${wo.id})" title="Open stock WO">✏ Edit</button>
+          </div>`;
+        }).join('')}
+      </div>`;
+    }).join('');
 }
 
 async function saveWO(){
@@ -2576,8 +2866,9 @@ async function saveWO(){
     customer:cust,address:document.getElementById('f-addr').value,
     cityst:document.getElementById('f-cityst').value,zone:document.getElementById('f-zone').value,
     date:document.getElementById('f-date').value,delivery:document.getElementById('f-delivery').value,isPickup:document.getElementById('f-pickup')?.checked||false,
+    isStock:document.getElementById('f-stock')?.checked||false,
     pickupExpectedDate:document.getElementById('f-pickup-date')?.value||'',
-    truck:document.getElementById('f-truck').value,
+    truck:document.getElementById('f-stock')?.checked?'':document.getElementById('f-truck').value,
     notes:document.getElementById('f-notes').value,
     items,created:new Date().toISOString()
   };
@@ -3561,7 +3852,8 @@ function renderBoardView(){
 
   grid.innerHTML = days.map(day=>{
     const dayWOs = state.wos.filter(w=>w.delivery===day.iso);
-    const ntWOs = dayWOs.filter(w=>!getWOTruckId(w.id));
+    const stockWOs = dayWOs.filter(w=>w.isStock);
+    const ntWOs = dayWOs.filter(w=>!getWOTruckId(w.id) && !w.isStock);
     const isToday = day.iso===todayISO;
     // July 3 observed holiday (fireworks eve)
     const isJuly4Eve = day.iso && day.iso.slice(5) === '07-03';
@@ -3666,6 +3958,7 @@ function renderBoardView(){
             return truckSection(icons[i%icons.length]+' '+t.name.toUpperCase(),colors[i%colors.length],tWOs,tPickups);
           }).join('')
           +truckSection('⚠ UNASSIGNED','#FAC775',ntWOs)
+          +truckSection('📦 STOCK','#4AA8D8',stockWOs)
         :'<div style="padding:20px;text-align:center;color:#444;font-size:12px">No deliveries</div>')
       
       +(()=>{
@@ -4259,9 +4552,11 @@ function editWO(id){
     +'<div class="field"><label class="lbl">PO Number</label><input type="text" id="e-po" value="'+(wo.po||'')+'"></div>'
     +'<div class="field"><label class="lbl">Order Date</label><input type="date" id="e-date" value="'+(wo.date||'')+'"></div>'
     +'</div>'
+    +'<div class="field mt8" style="margin-bottom:12px"><label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--text2);cursor:pointer"><input type="checkbox" id="e-stock" '+(wo.isStock?'checked':'')+' onchange="toggleStockModeEdit(this.checked)"> 📦 Stock Order <span style="font-weight:400;color:var(--text3)">— internal fabrication, held until a real order needs it</span></label></div>'
     +'<div class="grid3 mb12">'
     +'<div class="field" style="grid-column:span 2"><label class="lbl">Customer</label>'
     +'<div class="autocomplete-wrap"><input type="text" id="e-cust" value="'+wo.customer+'" placeholder="Type to search..." oninput="custSearch(this.value)" autocomplete="off"><div class="autocomplete-list" id="cust-drop" style="display:none"></div></div>'
+    +'<div id="e-stock-note" style="display:'+(wo.isStock?'block':'none')+';margin-top:6px;font-size:11px;color:var(--text3)">Defaults to Sherwood Steel for internal stock — change it if this is customer-specific stock.</div>'
     +'</div>'
     +'<div class="field"><label class="lbl">Delivery Date</label><div style="display:flex;align-items:center;gap:10px"><input type="date" id="e-delivery" value="'+(wo.delivery||'')+'"'+(wo.isPickup?' disabled':'')+' style="flex:1"><label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;cursor:pointer"><input type="checkbox" id="e-pickup" '+(wo.isPickup?'checked':'')+' onchange="if(this.checked){var d=document.getElementById(\'e-delivery\');d.value=\'\';d.disabled=true;document.getElementById(\'e-pickup-date-wrap\').style.display=\'flex\';}else{document.getElementById(\'e-delivery\').disabled=false;document.getElementById(\'e-pickup-date-wrap\').style.display=\'none\';}"> &#x1F3EA; Pick Up</label></div><div id="e-pickup-date-wrap" style="display:'+(wo.isPickup?'flex':'none')+';align-items:center;gap:8px;margin-top:6px"><label class="lbl" style="margin:0;white-space:nowrap">Expected Pick Up</label><input type="date" id="e-pickup-date" value="'+(wo.pickupExpectedDate||'')+'" style="flex:1"></div></div>'
     +'</div>'
@@ -4270,7 +4565,8 @@ function editWO(id){
     +'<div class="field"><label class="lbl">City / State</label><input type="text" id="e-cityst" value="'+(wo.cityst||'')+'"></div>'
     +'<div class="field"><label class="lbl">Zone</label><input type="text" id="e-zone" value="'+(wo.zone||'')+'"></div>'
     +'</div>'
-    +'<div class="field"><label class="lbl">Truck</label><select id="e-truck" style="width:280px">'+truckOpts+'</select></div>'
+    +'<div class="field" id="e-truck-wrap" style="display:'+(wo.isStock?'none':'')+'"><label class="lbl">Truck</label><select id="e-truck" style="width:280px">'+truckOpts+'</select></div>'
+    +'<div id="e-truck-stock-note" style="display:'+(wo.isStock?'block':'none')+';margin-top:8px;padding:8px 12px;background:#f7f8fc;border:1px solid var(--border);border-radius:var(--rad);font-size:12px;color:var(--text3)">📦 Stock orders aren\'t assigned a truck — once the shop completes it, it\'ll land in Fabricated Stock instead.</div>'
     +'<div class="field mt8"><label class="lbl">Notes</label><textarea id="e-notes">'+(wo.notes||'')+'</textarea></div>'
     +'</div>'
     +'<div class="card"><div class="flex-between mb12"><div class="section-head" style="margin:0">Line Items</div><button class="btn btn-sm" onclick="addLI()">+ Add Line Item</button></div>'
@@ -4281,12 +4577,35 @@ function editWO(id){
   window._editingWOId=id;
 }
 
+function toggleStockModeEdit(checked){
+  const truckWrap=document.getElementById('e-truck-wrap');
+  const truckNote=document.getElementById('e-truck-stock-note');
+  const custNote=document.getElementById('e-stock-note');
+  const truckSel=document.getElementById('e-truck');
+  const custInp=document.getElementById('e-cust');
+  if(checked){
+    if(truckWrap) truckWrap.style.display='none';
+    if(truckNote) truckNote.style.display='block';
+    if(custNote) custNote.style.display='block';
+    if(truckSel) truckSel.value='';
+    if(custInp && !custInp.value.trim()){
+      const sherwood=getCustomers().find(c=>c.name.toLowerCase()==='sherwood steel');
+      if(sherwood) selectCust(sherwood);
+    }
+  } else {
+    if(truckWrap) truckWrap.style.display='';
+    if(truckNote) truckNote.style.display='none';
+    if(custNote) custNote.style.display='none';
+  }
+}
+
 function saveEditWO(id){
   const wo=state.wos.find(w=>w.id===id);if(!wo)return;
   wo.woNum=document.getElementById('e-wonum').value.trim()||wo.woNum;
   wo.po=document.getElementById('e-po').value.trim();
   wo.date=document.getElementById('e-date').value;
   wo.customer=document.getElementById('e-cust').value.trim()||wo.customer;
+  wo.isStock=document.getElementById('e-stock')?.checked||false;
   const pickupChecked = document.getElementById('e-pickup')?.checked||false;
   wo.isPickup = pickupChecked;
   const editDelivery = document.getElementById('e-delivery').value;
@@ -4309,7 +4628,7 @@ function saveEditWO(id){
   wo.cityst=document.getElementById('e-cityst').value;
   wo.zone=document.getElementById('e-zone').value;
   wo.notes=document.getElementById('e-notes').value;
-  const newTruck=document.getElementById('e-truck').value;
+  const newTruck=wo.isStock?'':document.getElementById('e-truck').value;
   if(newTruck!==wo.truck){
     state.trucks.forEach(t=>{t.stops=t.stops.filter(s=>s.woId!==id)});
     wo.truck=newTruck;
@@ -4335,6 +4654,8 @@ function saveEditWO(id){
       ni.priority=old.priority;
       ni.bundle=old.bundle||ni.bundle;
       ni.skidSplits=old.skidSplits;
+      ni.sourcedFromStock=old.sourcedFromStock;
+      ni.stockNote=old.stockNote;
       // Only keep coilNum if station is still IOWA
       if(ni.station==='IOWA') ni.coilNum=old.coilNum;
       else ni.coilNum=''; // clear coilNum if moved off IOWA
@@ -4365,7 +4686,10 @@ function saveEditWO(id){
         wt_unit:item.wtUnit||null
       }).then(rows=>{
         // Store the new DB id so future patches work
-        if(rows&&rows[0]) item._dbId=rows[0].id;
+        if(rows&&rows[0]){
+          item._dbId=rows[0].id;
+          if(item._stockFill) applyPendingStockFill(wo,item).catch(e=>console.warn('applyPendingStockFill error',e));
+        }
       }).catch(e=>console.warn('saveEditWO insert new LI error',e));
     } else {
       // UPDATE — existing line item
@@ -4389,6 +4713,7 @@ function saveEditWO(id){
         size:       item.size||null,
         wtUnit:     item.wtUnit||null
       }).catch(e=>console.warn('saveEditWO sbUpdateLI error',e));
+      if(item._stockFill) applyPendingStockFill(wo,item).catch(e=>console.warn('applyPendingStockFill error',e));
     }
   });
   toast('WO #'+wo.woNum+' updated');
@@ -6656,7 +6981,7 @@ function renderTruck(c){
     const iso=localISO(d);
     const isSelected=iso===activeTruckDay;
     const isToday=iso===todayISOf;
-    const dayWOs=state.wos.filter(w=>w.delivery===iso);
+    const dayWOs=state.wos.filter(w=>w.delivery===iso && !w.isStock);
     const totalW=dayWOs.reduce((sum,wo)=>sum+getWOWeight(wo.id),0);
     return`<div onclick="switchTruckDay('${iso}')" style="flex:1;padding:10px 8px;text-align:center;cursor:pointer;border-bottom:3px solid ${isSelected?'var(--blue)':'transparent'};background:${isSelected?'var(--blue-l)':isToday?'#f8fbff':'var(--surface)'};border-radius:var(--rad) var(--rad) 0 0;transition:all .15s;min-width:80px">
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:${isSelected?'var(--blue)':isToday?'var(--blue)':'var(--text2)'}">${d.toLocaleDateString('en-US',{weekday:'short'})}</div>
@@ -6668,7 +6993,7 @@ function renderTruck(c){
   }).join('');
 
   // Filter stops for selected day only
-  const selWOs=state.wos.filter(w=>w.delivery===activeTruckDay);
+  const selWOs=state.wos.filter(w=>w.delivery===activeTruckDay && !w.isStock);
   const _dayTrucks=state.trucks.map(t=>({t,stops:t.stops.filter(s=>s.delivery===activeTruckDay)})).map(o=>({...o,w:o.stops.reduce((s,st)=>s+getWOWeight(st.woId),0)}));
 
   // Monthly stats
@@ -6965,7 +7290,7 @@ function renderTruckMap(dayISO){
   });
 
   // Day's WOs with no truck assigned yet — shown gray so they're still visible.
-  const noTruckWOs = state.wos.filter(w=>w.delivery===dayISO && !getWOTruckId(w.id));
+  const noTruckWOs = state.wos.filter(w=>w.delivery===dayISO && !getWOTruckId(w.id) && !w.isStock);
   noTruckWOs.forEach(wo=>{
     const rawCoords = stopCoords(wo, null);
     if(!rawCoords){ skippedList.push({ truckName: 'Unassigned', woNum: wo.woNum, customer: wo.customer }); return; }
@@ -7891,12 +8216,14 @@ function renderDashboard(c){
                 <div style="font-size:9px;color:var(--text3);margin-top:1px">${chipWt?chipWt.toLocaleString()+' lbs':''}${chipWt&&chipGrp?' · ':''}${chipGrp?chipGrp.name:''}</div>
               </div>
               <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0">
-                <select style="font-size:10px;padding:2px 4px;border:1px solid var(--border);border-radius:var(--rad);background:var(--surface);color:var(--text);max-width:72px"
+                ${wo.isStock
+                  ? '<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px;background:#e8f2fa;color:#185FA5;white-space:nowrap">📦 Stock</span>'
+                  : `<select style="font-size:10px;padding:2px 4px;border:1px solid var(--border);border-radius:var(--rad);background:var(--surface);color:var(--text);max-width:72px"
                   onclick="event.stopPropagation()"
                   onchange="quickTruckAssign(${wo.id},this.value)">
                   <option value="" ${!liveTruck?'selected':''}>🚚 Truck</option>
                   ${state.trucks.filter(t=>t.active!==false||String(liveTruck)===String(t.id)).map(t=>`<option value="${t.id}"${String(liveTruck)===String(t.id)?' selected':''}>${t.name.split(' ').slice(0,2).join(' ')}</option>`).join('')}
-                </select>
+                </select>`}
                 <button onclick="event.stopPropagation();toggleWOComplete(${wo.id})"
                   style="font-size:9px;padding:2px 6px;border-radius:10px;border:none;cursor:pointer;font-weight:700;
                   ${woStatus(wo)==='Complete'?'background:var(--green-m);color:#fff;':'background:var(--border);color:var(--text2);'}">
@@ -7910,7 +8237,8 @@ function renderDashboard(c){
             </div>
           </div>`;
         };
-        const nt = dayWOs.filter(w=>!getWOTruckId(w.id));
+        const nt = dayWOs.filter(w=>!getWOTruckId(w.id) && !w.isStock);
+        const stockWOs = dayWOs.filter(w=>w.isStock);
         const divider = (label,color) => `<div style="display:flex;align-items:center;gap:4px;margin:6px 0 4px">
           <span style="font-size:9px;font-weight:700;text-transform:uppercase;color:${color};white-space:nowrap">${label}</span>
           <div style="flex:1;height:1px;background:${color}"></div>
@@ -7948,7 +8276,8 @@ function renderDashboard(c){
           if(!tWOs.length && !tPickups.length) return '';
           return divider(_tIcons[i%4]+' '+t.name,_tColors[i%4])+tWOs.map(renderChip).join('')+tPickups.map(s=>renderPickupChip(s,t.id)).join('');
         }).join('')
-             + (nt.length?divider('⚠ No Truck','#BA7517')+nt.map(renderChip).join(''):'' );
+             + (nt.length?divider('⚠ No Truck','#BA7517')+nt.map(renderChip).join(''):'' )
+             + (stockWOs.length?divider('📦 Stock','#4AA8D8')+stockWOs.map(renderChip).join(''):'' );
 
       })():`<div style="text-align:center;padding:12px 0;font-size:11px;color:var(--text3)">Drop here</div>`}
       ${(()=>{
@@ -8188,7 +8517,8 @@ function toggleDayDetail(iso, forceOpen=false){
     </div>
     ${(()=>{
       // Group WOs by truck
-      const noTruckWOs = dayWOs.filter(w=>!getWOTruckId(w.id));
+      const noTruckWOs = dayWOs.filter(w=>!getWOTruckId(w.id) && !w.isStock);
+      const stockWOs = dayWOs.filter(w=>w.isStock);
 
       const renderWOCard = (wo) => {
         const st=woStatus(wo);
@@ -8209,11 +8539,13 @@ function toggleDayDetail(iso, forceOpen=false){
             ${statusPill(st)}
             ${(()=>{const g=getWOGroup(wo);return g?`<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${g.color};flex-shrink:0" title="${g.name}"></span><span style="font-size:11px;color:var(--text2)">${g.name}</span>`:''})()}
             <button class="btn btn-xs btn-amber" onclick="editWO(${wo.id})" title="Edit WO">✏ Edit</button>
-            <select style="font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:var(--rad);background:var(--surface);color:var(--text)"
+            ${wo.isStock
+              ? '<span class="badge" style="background:#e8f2fa;color:#185FA5;font-weight:700">📦 Stock</span>'
+              : `<select style="font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:var(--rad);background:var(--surface);color:var(--text)"
               onchange="quickTruckAssign(wo.id,this.value)">
               <option value="" ${!getWOTruckId(wo.id)?'selected':''}>🚚 No Truck</option>
               ${truckOptions(getWOTruckId(wo.id))}
-            </select>
+            </select>`}
           </div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;font-size:12px;margin-bottom:8px">
@@ -8256,7 +8588,8 @@ function toggleDayDetail(iso, forceOpen=false){
           });
         return truckSection(t.name,colors[i%colors.length],tWOs,i===0?'🚚':'🚛');
       }).join('')
-           + (noTruckWOs.length?truckSection('⚠ No Truck Assigned','#BA7517',noTruckWOs,'📋'):'');
+           + (noTruckWOs.length?truckSection('⚠ No Truck Assigned','#BA7517',noTruckWOs,'📋'):'')
+           + (stockWOs.length?truckSection('📦 Stock','#4AA8D8',stockWOs,'📦'):'');
     })()}
   </div>`;
 }
@@ -12631,11 +12964,13 @@ function _obGrid(){
     } else {
       const secs=[];
       state.trucks.forEach((t,i)=>{
-        const ws=dayWOs.filter(w=>getWOTruckId(w.id)===String(t.id));
+        const ws=dayWOs.filter(w=>getWOTruckId(w.id)===String(t.id) && !w.isStock);
         if(ws.length) secs.push({lbl:TI[i%4]+' '+t.name.split('\u2014')[0].trim(),color:TC[i%4],wos:ws});
       });
-      const noT=dayWOs.filter(w=>!getWOTruckId(w.id));
+      const noT=dayWOs.filter(w=>!getWOTruckId(w.id) && !w.isStock);
       if(noT.length) secs.push({lbl:'\u26a0 No Truck',color:'#FAC775',wos:noT});
+      const stockWOs=dayWOs.filter(w=>w.isStock);
+      if(stockWOs.length) secs.push({lbl:'\ud83d\udce6 Stock',color:'#4AA8D8',wos:stockWOs});
       dayBody=secs.map(sec=>{
         const cm={};
         sec.wos.forEach(wo=>{const k=wo.customer||'?';(cm[k]||(cm[k]=[])).push(wo);});
