@@ -4011,7 +4011,14 @@ function renderBoardView(){
       days.map(d=>d.iso).join(','),
       days.map(d => state.wos.filter(w=>w.delivery===d.iso).map(w=>{
         const items = w.items||[];
-        return `${w.id}:${items.length}:${w.notes?1:0}:${items.filter(i=>i.waitingVendor).length}:${w.delivered?1:0}`;
+        // woStatus(w) and getWOTruckId(w.id) are included because both
+        // change a card's actual rendered height/grouping without changing
+        // item count — completion adds a "Ready to Ship"/"Delivered" line,
+        // and truck reassignment can add/remove a truck-section divider.
+        // Missing these caused the scale to go stale mid-day as WOs were
+        // completed or reassigned, letting content drift off the bottom
+        // of the board on the 85in TV.
+        return `${w.id}:${items.length}:${w.notes?1:0}:${items.filter(i=>i.waitingVendor).length}:${w.delivered?1:0}:${woStatus(w)}:${getWOTruckId(w.id)||''}`;
       }).join(',')).join('|'),
       overlay.offsetWidth,
       overlay.offsetHeight,
