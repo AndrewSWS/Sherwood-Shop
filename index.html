@@ -1386,8 +1386,16 @@ function startSBPoll() {
       }
       // Refresh whichever regular view is currently showing
       // Don't re-render if a modal is open, user is editing a WO, or an input is focused
-      const modalOpen = Array.from(document.querySelectorAll('#split-modal, #wo-modal, [id$="-modal"]'))
-        .some(el => el.offsetParent !== null || getComputedStyle(el).display !== 'none');
+      // NOTE: previously used a wildcard [id$="-modal"] selector here, which
+      // also matched #ob-modal — the *inner* Office Board detail div. That
+      // inner div never has display:none set on itself (only its wrapper,
+      // #ob-modal-bg, does via the .ob-mopen class), so its computed display
+      // was always 'block' and modalOpen was permanently true — silently
+      // blocking the dashboard from ever re-rendering on poll. Checking the
+      // actual toggled wrapper's class fixes this.
+      const modalOpen = Array.from(document.querySelectorAll('#split-modal, #wo-modal, #stock-needs-modal, #shop-queue-modal'))
+        .some(el => el.offsetParent !== null || getComputedStyle(el).display !== 'none')
+        || !!document.getElementById('ob-modal-bg')?.classList.contains('ob-mopen');
       const inputFocused = document.activeElement && ['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName);
       const dropOpen = document.querySelector('#cust-drop[style*="block"], .autocomplete-list[style*="block"]');
       const editingInline = !!window._editingWOId || !!document.querySelector('#e-wonum') || !!document.querySelector('.wo-edit-form');
