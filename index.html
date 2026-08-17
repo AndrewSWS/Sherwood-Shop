@@ -3958,9 +3958,13 @@ function renderBoardView(){
             const icons=['🚚','🚛','🛻','🚜'];
             const tWOs=dayWOs.filter(w=>getWOTruckId(w.id)===String(t.id))
               .sort((a,b)=>{
-                const sa=(t.stops.find(s=>s.woId===a.id)||{}).seq;
-                const sb=(t.stops.find(s=>s.woId===b.id)||{}).seq;
-                return (sa??999999)-(sb??999999);
+                // Sort by actual position in t.stops (same array the Truck
+                // Planner displays) instead of the .seq field — several
+                // code paths push a stop without ever setting .seq, which
+                // let this drift out of sync with the Truck Planner's order.
+                const sa=t.stops.findIndex(s=>s.woId===a.id);
+                const sb=t.stops.findIndex(s=>s.woId===b.id);
+                return (sa<0?999999:sa)-(sb<0?999999:sb);
               });
             const tPickups=(t.stops||[]).filter(s=>s.type==='pickup'&&s.delivery===day.iso&&!s.delivered);
             return truckSection(icons[i%icons.length]+' '+t.name.toUpperCase(),colors[i%colors.length],tWOs,tPickups);
@@ -8283,9 +8287,12 @@ function renderDashboard(c){
         return state.trucks.map((t,i)=>{
           const tWOs=dayWOs.filter(w=>getWOTruckId(w.id)===String(t.id))
             .sort((a,b)=>{
-              const sa=(t.stops.find(s=>s.woId===a.id)||{}).seq;
-              const sb=(t.stops.find(s=>s.woId===b.id)||{}).seq;
-              return (sa??999999)-(sb??999999);
+              // Sort by actual position in t.stops (same array the Truck
+              // Planner displays) instead of the .seq field — see note in
+              // renderBoardView for why .seq can't be trusted here.
+              const sa=t.stops.findIndex(s=>s.woId===a.id);
+              const sb=t.stops.findIndex(s=>s.woId===b.id);
+              return (sa<0?999999:sa)-(sb<0?999999:sb);
             });
           const tPickups=(t.stops||[]).filter(s=>s.type==='pickup'&&s.delivery===iso&&!s.delivered);
           if(!tWOs.length && !tPickups.length) return '';
@@ -8597,9 +8604,12 @@ function toggleDayDetail(iso, forceOpen=false){
       return state.trucks.map((t,i)=>{
         const tWOs=dayWOs.filter(w=>getWOTruckId(w.id)===String(t.id))
           .sort((a,b)=>{
-            const sa=(t.stops.find(s=>s.woId===a.id)||{}).seq;
-            const sb=(t.stops.find(s=>s.woId===b.id)||{}).seq;
-            return (sa??999999)-(sb??999999);
+            // Sort by actual position in t.stops (same array the Truck
+            // Planner displays) instead of the .seq field — see note in
+            // renderBoardView for why .seq can't be trusted here.
+            const sa=t.stops.findIndex(s=>s.woId===a.id);
+            const sb=t.stops.findIndex(s=>s.woId===b.id);
+            return (sa<0?999999:sa)-(sb<0?999999:sb);
           });
         return truckSection(t.name,colors[i%colors.length],tWOs,i===0?'🚚':'🚛');
       }).join('')
