@@ -690,7 +690,7 @@ const PRODUCT_CATS = {
     gauges: [],
     sizes: {}
   },
-  'Coil Stock (1x120)': {
+  'Hanger Strap (1x120)': {
     gauges: ['16','18','20','22','24'],
     sizes: {'16':['1x120'],'18':['1x120'],'20':['1x120'],'22':['1x120'],'24':['1x120']}
   },
@@ -701,6 +701,23 @@ const PRODUCT_CATS = {
       '24':['13x20x36 Plenum Kit','13x20x48 Plenum Kit','Custom'],
       '22':['Custom'],
       '20':['Custom']
+    }
+  },
+  'Coils': {
+    gauges: ['30','28','26','24','22','20','18','16','14','12','11','10'],
+    sizes: {
+      '30':['60', '48', '36', '5.394'],
+      '28':['60', '48', '36', '5.394'],
+      '26':['60', '48', '36', '5.394'],
+      '24':['60', '48', '36', '5.394'],
+      '22':['60', '48', '36', '5.394'],
+      '20':['60', '48', '36', '5.394'],
+      '18':['60', '48', '36', '5.394'],
+      '16':['60', '48', '36', '5.394'],
+      '14':['60', '48', '36', '5.394'],
+      '12':['60', '48', '36', '5.394'],
+      '11':['60', '48', '36', '5.394'],
+      '10':['60', '48', '36', '5.394']
     }
   },
   'Other / Hardware': {
@@ -722,6 +739,13 @@ const PRODUCT_CATS = {
     }
   }
 };
+
+// Legacy category key migration — 'Coil Stock (1x120)' was renamed to
+// 'Hanger Strap (1x120)' to match what it's actually used for. Any WO/line
+// item already saved in Supabase under the old key is remapped on load so
+// it keeps rendering correctly (see _rowToItem) instead of pointing at a
+// category that no longer exists in PRODUCT_CATS.
+const LEGACY_CAT_KEYS = { 'Coil Stock (1x120)': 'Hanger Strap (1x120)' };
 
 // Category display-name overrides — keyed by the STABLE internal
 // PRODUCT_CATS key (e.g. 'Other / Hardware'), never by the key itself.
@@ -910,7 +934,7 @@ function _liToRow(item, wo) {
 // DB row → WO item field name mapping
 function _rowToItem(row) {
   return {
-    id: row.id, _dbId: row.id, productCat: row.product_cat, type: row.type, gauge: row.gauge,
+    id: row.id, _dbId: row.id, productCat: LEGACY_CAT_KEYS[row.product_cat] || row.product_cat, type: row.type, gauge: row.gauge,
     size: row.size, qty: row.qty, wtUnit: row.wt_unit, bundle: row.bundle,
     weight: row.weight, station: row.station, isDual: row.is_dual,
     step1Op: row.step1_op, step1Status: row.step1_status, step1CompletedBy: row.step1_completed_by,
@@ -1265,7 +1289,7 @@ async function sbLoadState() {
             case 'category_names': {const cn=typeof val==='string'?JSON.parse(val):val;if(cn&&typeof cn==='object')Object.assign(CATEGORY_DISPLAY_NAMES,cn);} break;
             case 'linear_weights': {const lw=typeof val==='string'?JSON.parse(val):val;if(lw&&typeof lw==='object'){Object.assign(LINEAR_WEIGHTS,lw);console.log('[adminConfig] loaded linear_weights, keys:',Object.keys(lw).length);}} break;
             case 'sheet_weights':  {const sw=typeof val==='string'?JSON.parse(val):val;if(sw&&typeof sw==='object')Object.assign(SHEET_WEIGHTS,sw);} break;
-            case 'product_cats': {const pcSaved=typeof val==='string'?JSON.parse(val):val;if(pcSaved&&typeof pcSaved==='object'&&typeof settingsProdCat!=='undefined'&&!settingsProdCat){Object.keys(pcSaved).forEach(cat=>{if(PRODUCT_CATS[cat])PRODUCT_CATS[cat]=pcSaved[cat];});}} break;
+            case 'product_cats': {const pcSaved=typeof val==='string'?JSON.parse(val):val;if(pcSaved&&typeof pcSaved==='object'&&typeof settingsProdCat!=='undefined'&&!settingsProdCat){Object.keys(pcSaved).forEach(cat=>{PRODUCT_CATS[cat]=pcSaved[cat];});}} break;
             case 'hardware_packaging': {const hp=typeof val==='string'?JSON.parse(val):val;if(hp&&typeof hp==='object')Object.assign(HARDWARE_PACKAGING,hp);} break;
             case 'weatherGeocodeCache': {const wgc=typeof val==='string'?JSON.parse(val):val;if(wgc&&typeof wgc==='object'){if(!state.adminConfig)state.adminConfig={};state.adminConfig.weatherGeocodeCache=wgc;}} break;
             case 'cityCoordsOverride': {const cco=typeof val==='string'?JSON.parse(val):val;if(cco&&typeof cco==='object'){if(!state.adminConfig)state.adminConfig={};state.adminConfig.cityCoordsOverride=cco;}} break;
@@ -2513,7 +2537,7 @@ const STATION_CAT_MAP = {
   'SHEAR \u2192 BREAK': 'Flat Sheet',
   'BREAK':      'Flat Sheet',
   'PLENUMS':    'Flat Sheet',
-  'ROLLERS':    'Coil Stock (1x120)',
+  'ROLLERS':    'Hanger Strap (1x120)',
 };
 
 function liStationChange(n, station){
@@ -11138,6 +11162,10 @@ function renderSettingsProducts(){
         </div>`;
       }).join('')}
     </div>
+    <div class="flex gap8 mt12">
+      <input type="text" id="new-product-cat" placeholder="New category name (e.g. Coils)" style="flex:1;max-width:280px">
+      <button class="btn btn-sm btn-primary" onclick="addProductCategory()">+ Add Category</button>
+    </div>
   </div>
   ${settingsProdCat?renderProductCatEditor():
     '<div style="text-align:center;padding:32px;color:var(--text3);font-size:13px">Select a product category above to view and edit its catalog</div>'}
@@ -11329,6 +11357,18 @@ async function updateProductWeight(cat, gauge, sizeIdx, wtVal, bundleVal){
 // both start as hardcoded defaults in the source, but any admin edits need to
 // actually reach Supabase — otherwise they only live in the current browser
 // tab and vanish on the next reload, or never reach anyone else's device.
+async function addProductCategory(){
+  const inp=document.getElementById('new-product-cat');
+  const name=inp?inp.value.trim():'';
+  if(!name)return;
+  if(PRODUCT_CATS[name]){toast('That category already exists');return;}
+  PRODUCT_CATS[name]={gauges:[],sizes:{}};
+  const ok = await saveProductCats();
+  toast(ok ? `✓ "${name}" category added` : '⚠ Save failed — check connection and try again', ok?2500:5000);
+  settingsProdCat=name;
+  renderSettings(document.getElementById('content'));
+}
+
 async function renameProductCategory(cat){
   const current = catLabel(cat);
   const input = prompt('Rename category (display name only — internal behavior stays the same):', current);
@@ -11553,7 +11593,7 @@ function qbProductCat(cat, desc){
   if(d.includes('slip')) return'Slip';
   if(d.includes('drive')) return'Drive';
   // 1x120 coil stock → Coil Stock (1x120)
-  if((cat==='GlvCoil'||cat==='GVNLCoil')&&(d.includes('1x120')||d.includes('1" x 120')||d.includes("1' x 120"))) return'Coil Stock (1x120)';
+  if((cat==='GlvCoil'||cat==='GVNLCoil')&&(d.includes('1x120')||d.includes('1" x 120')||d.includes("1' x 120"))) return'Hanger Strap (1x120)';
   return QB_CAT_MAP[cat] || 'Other / Hardware';
 }
 
