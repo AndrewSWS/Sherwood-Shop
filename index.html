@@ -4026,15 +4026,27 @@ function renderBoardView(){
     const scaler = document.getElementById('board-scaler');
     if(!grid || !overlay || !scaler) return;
 
+    // Populate the pickup bar's actual content BEFORE measuring it. Previously
+    // this ran at the end (see old call further down), so every measurement here
+    // used whatever height the bar had from the PREVIOUS render — if pickup
+    // orders changed enough to wrap the bar to another row, the grid was scaled
+    // for the old (shorter) bar and board content ran into the pickup area on
+    // the 85in TV. Rendering first means offsetHeight below is always current.
+    renderBoardPickups();
+
     // Build a fingerprint of everything that affects board layout:
     // day range, WO *content* per day (not just count — a WO going from 0 items
     // to a full list, or gaining notes/waiting-vendor flags, changes its rendered
     // height without changing how many WOs are on the day), window dimensions,
-    // and the header/pickup-bar's own rendered height — a header that wraps to
+    // the header/pickup-bar's own rendered height — a header that wraps to
     // a second line (more buttons, a late font swap, etc.) changes how much
-    // room the grid actually has, even though nothing about the WOs changed.
+    // room the grid actually has, even though nothing about the WOs changed —
+    // and the pickup list itself, so a pickup-only change still forces a rescale
+    // even in the rare case its rendered height doesn't move.
     const headerHNow = header ? header.offsetHeight : 60;
     const pickupBarHNow = pickupBar ? Math.max(pickupBar.offsetHeight, 48) : 48;
+    const pickupFp = state.wos.filter(w=>w.isPickup && !w.pickupDate && !w.delivered)
+      .map(w=>`${w.id}:${w.readyForPickup?1:0}`).sort().join(',');
     const fp = [
       days.map(d=>d.iso).join(','),
       days.map(d => state.wos.filter(w=>w.delivery===d.iso).map(w=>{
@@ -4051,12 +4063,12 @@ function renderBoardView(){
       overlay.offsetWidth,
       overlay.offsetHeight,
       headerHNow,
-      pickupBarHNow
+      pickupBarHNow,
+      pickupFp
     ].join('|');
 
     if(fp === window._boardScaleFingerprint && window._boardScaleApplied){
-      renderBoardPickups();
-      return; // content identical — keep the existing scale, no glitch
+      return; // content identical (pickup bar already re-rendered above) — keep the existing scale, no glitch
     }
     window._boardScaleFingerprint = fp;
 
@@ -4101,8 +4113,6 @@ function renderBoardView(){
       scaler.style.overflow = 'hidden';
     }
     window._boardScaleApplied = true;
-
-    renderBoardPickups();
   }, 400);
 }
 
