@@ -8415,7 +8415,7 @@ function renderDashboard(c){
   }));
 
   // Unscheduled WOs — no delivery date set
-  const unscheduled=state.wos.filter(w=>!w.delivery&&!w.isPickup);
+  const unscheduled=state.wos.filter(w=>!w.delivery&&!w.isPickup&&!w.isStock);
   const pickups=state.wos.filter(w=>{
     if(!w.isPickup) return false;
     if(w.pickupDate) return false;
