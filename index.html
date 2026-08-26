@@ -5814,7 +5814,11 @@ async function renderBundleLog(c) {
   }
 
   try {
-    const rows = await _sbGet('bundle_usage', 'order=recorded_at.desc&limit=1000');
+    // _sbGetAll paginates past Supabase/PostgREST's implicit row caps —
+    // a plain limit=1000 here was silently hiding every record older than
+    // the most recent 1,000 (confirmed: 1,994 total rows in bundle_usage
+    // vs. only 1,000 ever reaching this page).
+    const rows = await _sbGetAll('bundle_usage', 'order=recorded_at.desc');
     _bundleLogData = rows || [];
     _bundleLogLoaded = true;
     blRender();
@@ -5859,6 +5863,19 @@ function blRender() {
     return true;
   });
 
+  // Sort by WO number, newest (highest) first. Simpler and more reliable
+  // than sorting by date — plenty of rows (especially backfilled/older
+  // ones) have no trustworthy completed_at or delivery_date, but every
+  // row has a WO #. Numeric part of the WO # is compared as a number so
+  // "47049" sorts above "9800"; falls back to plain string compare for
+  // anything non-numeric (e.g. stock WO#s like "S62926").
+  rows.sort((a,b) => {
+    const na = parseInt((a.wo_num||'').replace(/\D/g,''), 10);
+    const nb = parseInt((b.wo_num||'').replace(/\D/g,''), 10);
+    if(!isNaN(na) && !isNaN(nb) && na!==nb) return nb-na;
+    return String(b.wo_num||'').localeCompare(String(a.wo_num||''));
+  });
+
   // Summary bar
   const customers = new Set(rows.map(r=>r.customer).filter(Boolean));
   const coils     = new Set(rows.map(r=>r.coil_num).filter(Boolean));
@@ -5886,7 +5903,11 @@ function blRender() {
     </thead>
     <tbody>
       ${rows.map((r,i) => {
-        const dt = r.completed_at ? new Date(r.completed_at).toLocaleDateString([],{month:'short',day:'numeric',year:'2-digit'}) : '—';
+        const dispDate = r.completed_at || r.delivery_date || null;
+        // delivery_date is a plain date string (no time) — append noon to
+        // avoid it parsing as UTC midnight and displaying a day early in
+        // local timezones (same pattern used elsewhere in this app).
+        const dt = dispDate ? new Date(dispDate.length<=10 ? dispDate+'T12:00:00' : dispDate).toLocaleDateString([],{month:'short',day:'numeric',year:'2-digit'}) : '—';
         const skids = r.skid_splits && r.skid_splits.length
           ? `<span title="${r.skid_splits.map(s=>`${s.qty||'?'}×${s.size||s.type||'?'}`).join(', ')}" style="cursor:help;color:var(--blue)">${r.skid_splits.length} skid${r.skid_splits.length!==1?'s':''}</span>`
           : '—';
@@ -5930,22 +5951,34 @@ function startEditBundleCell(td, rowId, field){
 
 async function saveBundleCell(inp, rowId, field){
   const td = inp.parentElement;
+  const rec = _bundleLogData.find(r=>r.id===rowId);
+  const previousVal = rec ? (rec[field]||'') : '';
   if(inp.dataset.cancel){
-    const rec = _bundleLogData.find(r=>r.id===rowId);
-    td.innerHTML = (rec && rec[field]) || '—';
+    td.innerHTML = previousVal || '—';
     td.setAttribute('onclick', `startEditBundleCell(this,${rowId},'${field}')`);
     return;
   }
   const newVal = inp.value.trim();
+  // Optimistically show the new value while the PATCH is in flight...
   td.innerHTML = newVal || '—';
   td.setAttribute('onclick', `startEditBundleCell(this,${rowId},'${field}')`);
-  const rec = _bundleLogData.find(r=>r.id===rowId);
-  if(rec) rec[field] = newVal||null;
   const patch = {}; patch[field] = newVal||null;
   const result = await _sbPatch('bundle_usage', {id: rowId}, patch).catch(e=>{console.warn('saveBundleCell error',e);return null;});
-  if(!result){
+  // _sbPatch returns an array on success — but an empty array [] means the
+  // PATCH request itself succeeded while matching zero rows (bad id, or an
+  // RLS policy silently blocking the write). [] is truthy in JS, so a plain
+  // "if(!result)" check would report success even when nothing was actually
+  // written — which is exactly how edits could look saved but disappear on
+  // the next real fetch. Require an actual returned row.
+  const ok = Array.isArray(result) && result.length > 0;
+  if(!ok){
+    // ...revert both the DOM and local cache since it didn't actually persist
+    td.innerHTML = previousVal || '—';
+    if(rec) rec[field] = previousVal||null;
     toast('⚠ Failed to save — check connection and try again');
+    console.warn('saveBundleCell: PATCH returned no rows', {rowId, field, result});
   } else {
+    if(rec) rec[field] = newVal||null;
     toast('✓ Saved');
   }
 }
