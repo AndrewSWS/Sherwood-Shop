@@ -4389,6 +4389,7 @@ function setPickupReady(woId, ready){
       completedBy: item.completedBy,
       completedAt: item.completedAt
     }).catch(e=>console.warn('sbUpdateLI setPickupReady error',e));
+    if(ready && item.status==='Complete') sbLogBundleUsage(woId, item).catch(e=>console.warn('sbLogBundleUsage setPickupReady error',e));
   });
   saveState();
   sbUpdateWO(wo).catch(e=>console.warn('setPickupReady error',e));
@@ -4504,6 +4505,7 @@ function togglePickupModalItem(woId, itemId){
   sbUpdateLI(woId, itemId, {
     status: item.status, completedBy: item.completedBy, completedAt: item.completedAt
   }).catch(e=>console.warn('togglePickupModalItem sbUpdateLI error',e));
+  if(nowDone) sbLogBundleUsage(woId, item).catch(e=>console.warn('sbLogBundleUsage togglePickupModalItem error',e));
 
   // Keep readyForPickup in sync with whether every item is now done
   const allDone = wo.items.every(i=>i.status==='Complete');
@@ -4535,6 +4537,7 @@ function boardSetPickupReady(woId){
       completedBy: item.completedBy,
       completedAt: item.completedAt
     }).catch(e=>console.warn('sbUpdateLI boardSetPickupReady error',e));
+    sbLogBundleUsage(woId, item).catch(e=>console.warn('sbLogBundleUsage boardSetPickupReady error',e));
   });
   saveState();
   sbUpdateWO(wo).catch(e=>console.warn('boardSetPickupReady error',e));
