@@ -1149,9 +1149,12 @@ async function sbLoadState() {
     // opened directly self-heals its items on demand (see toggleWO), and
     // full history including line items is always available on-demand via
     // Customer Order History regardless of what's loaded here.
+    // Stock WOs (is_stock) are always exempt from the date cutoff — the
+    // Fabricated Stock page needs their items regardless of how old the
+    // WO is, and stock rarely if ever has a real delivery date anyway.
     const _weekAgoStr = localISO(new Date(Date.now() - 7*24*60*60*1000));
     const _activeOrRecentIds = wosRaw
-      .filter(r => !r.delivery || r.delivery >= _weekAgoStr)
+      .filter(r => r.is_stock || !r.delivery || r.delivery >= _weekAgoStr)
       .map(r => r.id);
 
     let lisRaw = [];
@@ -1880,7 +1883,7 @@ const VIEWS = {
   stockneeds:{title:'Stock Needs',actions:''},
   assign:{title:'Assign & Manage WOs',actions:'<div class="flex gap8" style="align-items:center"><input type="text" id="assign-search" placeholder="Search WO, customer..." oninput="filterAssignInPlace(this.value)" style="width:200px;padding:6px 10px;font-size:13px"><button id="assign-toggle" class="btn btn-sm" onclick="showAllAssign=!showAllAssign;updateAssignToggle();renderAssign(document.getElementById(\'assign-search\').value)">Show All</button></div>'},
   queue:{title:'Shop Queue — Unassigned',actions:'<div class="flex gap8"><button id="queue-toggle" class="btn btn-sm" onclick="showAllQueue=!showAllQueue;updateQueueToggle();scheduleRenderQueue()">Show All</button><button class="btn btn-sm" onclick="resetQueuePriorities()" title="Clear manual priorities — revert to delivery date order">↺ Reset Order</button><button class="btn btn-sm" style="background:#2a0a0a;color:#e05555;border:1px solid #5a1a1a;position:relative" onclick="showWaitingModal()">⏳ Waiting <span id="badge-waiting" style="background:#e05555;color:#fff;border-radius:10px;padding:1px 6px;font-size:11px;font-weight:700;margin-left:4px">0</span></button></div>'},
-  stock:{title:'Fabricated Stock',actions:'<input type="text" id="stock-search" placeholder="Search customer, WO#, spec..." oninput="renderStockView(this.value)" style="width:220px;padding:6px 10px;font-size:13px">'},
+  stock:{title:'Fabricated Stock',actions:'<input type="text" id="stock-search" placeholder="Search customer, WO#, spec..." oninput="renderStockView(this.value)" style="width:220px;padding:6px 10px;font-size:13px"> <button class="btn btn-primary btn-sm" onclick="openAddStockModal()">+ Add Stock</button>'},
   myview:{title:'My Tasks',actions:''},
   truck:{title:'Truck Planner',actions:'<button class="btn btn-primary no-print" onclick="printTruck()">🖨 Print Load Sheet</button> <a href="https://app03.linxup.com/ng/portal/index.html" target="_blank" rel="noopener" class="btn no-print" style="text-decoration:none">📡 Linxup Tracking</a>'},
   dashboard:{title:'Master Dashboard',actions:'<button class="btn" onclick="enterBoardView()" style="background:#1C2E1C;color:#fff;border:none">📺 Board View</button> <button class="btn" onclick="enterOfficeBoardView()" style="background:#0f1f3f;color:#A8D5A8;border:1px solid #2D6A2D">🖥 Office Board</button>'},
@@ -2089,11 +2092,17 @@ function toggleStockMode(checked){
   const custNote=document.getElementById('f-stock-note');
   const truckSel=document.getElementById('f-truck');
   const custInp=document.getElementById('f-cust');
+  const delivInp=document.getElementById('f-delivery');
   if(checked){
     if(truckWrap) truckWrap.style.display='none';
     if(truckNote) truckNote.style.display='block';
     if(custNote) custNote.style.display='block';
     if(truckSel) truckSel.value='';
+    // Stock orders don't have a real delivery date — leaving one set here
+    // (whatever was previously typed in) causes their line items to age
+    // out of the recent-window load filter in sbLoadState and vanish from
+    // the Fabricated Stock page even though the WO/items are fine in the DB.
+    if(delivInp){ delivInp.value=''; delivInp.disabled=true; }
     // Only auto-fill if customer is empty — don't clobber a customer-specific stock pick
     if(custInp && !custInp.value.trim()){
       const sherwood=getCustomers().find(c=>c.name.toLowerCase()==='sherwood steel');
@@ -2103,6 +2112,7 @@ function toggleStockMode(checked){
     if(truckWrap) truckWrap.style.display='';
     if(truckNote) truckNote.style.display='none';
     if(custNote) custNote.style.display='none';
+    if(delivInp) delivInp.disabled=false;
   }
 }
 
@@ -2873,6 +2883,173 @@ function renderStockView(search,c){
     }).join('');
 }
 
+// ── Manually add fabricated stock (no full Work Order flow) ──────────────
+
+// All is_stock line items with a real DB id, regardless of remaining — used
+// by the "Add to Existing" picker so a fully-used item can still be topped
+// up (getAvailableStockItems() intentionally hides remaining<=0 items).
+function getAllStockItemsForAdd(){
+  const results=[];
+  state.wos.forEach(wo=>{
+    if(!wo.isStock) return;
+    (wo.items||[]).forEach(item=>{
+      if(!item._dbId) return;
+      results.push({wo,item,remaining:getStockRemaining(item)});
+    });
+  });
+  results.sort((a,b)=>{
+    if(a.wo.customer!==b.wo.customer) return (a.wo.customer||'').localeCompare(b.wo.customer||'');
+    return b.remaining-a.remaining;
+  });
+  return results;
+}
+
+function openAddStockModal(){
+  const existing=document.getElementById('addstock-modal');
+  if(existing)existing.remove();
+  window._addStockExisting=getAllStockItemsForAdd();
+  const modal=document.createElement('div');
+  modal.id='addstock-modal';
+  modal.style.cssText='position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:16px';
+  modal.onclick=e=>{if(e.target===modal)closeAddStockModal();};
+  modal.innerHTML=`
+  <div style="background:var(--surface);border-radius:var(--rad2);padding:20px;width:100%;max-width:520px;max-height:85vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.2)">
+    <div class="flex-between mb12">
+      <div style="font-size:15px;font-weight:700">📦 Add Fabricated Stock</div>
+      <button class="btn btn-sm" onclick="closeAddStockModal()">✕ Cancel</button>
+    </div>
+    <div class="flex gap6 mb12">
+      <button class="btn btn-sm" id="addstock-tab-existing" onclick="switchAddStockTab('existing')" style="flex:1">Add to Existing</button>
+      <button class="btn btn-sm" id="addstock-tab-new" onclick="switchAddStockTab('new')" style="flex:1">New Item</button>
+    </div>
+    <div id="addstock-body"></div>
+  </div>`;
+  document.body.appendChild(modal);
+  switchAddStockTab('existing');
+}
+
+function closeAddStockModal(){
+  const m=document.getElementById('addstock-modal');
+  if(m)m.remove();
+}
+
+function switchAddStockTab(tab){
+  window._addStockTab=tab;
+  const tExisting=document.getElementById('addstock-tab-existing');
+  const tNew=document.getElementById('addstock-tab-new');
+  if(tExisting) tExisting.style.cssText=tab==='existing'?'flex:1;background:var(--blue);color:#fff':'flex:1';
+  if(tNew) tNew.style.cssText=tab==='new'?'flex:1;background:var(--blue);color:#fff':'flex:1';
+  const body=document.getElementById('addstock-body');
+  if(!body)return;
+  if(tab==='existing'){
+    const items=window._addStockExisting||[];
+    if(!items.length){
+      body.innerHTML='<div style="text-align:center;padding:24px;color:var(--text3);font-size:13px">No stock items to add to yet — use "New Item" instead.</div>';
+      return;
+    }
+    body.innerHTML=`
+      <div class="field mb12"><label class="lbl">Stock Item</label>
+        <select id="addstock-item-sel" style="width:100%">
+          ${items.map((r,i)=>`<option value="${i}">${r.wo.customer} — WO #${r.wo.woNum} · ${[r.item.productCat,r.item.gauge,r.item.size].filter(Boolean).join(' ')} (${r.remaining} remaining)</option>`).join('')}
+        </select>
+      </div>
+      <div class="field mb12"><label class="lbl">Qty to Add</label>
+        <input type="number" id="addstock-qty" min="1" placeholder="Qty" style="width:100%">
+      </div>
+      <button class="btn btn-primary" style="width:100%" onclick="submitAddToExistingStock()">💾 Add Stock</button>`;
+  } else {
+    const custOpts=getCustomers().map(c=>`<option value="${c.name}">`).join('');
+    const catOpts=Object.keys(PRODUCT_CATS).map(c=>`<option value="${c}">${catLabel(c)}</option>`).join('');
+    body.innerHTML=`
+      <div class="field mb12"><label class="lbl">Customer</label>
+        <input type="text" id="addstock-cust" list="addstock-cust-list" value="Sherwood Steel" style="width:100%">
+        <datalist id="addstock-cust-list">${custOpts}</datalist>
+      </div>
+      <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:8px" class="mb12">
+        <div class="field"><label class="lbl">Product Category</label>
+          <select id="addstock-cat" style="width:100%">${catOpts}</select>
+        </div>
+        <div class="field"><label class="lbl">Gauge</label>
+          <input type="text" id="addstock-gauge" placeholder="e.g. 20" style="width:100%"></div>
+        <div class="field"><label class="lbl">Size</label>
+          <input type="text" id="addstock-size" placeholder="e.g. 4&quot; x 55.5&quot;" style="width:100%"></div>
+      </div>
+      <div class="field mb12"><label class="lbl">Qty</label>
+        <input type="number" id="addstock-newqty" min="1" placeholder="Qty" style="width:100%"></div>
+      <div class="field mb12"><label class="lbl">Notes (optional)</label>
+        <input type="text" id="addstock-notes" placeholder="e.g. leftover from run, counted on shelf..." style="width:100%"></div>
+      <button class="btn btn-primary" style="width:100%" onclick="submitNewStockItem()">💾 Add Stock</button>`;
+  }
+}
+
+async function submitAddToExistingStock(){
+  const items=window._addStockExisting||[];
+  const idx=parseInt(document.getElementById('addstock-item-sel')?.value);
+  const r=items[idx];
+  if(!r){toast('⚠ Select a stock item');return;}
+  const addQty=parseFloat(document.getElementById('addstock-qty')?.value);
+  if(!addQty||addQty<=0){toast('⚠ Enter a valid quantity');return;}
+  const item=r.item, wo=r.wo;
+  const newQty=(parseFloat(item.qty)||0)+addQty;
+  const stamp=`+${addQty} added manually by ${state.currentUser||'—'} on ${fmtDate(localISO(new Date()))}`;
+  item.notes=item.notes?`${item.notes} · ${stamp}`:stamp;
+  item.qty=newQty;
+  saveState();
+  await sbUpdateLI(wo.id,item.id,{qty:newQty,notes:item.notes}).catch(e=>console.warn('addToExistingStock error',e));
+  toast(`✓ Added ${addQty} — now ${newQty} on WO #${wo.woNum}`);
+  closeAddStockModal();
+  renderStockView(document.getElementById('stock-search')?.value||'');
+}
+
+async function submitNewStockItem(){
+  const cust=document.getElementById('addstock-cust')?.value.trim();
+  const productCat=document.getElementById('addstock-cat')?.value;
+  const gauge=document.getElementById('addstock-gauge')?.value.trim();
+  const size=document.getElementById('addstock-size')?.value.trim();
+  const qty=parseFloat(document.getElementById('addstock-newqty')?.value);
+  const notes=document.getElementById('addstock-notes')?.value.trim();
+  if(!cust){toast('⚠ Customer required');return;}
+  if(!qty||qty<=0){toast('⚠ Enter a valid quantity');return;}
+
+  const now=new Date().toISOString();
+  const newItem={
+    id:Date.now()+Math.random(), productCat, gauge, size, qty, wtUnit:0, weight:0,
+    station:'', notes:notes||'', status:'Complete',
+    completedBy:state.currentUser||'Manual Stock', completedAt:now,
+    customer:cust, delivery:''
+  };
+
+  // Reuse an existing stock WO for this customer if one exists — keeps
+  // stock consolidated per-customer instead of spawning a new WO number
+  // every time someone logs extra pieces found or produced.
+  let wo=state.wos.find(w=>w.isStock && (w.customer||'').toLowerCase()===cust.toLowerCase());
+  if(wo){
+    wo.items.push(newItem);
+    saveState();
+    const rows=await _sbPost('line_items', _liToRow(newItem, wo)).catch(e=>{console.warn('addNewStockItem line insert error',e);return null;});
+    if(Array.isArray(rows)&&rows[0]) newItem._dbId=rows[0].id;
+    toast(`✓ Added to existing stock WO #${wo.woNum}`);
+  } else {
+    // No stock WO for this customer yet — create one. WO# must be unique
+    // (DB constraint), so auto-generate one that won't collide with real
+    // QB order numbers.
+    const woNum=`STK-${Date.now()}`;
+    wo={
+      id:Date.now(),woNum,po:'',customer:cust,address:'',cityst:'',zone:'',
+      date:localISO(new Date()),delivery:'',isPickup:false,isStock:true,
+      pickupExpectedDate:'',truck:'',notes:'Manually added fabricated stock',
+      items:[newItem],created:now
+    };
+    state.wos.push(wo);
+    saveState();
+    await sbCreateWO(wo).catch(e=>console.warn('addNewStockItem sbCreateWO error',e));
+    toast(`✓ Created stock WO #${woNum}`);
+  }
+  updateBadges();
+  closeAddStockModal();
+  renderStockView(document.getElementById('stock-search')?.value||'');
+}
+
 async function saveWO(){
   const woNum=document.getElementById('f-wonum').value.trim();
   const cust=document.getElementById('f-cust').value.trim();
@@ -2897,7 +3074,9 @@ async function saveWO(){
     id:Date.now(),woNum,po:document.getElementById('f-po').value.trim(),
     customer:cust,address:document.getElementById('f-addr').value,
     cityst:document.getElementById('f-cityst').value,zone:document.getElementById('f-zone').value,
-    date:document.getElementById('f-date').value,delivery:document.getElementById('f-delivery').value,isPickup:document.getElementById('f-pickup')?.checked||false,
+    date:document.getElementById('f-date').value,
+    delivery:document.getElementById('f-stock')?.checked?'':document.getElementById('f-delivery').value,
+    isPickup:document.getElementById('f-pickup')?.checked||false,
     isStock:document.getElementById('f-stock')?.checked||false,
     pickupExpectedDate:document.getElementById('f-pickup-date')?.value||'',
     truck:document.getElementById('f-stock')?.checked?'':document.getElementById('f-truck').value,
@@ -4611,7 +4790,7 @@ function editWO(id){
     +'<div class="autocomplete-wrap"><input type="text" id="e-cust" value="'+wo.customer+'" placeholder="Type to search..." oninput="custSearch(this.value)" autocomplete="off"><div class="autocomplete-list" id="cust-drop" style="display:none"></div></div>'
     +'<div id="e-stock-note" style="display:'+(wo.isStock?'block':'none')+';margin-top:6px;font-size:11px;color:var(--text3)">Defaults to Sherwood Steel for internal stock — change it if this is customer-specific stock.</div>'
     +'</div>'
-    +'<div class="field"><label class="lbl">Delivery Date</label><div style="display:flex;align-items:center;gap:10px"><input type="date" id="e-delivery" value="'+(wo.delivery||'')+'"'+(wo.isPickup?' disabled':'')+' style="flex:1"><label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;cursor:pointer"><input type="checkbox" id="e-pickup" '+(wo.isPickup?'checked':'')+' onchange="if(this.checked){var d=document.getElementById(\'e-delivery\');d.value=\'\';d.disabled=true;document.getElementById(\'e-pickup-date-wrap\').style.display=\'flex\';}else{document.getElementById(\'e-delivery\').disabled=false;document.getElementById(\'e-pickup-date-wrap\').style.display=\'none\';}"> &#x1F3EA; Pick Up</label></div><div id="e-pickup-date-wrap" style="display:'+(wo.isPickup?'flex':'none')+';align-items:center;gap:8px;margin-top:6px"><label class="lbl" style="margin:0;white-space:nowrap">Expected Pick Up</label><input type="date" id="e-pickup-date" value="'+(wo.pickupExpectedDate||'')+'" style="flex:1"></div></div>'
+    +'<div class="field"><label class="lbl">Delivery Date</label><div style="display:flex;align-items:center;gap:10px"><input type="date" id="e-delivery" value="'+(wo.isStock?'':(wo.delivery||''))+'"'+((wo.isPickup||wo.isStock)?' disabled':'')+' style="flex:1"><label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;cursor:pointer"><input type="checkbox" id="e-pickup" '+(wo.isPickup?'checked':'')+' onchange="if(this.checked){var d=document.getElementById(\'e-delivery\');d.value=\'\';d.disabled=true;document.getElementById(\'e-pickup-date-wrap\').style.display=\'flex\';}else{document.getElementById(\'e-delivery\').disabled=false;document.getElementById(\'e-pickup-date-wrap\').style.display=\'none\';}"> &#x1F3EA; Pick Up</label></div><div id="e-pickup-date-wrap" style="display:'+(wo.isPickup?'flex':'none')+';align-items:center;gap:8px;margin-top:6px"><label class="lbl" style="margin:0;white-space:nowrap">Expected Pick Up</label><input type="date" id="e-pickup-date" value="'+(wo.pickupExpectedDate||'')+'" style="flex:1"></div></div>'
     +'</div>'
     +'<div class="grid3 mb12">'
     +'<div class="field"><label class="lbl">Address</label><input type="text" id="e-addr" value="'+(wo.address||'')+'"></div>'
@@ -4636,11 +4815,17 @@ function toggleStockModeEdit(checked){
   const custNote=document.getElementById('e-stock-note');
   const truckSel=document.getElementById('e-truck');
   const custInp=document.getElementById('e-cust');
+  const delivInp=document.getElementById('e-delivery');
   if(checked){
     if(truckWrap) truckWrap.style.display='none';
     if(truckNote) truckNote.style.display='block';
     if(custNote) custNote.style.display='block';
     if(truckSel) truckSel.value='';
+    // Stock orders don't have a real delivery date — leaving one set here
+    // causes their line items to age out of the recent-window load filter
+    // in sbLoadState and vanish from the Fabricated Stock page even though
+    // the WO/items are fine in the DB.
+    if(delivInp){ delivInp.value=''; delivInp.disabled=true; }
     if(custInp && !custInp.value.trim()){
       const sherwood=getCustomers().find(c=>c.name.toLowerCase()==='sherwood steel');
       if(sherwood) selectCust(sherwood);
@@ -4649,6 +4834,7 @@ function toggleStockModeEdit(checked){
     if(truckWrap) truckWrap.style.display='';
     if(truckNote) truckNote.style.display='none';
     if(custNote) custNote.style.display='none';
+    if(delivInp) delivInp.disabled=false;
   }
 }
 
@@ -4677,6 +4863,11 @@ function saveEditWO(id){
   } else {
     wo.delivery = editDelivery;
   }
+  // Safety net: stock WOs must never carry a delivery date, regardless of
+  // what was left in the field — a stale date silently drops the WO's
+  // line items from the recent-window load filter (see sbLoadState) and
+  // makes it disappear from Fabricated Stock even though it's fine in the DB.
+  if(wo.isStock) wo.delivery = '';
   wo.address=document.getElementById('e-addr').value;
   wo.cityst=document.getElementById('e-cityst').value;
   wo.zone=document.getElementById('e-zone').value;
