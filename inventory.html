@@ -197,6 +197,22 @@ async function sbDelete(table,bundleNum){
   try{const r=await fetch(`${SB_URL}/rest/v1/${table}?bundle_num=eq.${encodeURIComponent(bundleNum)}`,{method:'DELETE',headers:{...SB_HDR,'Prefer':'return=minimal'}});return r.ok;}
   catch(e){return false;}
 }
+// Batched delete for archiving many rows at once — avoids one DELETE request per row.
+// PostgREST 'in.(...)' filter; each value URL-encoded individually since bundle_num can contain
+// spaces/pipes/periods now that invSheets keys are composite (gauge|size|vendor|bundleNum).
+async function sbDeleteMany(table,bundleNums){
+  if(!bundleNums||!bundleNums.length)return true;
+  let ok=true;
+  for(let i=0;i<bundleNums.length;i+=100){
+    const chunk=bundleNums.slice(i,i+100);
+    const list=chunk.map(b=>encodeURIComponent(b)).join(',');
+    try{
+      const r=await fetch(`${SB_URL}/rest/v1/${table}?bundle_num=in.(${list})`,{method:'DELETE',headers:{...SB_HDR,'Prefer':'return=minimal'}});
+      if(!r.ok)ok=false;
+    }catch(e){ok=false;}
+  }
+  return ok;
+}
 async function sbPatch(table,bundleNum,body){
   try{const r=await fetch(`${SB_URL}/rest/v1/${table}?bundle_num=eq.${encodeURIComponent(bundleNum)}`,{method:'PATCH',headers:{...SB_HDR,'Prefer':'return=minimal'},body:JSON.stringify(body)});return r.ok;}
   catch(e){return false;}
@@ -235,11 +251,12 @@ async function reconcileImport(parsedData, fname){
   for(const [key,table] of Object.entries(SB_TABLES)){
     const newRows=parsedData[key]||[];
 
-    // Build lookup of new data by bundleNum — use desc as key for Elgen
+    // Build lookup of new data by identity key — prefer composite key (invSheets) since
+    // bundleNum tags can be physically reused across different vendors/gauges; use desc as key for Elgen
     const newByBundle={};
     for(let ri=0;ri<newRows.length;ri++){
       const row=newRows[ri];
-      const bn=String(row.bundleNum||row.mjsTag||row.heatNum||row.desc||'').trim()||`row-${ri}`;
+      const bn=String(row.key||row.bundleNum||row.mjsTag||row.heatNum||row.desc||'').trim()||`row-${ri}`;
       newByBundle[bn]=row;
     }
 
@@ -253,21 +270,22 @@ async function reconcileImport(parsedData, fname){
     const auditAddBatch=[];
     for(let ri=0;ri<newRows.length;ri++){
       const row=newRows[ri];
-      const bn=String(row.bundleNum||row.mjsTag||row.heatNum||row.desc||'').trim()||`row-${ri}`;
+      const bn=String(row.key||row.bundleNum||row.mjsTag||row.heatNum||row.desc||'').trim()||`row-${ri}`;
       const qty=parseInt(row.pcs||row.coils||0)+(parseFloat(row.weight||row.lf||0));
       if(qty===0) continue; // skip zero rows from Excel
       const isUpdate=!!existingByBundle[bn];
-      upsertBatch.push({bundle_num:bn,data:row,updated_at:ts});
       if(isUpdate){
-        // Only audit if data actually changed
+        // Only write/audit/count if data actually changed — otherwise skip entirely
+        // (no upsert, no updated_at bump, no egress) since this row is identical to what's stored
         const prev=existingByBundle[bn];
         const prevStr=JSON.stringify({pcs:prev.pcs,price:prev.price,total:prev.total});
         const newStr=JSON.stringify({pcs:row.pcs,price:row.price,total:row.total});
-        if(prevStr!==newStr){
-          auditAddBatch.push({tab:key,bundle_num:bn,data:{...row,_prev:{pcs:prev.pcs,price:prev.price,total:prev.total}},reason:'import_updated',archived_at:ts});
-        }
+        if(prevStr===newStr) continue;
+        upsertBatch.push({bundle_num:bn,data:row,updated_at:ts});
+        auditAddBatch.push({tab:key,bundle_num:bn,data:{...row,_prev:{pcs:prev.pcs,price:prev.price,total:prev.total}},reason:'import_updated',archived_at:ts});
         updated++;
       } else {
+        upsertBatch.push({bundle_num:bn,data:row,updated_at:ts});
         auditAddBatch.push({tab:key,bundle_num:bn,data:row,reason:'import_added',archived_at:ts});
         added++;
       }
@@ -287,12 +305,16 @@ async function reconcileImport(parsedData, fname){
 
     // Archive bundles in Supabase not in new Excel
     const auditBatch=[];
+    const toDelete=[];
     for(const [bn,data] of Object.entries(existingByBundle)){
       if(!newByBundle[bn]){
         auditBatch.push({tab:key,bundle_num:bn,data:{...data,pcs:0},reason:'import_removed',archived_at:ts});
-        await sbDelete(table,bn);
+        toDelete.push(bn);
         archived++;
       }
+    }
+    if(toDelete.length>0){
+      await sbDeleteMany(table,toDelete); // batched — one request per 100 rows instead of one per row
     }
     if(auditBatch.length>0){
       await sbUpsert('inventory_audit',auditBatch); // keep existing for removal tracking
@@ -312,7 +334,7 @@ async function reconcileImport(parsedData, fname){
 // ── MANUAL PCS UPDATE ──
 async function updatePcs(key,bundleNum,newPcs){
   const table=SB_TABLES[key];
-  const row=state[key].find(r=>r.bundleNum===bundleNum||r.heatNum===bundleNum||r.mjsTag===bundleNum||r.desc===bundleNum);
+  const row=state[key].find(r=>r.key===bundleNum||r.bundleNum===bundleNum||r.heatNum===bundleNum||r.mjsTag===bundleNum||r.desc===bundleNum);
   if(!row)return;
   const qty=parseInt(newPcs)||0;
   if(qty===0){
@@ -430,8 +452,9 @@ function renderInvSheets(){
         tbody+=`<tr class="section-header" style="background:#1a1a2a"><td colspan="9" style="color:#a0a8c8">📋 ${gauge} Ga — Sheets <span style="font-weight:400;color:#fff;font-size:11px;margin-left:8px">${gaugeSheets.length} items · ${fmt$(sumField(gaugeSheets,'total'))}</span></td></tr>`;
         gaugeSheets.forEach(r=>{
           const bn=r.bundleNum||'';
+          const editKey=r.key||bn;
           const pcsCell=`<td class="td-num"><input class="pcs-input" type="number" min="0" value="${r.pcs??''}"
-            onblur="updatePcs('invSheets','${bn}',this.value||'${r.pcs??0}')"></td>`;
+            onblur="updatePcs('invSheets','${editKey}',this.value||'${r.pcs??0}')"></td>`;
           const priceCell=`<td class="td-money">${fmt$(r.price)}</td>`;
           tbody+=`<tr>
             <td><span class="gauge-chip">${r.gauge||'—'}</span></td>
@@ -477,12 +500,13 @@ function renderInvSheets(){
         tbody+=`<tr class="section-header" style="background:#1a1a2a"><td colspan="9" style="color:#a0a8c8">📋 ${gauge} Ga — Sheets <span style="font-weight:400;color:#fff;font-size:11px;margin-left:8px">${gSheets.length} items · ${fmt$(sumField(gSheets,'total'))}</span></td></tr>`;
         gSheets.forEach(r=>{
           const bn=r.bundleNum||'';
+          const editKey=r.key||bn;
           tbody+=`<tr>
             <td><span class="gauge-chip">${r.gauge||'—'}</span></td>
             <td>${r.size||'—'}</td>
             <td><span class="vendor-badge">${r.vendor||'—'}</span></td>
             <td class="td-num"><input class="pcs-input" type="number" min="0" value="${r.pcs??''}"
-              onblur="updatePcs('invSheets','${bn}',this.value||'${r.pcs??0}')"></td>
+              onblur="updatePcs('invSheets','${editKey}',this.value||'${r.pcs??0}')"></td>
             <td>${r.bundle||'—'}</td>
             <td style="font-family:monospace;font-size:12px">${bn}</td>
             <td class="td-money">${fmt$(r.price)}</td>
@@ -777,7 +801,13 @@ function parseInvSheets(ws){
       bundleNum=`${gv}-${(sz>=0?String(row[sz]||''):'')+''}-${vd>=0?String(row[vd]||''):''}`.replace(/\s+/g,'-').replace(/[^a-zA-Z0-9-]/g,'').toLowerCase()+'-nobundle-'+(_pcsRaw||i);
       if(!bundleNum||bundleNum.startsWith('-nobundle'))continue;
     }
-    res.push({section:sec,gauge:gv,size:sz>=0?String(row[sz]||'').trim():'',vendor:vd>=0?String(row[vd]||'').trim():'',pcs:parseFloat(String(pv||'').replace(/,/g,''))||0,bundle:String(row[bn]||'').trim(),bundleNum,price:pr>=0?parseFloat(String(row[pr]||'').replace(/[$,]/g,''))||0:0,total:to>=0?parseFloat(String(row[to]||'').replace(/[$,]/g,''))||0:0});
+    const sizeV=sz>=0?String(row[sz]||'').trim():'',vendorV=vd>=0?String(row[vd]||'').trim():'';
+    // Composite key: bundle # tags get physically reused across different vendors/gauges/coils
+    // (e.g. "4664" used on both a 16ga MJS Grade-50 coil AND a 26ga OS G90 coil). Keying Supabase
+    // storage on gauge+size+vendor+bundleNum instead of bundleNum alone prevents one from silently
+    // overwriting the other on import. bundleNum itself is left untouched for display.
+    const key=`${gv}|${sizeV}|${vendorV}|${bundleNum}`.toLowerCase();
+    res.push({section:sec,gauge:gv,size:sizeV,vendor:vendorV,pcs:parseFloat(String(pv||'').replace(/,/g,''))||0,bundle:String(row[bn]||'').trim(),bundleNum,key,price:pr>=0?parseFloat(String(row[pr]||'').replace(/[$,]/g,''))||0:0,total:to>=0?parseFloat(String(row[to]||'').replace(/[$,]/g,''))||0:0});
   }
   return res;
 }
