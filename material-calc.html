@@ -32,6 +32,9 @@
   tbody td{padding:6px 8px;border-bottom:1px solid var(--border);}
   tbody tr.best{background:var(--green-l);font-weight:700;}
   .placeholder{color:var(--text3);font-size:13px;padding:8px 0;}
+  .mc3-row{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;margin-bottom:8px;align-items:end;}
+  .mc3-row .rm{background:none;border:1px solid var(--border);border-radius:var(--rad);color:var(--text3);cursor:pointer;padding:7px 10px;font-size:13px;}
+  .mc3-row .rm:hover{background:var(--amber-l);color:var(--amber);border-color:var(--amber);}
 </style>
 </head>
 <body>
@@ -72,6 +75,17 @@
           <input type="number" id="mc2-qty" min="1" value="1" oninput="mc2Calc()"></div>
       </div>
       <div id="mc2-results"></div>
+    </div>
+
+    <div class="card">
+      <h2>📊 Combine Multiple Cuts — Best Use of Material</h2>
+      <div class="desc">For when several orders need different cut sizes from the same gauge — figures out how to share sheets between them to minimize total sheets and waste, instead of treating each size independently.</div>
+      <div class="field mb12" style="max-width:200px"><label>Gauge</label>
+        <select id="mc3-gauge" onchange="mc3Calc()"></select></div>
+      <div id="mc3-rows"></div>
+      <button class="btn" onclick="addMc3Row()" style="margin-top:8px;margin-bottom:14px">+ Add Cut Size</button>
+      <div id="mc3-results"></div>
+      <div style="font-size:11px;color:var(--text3);margin-top:10px">Estimate only — uses a standard shelf-packing method. An experienced fabricator laying it out by hand may do slightly better on some combinations.</div>
     </div>
   </div>
 
@@ -241,16 +255,195 @@ function initGaugeSelects(){
   const opts = Object.keys(GA_LBS_PER_SQFT).map(g=>`<option value="${g}">${g.replace('CR',' CR')} ga</option>`).join('');
   document.getElementById('mc1-gauge').innerHTML = opts;
   document.getElementById('mc2-gauge').innerHTML = opts;
+  document.getElementById('mc3-gauge').innerHTML = opts;
+}
+
+// ── Multi-cut combined yield ───────────────────────────────────────────
+// Packs a mix of different piece sizes onto shared stock sheets using a
+// shelf-packing heuristic (First-Fit Decreasing Height): sort every
+// individual piece by its longer side, lay pieces left-to-right in
+// horizontal "shelves" whose height is set by the first (tallest) piece
+// placed in them, opening a new shelf when one won't fit within the
+// current shelf, and a new sheet when a shelf won't fit within the
+// remaining sheet height. This is a well-established, reliable heuristic
+// for 2D cutting-stock problems — not a guaranteed-perfect layout, but
+// consistently close to optimal and far better than planning each cut
+// size independently.
+let _mc3RowCounter = 0;
+
+function shelfPack(pieces, binW, binH){
+  // pieces: [{w,h}], already oriented long-side-as-w, short-side-as-h
+  const sorted = [...pieces].sort((a,b)=>b.h-a.h);
+  let sheets = 0;
+  let shelves = [];
+  let heightUsed = 0;
+
+  function newSheet(){ sheets++; shelves=[]; heightUsed=0; }
+
+  for(const p of sorted){
+    if(p.w > binW || p.h > binH) return {sheets: Infinity, impossible: true};
+    if(sheets===0) newSheet();
+    let placed = false;
+    for(const shelf of shelves){
+      if(shelf.usedWidth + p.w <= binW && p.h <= shelf.height){
+        shelf.usedWidth += p.w;
+        placed = true;
+        break;
+      }
+    }
+    if(!placed && heightUsed + p.h <= binH){
+      shelves.push({height:p.h, usedWidth:p.w});
+      heightUsed += p.h;
+      placed = true;
+    }
+    if(!placed){
+      newSheet();
+      shelves.push({height:p.h, usedWidth:p.w});
+      heightUsed += p.h;
+    }
+  }
+  return {sheets: sheets||0, impossible:false};
+}
+
+function calcMultiCutYield(gauge, pieceDefs){
+  // pieceDefs: [{w,l,qty}]
+  const sizes = STOCK_SIZES[gauge] || [];
+  const totalQty = pieceDefs.reduce((s,p)=>s+p.qty,0);
+  if(totalQty > 4000){
+    return {tooMany:true};
+  }
+  const instances = [];
+  pieceDefs.forEach(p=>{
+    const h = Math.min(p.w,p.l), w = Math.max(p.w,p.l);
+    for(let i=0;i<p.qty;i++) instances.push({w,h});
+  });
+  const totalUsedArea = pieceDefs.reduce((s,p)=>s+p.w*p.l*p.qty,0);
+
+  function singleFit(w,l,qty,binW,binH){
+    const fitNoRot = Math.floor(binW/w) * Math.floor(binH/l);
+    const fitRot   = Math.floor(binW/l) * Math.floor(binH/w);
+    const best = Math.max(fitNoRot, fitRot);
+    if(best<=0) return Infinity;
+    return Math.ceil(qty/best);
+  }
+
+  const results = [];
+  sizes.forEach(sizeStr=>{
+    const dims = parseSheetDims(sizeStr);
+    if(!dims) return;
+
+    // Strategy A: pack every size together on shared sheets (shelf heuristic)
+    const packA = shelfPack(instances, dims.w, dims.l);
+    const packB = shelfPack(instances, dims.l, dims.w);
+    const combinedSheets = Math.min(
+      packA.impossible ? Infinity : packA.sheets,
+      packB.impossible ? Infinity : packB.sheets
+    );
+
+    // Strategy B: dedicate separate sheets per size — the shelf heuristic
+    // isn't guaranteed optimal and can occasionally do WORSE than simply
+    // planning each cut size on its own (confirmed by testing). Always
+    // take whichever strategy uses fewer sheets, so combining cut sizes
+    // can only ever help, never hurt, versus planning them independently.
+    let separateSheets = 0, anySeparateImpossible = false;
+    pieceDefs.forEach(p=>{
+      const s = singleFit(p.w, p.l, p.qty, dims.w, dims.l);
+      if(!isFinite(s)) anySeparateImpossible = true;
+      else separateSheets += s;
+    });
+
+    const sheetsNeeded = Math.min(
+      combinedSheets,
+      anySeparateImpossible ? Infinity : separateSheets
+    );
+    if(!isFinite(sheetsNeeded)){ results.push({sizeStr, fits:false}); return; }
+
+    const stockAreaTotal = sheetsNeeded * dims.w * dims.l;
+    const wastePct = ((stockAreaTotal - totalUsedArea) / stockAreaTotal) * 100;
+    const wtPerSheet = calcFlatSheetWtPerPc(gauge, sizeStr) || 0;
+    results.push({ sizeStr, fits:true, sheetsNeeded, wastePct, totalStockWeight: wtPerSheet*sheetsNeeded });
+  });
+  results.sort((a,b)=>{
+    if(a.fits !== b.fits) return a.fits ? -1 : 1;
+    if(!a.fits) return 0;
+    if(a.sheetsNeeded !== b.sheetsNeeded) return a.sheetsNeeded - b.sheetsNeeded;
+    return a.wastePct - b.wastePct;
+  });
+  return {tooMany:false, results, totalQty};
+}
+
+function addMc3Row(w, l, qty){
+  _mc3RowCounter++;
+  const n = _mc3RowCounter;
+  const row = document.createElement('div');
+  row.className = 'mc3-row';
+  row.id = `mc3-row-${n}`;
+  row.innerHTML = `
+    <div class="field"><label>Piece Width (in)</label>
+      <input type="number" class="mc3-w" min="0" step="0.0625" placeholder="e.g. 7" value="${w||''}" oninput="mc3Calc()"></div>
+    <div class="field"><label>Piece Length (in)</label>
+      <input type="number" class="mc3-l" min="0" step="0.0625" placeholder="e.g. 48" value="${l||''}" oninput="mc3Calc()"></div>
+    <div class="field"><label>Qty</label>
+      <input type="number" class="mc3-qty" min="1" value="${qty||1}" oninput="mc3Calc()"></div>
+    <button class="rm" onclick="removeMc3Row(${n})" title="Remove">✕</button>`;
+  document.getElementById('mc3-rows').appendChild(row);
+  mc3Calc();
+}
+
+function removeMc3Row(n){
+  const rows = document.querySelectorAll('.mc3-row');
+  if(rows.length<=1){ return; } // keep at least one row
+  document.getElementById(`mc3-row-${n}`)?.remove();
+  mc3Calc();
+}
+
+function mc3Calc(){
+  const gauge = document.getElementById('mc3-gauge')?.value;
+  const box = document.getElementById('mc3-results');
+  if(!box) return;
+  const rowEls = document.querySelectorAll('.mc3-row');
+  const pieceDefs = [];
+  rowEls.forEach(rowEl=>{
+    const w = parseFloat(rowEl.querySelector('.mc3-w')?.value)||0;
+    const l = parseFloat(rowEl.querySelector('.mc3-l')?.value)||0;
+    const qty = parseFloat(rowEl.querySelector('.mc3-qty')?.value)||0;
+    if(w && l && qty) pieceDefs.push({w,l,qty});
+  });
+  if(!pieceDefs.length){ box.innerHTML = '<div class="placeholder">Add at least one cut size with width, length, and qty</div>'; return; }
+
+  const calc = calcMultiCutYield(gauge, pieceDefs);
+  if(calc.tooMany){ box.innerHTML = '<div class="placeholder">⚠ Too many total pieces to estimate at once (over 4,000) — try splitting into smaller batches.</div>'; return; }
+  if(!calc.results.length){ box.innerHTML = '<div class="placeholder">No standard stock sizes on file for this gauge</div>'; return; }
+
+  box.innerHTML = `
+    <div style="font-size:12px;color:var(--text3);margin-bottom:8px">${pieceDefs.length} cut size${pieceDefs.length!==1?'s':''}, ${calc.totalQty} pieces total</div>
+    <table>
+      <thead><tr><th>Stock Size</th><th>Sheets Needed</th><th>Waste</th><th>Stock Weight</th></tr></thead>
+      <tbody>
+        ${calc.results.map((r,i)=>{
+          if(!r.fits){
+            return `<tr style="opacity:.5"><td>${r.sizeStr}</td><td colspan="3" style="color:var(--text3)">One or more pieces too large for this stock size</td></tr>`;
+          }
+          return `<tr class="${i===0?'best':''}">
+            <td>${r.sizeStr}${i===0?' <span style="color:var(--green);font-size:11px">★ best</span>':''}</td>
+            <td>${r.sheetsNeeded}</td>
+            <td>${r.wastePct.toFixed(1)}%</td>
+            <td>${r.totalStockWeight?r.totalStockWeight.toFixed(1)+' lbs':'—'}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
 }
 
 initGaugeSelects();
 mc1Calc();
 mc2Calc();
+addMc3Row();
 
 // Refresh the Cut Yield section once live stock sizes arrive, so it
 // reflects whatever's actually configured in Settings → Product Catalog
 // rather than the hardcoded fallback for longer than necessary.
-loadLiveStockSizes().then(()=>{ mc2Calc(); });
+loadLiveStockSizes().then(()=>{ mc2Calc(); mc3Calc(); });
 </script>
 </body>
 </html>
