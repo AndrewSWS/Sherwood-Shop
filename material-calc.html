@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sherwood Steel — Material Calculator</title>
+<style>
+  :root{
+    --blue:#2D6A2D;--blue-l:#E8F4E8;--green:#3B6D11;--green-l:#EAF3DE;
+    --amber:#BA7517;--amber-l:#FAEEDA;
+    --border:#d8dce6;--surface:#fff;--page:#f0f2f5;
+    --text:#1C2E1C;--text2:#4a5f4a;--text3:#7a8f7a;
+    --rad:8px;--rad2:12px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--page);color:var(--text);}
+  .header{background:#1C2E1C;color:#fff;padding:0 24px;height:52px;display:flex;align-items:center;gap:12px;}
+  .header .brand{font-size:14px;font-weight:700;letter-spacing:.02em;}
+  .header .sub{font-size:11px;color:rgba(255,255,255,.5);}
+  .main{max-width:840px;margin:0 auto;padding:24px;}
+  .note{font-size:12px;color:var(--text3);margin-bottom:16px;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rad2);padding:20px;margin-bottom:20px;}
+  .card h2{font-size:15px;margin-bottom:4px;}
+  .card .desc{font-size:12px;color:var(--text3);margin-bottom:14px;}
+  .grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:12px;}
+  .field label{display:block;font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px;}
+  .field input,.field select{width:100%;padding:7px 9px;font-size:13px;border:1px solid var(--border);border-radius:var(--rad);background:#fff;color:var(--text);font-family:inherit;}
+  .field input:focus,.field select:focus{outline:none;border-color:var(--blue);}
+  .result{background:var(--blue-l);border:1px solid #b5d4f4;border-radius:var(--rad);padding:10px 12px;font-size:13px;text-align:center;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  thead th{text-align:left;border-bottom:1px solid var(--border);color:var(--text3);font-size:11px;text-transform:uppercase;padding:6px 8px;}
+  tbody td{padding:6px 8px;border-bottom:1px solid var(--border);}
+  tbody tr.best{background:var(--green-l);font-weight:700;}
+  .placeholder{color:var(--text3);font-size:13px;padding:8px 0;}
+</style>
+</head>
+<body>
+  <div class="header">
+    <div class="brand">SHERWOOD STEEL</div>
+    <div class="sub">Material Calculator</div>
+  </div>
+  <div class="main">
+    <div class="note">Galvanized steel only — figures are estimates, not a substitute for measuring actual stock on hand.</div>
+
+    <div class="card">
+      <h2>📐 Sheet Weight</h2>
+      <div class="desc">Weight for any size — including specialty/custom cuts not in the standard size list.</div>
+      <div class="grid4">
+        <div class="field"><label>Gauge</label>
+          <select id="mc1-gauge" onchange="mc1Calc()"></select></div>
+        <div class="field"><label>Width (in)</label>
+          <input type="number" id="mc1-width" min="0" step="0.0625" placeholder="e.g. 48" oninput="mc1Calc()"></div>
+        <div class="field"><label>Length (in)</label>
+          <input type="number" id="mc1-length" min="0" step="0.0625" placeholder="e.g. 96" oninput="mc1Calc()"></div>
+        <div class="field"><label>Qty</label>
+          <input type="number" id="mc1-qty" min="1" value="1" oninput="mc1Calc()"></div>
+      </div>
+      <div id="mc1-result" class="result">Enter dimensions above</div>
+    </div>
+
+    <div class="card">
+      <h2>✂️ Cut Yield — Best Stock Size</h2>
+      <div class="desc">How many stock sheets you'd need to cut, and how much waste, for each of your standard stock sizes in this gauge. Pieces can be rotated 90° to improve yield. <span id="mc2-source" style="color:var(--text3)"></span></div>
+      <div class="grid4">
+        <div class="field"><label>Gauge</label>
+          <select id="mc2-gauge" onchange="mc2Calc()"></select></div>
+        <div class="field"><label>Piece Width (in)</label>
+          <input type="number" id="mc2-width" min="0" step="0.0625" placeholder="e.g. 7" oninput="mc2Calc()"></div>
+        <div class="field"><label>Piece Length (in)</label>
+          <input type="number" id="mc2-length" min="0" step="0.0625" placeholder="e.g. 48" oninput="mc2Calc()"></div>
+        <div class="field"><label>Qty Needed</label>
+          <input type="number" id="mc2-qty" min="1" value="1" oninput="mc2Calc()"></div>
+      </div>
+      <div id="mc2-results"></div>
+    </div>
+  </div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════
+// Standalone Material Calculator — deliberately independent of index.html
+// (same file-separation approach as forecast.html / inventory.html in
+// this project). No Supabase connection, no live WO state — pure
+// reference math, safe to open/edit on its own.
+//
+// NOTE: the constants below (GA_LBS_PER_SQFT, standard stock sizes) are
+// intentionally duplicated from index.html rather than shared, matching
+// how this codebase already keeps forecast.html/inventory.html fully
+// self-contained. If a gauge's weight constant or a standard stock size
+// list ever changes in index.html, update it here too.
+// ═══════════════════════════════════════════════════════════════════════
+
+// Galvanized steel weight per square foot, by gauge — see index.html's
+// SHEET_WEIGHTS table for how these were derived (every standard size for
+// a given gauge divides out to the same lb/sqft, confirming it's a true
+// material constant). weight = lbPerSqFt × (width_in × length_in ÷ 144).
+const GA_LBS_PER_SQFT = {
+  '28': 0.6835938, '26': 0.7929688, '24': 1.0117188, '22': 1.2304688,
+  '20': 1.4492188, '18': 1.8867188, '16': 2.3242188, '16CR': 2.1875,
+  '14': 2.8710938, '11': 4.5117188
+};
+
+// Standard stock sheet sizes carried per gauge — mirrors
+// PRODUCT_CATS['Flat Sheet'].sizes in index.html. This is a fallback only;
+// on load we fetch the live version from Supabase (admin_config, key
+// 'product_cats') so edits made in index.html's Settings → Product Catalog
+// → Flat Sheet page are reflected here automatically — no separate admin
+// UI or table needed, since that page already persists the whole
+// PRODUCT_CATS object (gauges + sizes) to that one row.
+let STOCK_SIZES = {
+  '28':['24x96','30x96','36x96','48x96'],
+  '26':['24x96','30x96','36x96','48x96','48x120','60x96','60x120'],
+  '24':['36x96','48x96','48x120','60x120'],
+  '22':['36x95','48x96','48x120','60x120'],
+  '20':['48x96','48x120','60x120'],
+  '18':['48x96','48x120','60x120'],
+  '16':['48x96','48x120','60x120'],'16CR':['48x96','48x120'],
+  '14':['48x96'],'11':['48x96']
+};
+
+const _SB_URL = 'https://ecndvwmbycyppqkbvuzs.supabase.co';
+const _SB_KEY = 'sb_publishable_DPSLNDOI___sDI-lt3YbpQ_TGJbHaV-';
+const _SB_HDR = { 'Content-Type': 'application/json', 'apikey': _SB_KEY, 'Authorization': 'Bearer ' + _SB_KEY };
+
+async function loadLiveStockSizes(){
+  const srcEl = document.getElementById('mc2-source');
+  try {
+    const r = await fetch(`${_SB_URL}/rest/v1/admin_config?key=eq.product_cats&select=value`, { headers: _SB_HDR });
+    if(!r.ok){ if(srcEl) srcEl.textContent='(using built-in defaults — could not reach Supabase)'; return; }
+    const rows = await r.json();
+    if(!rows || !rows.length){ if(srcEl) srcEl.textContent='(using built-in defaults)'; return; }
+    const val = typeof rows[0].value === 'string' ? JSON.parse(rows[0].value) : rows[0].value;
+    const flatSheetSizes = val && val['Flat Sheet'] && val['Flat Sheet'].sizes;
+    if(flatSheetSizes && typeof flatSheetSizes === 'object'){
+      // Normalize gauge keys the same way index.html's own lookups do
+      // (strip spaces so "16 CR" matches this file's "16CR" convention).
+      const normalized = {};
+      Object.keys(flatSheetSizes).forEach(g=>{
+        normalized[g.replace(' ','')] = flatSheetSizes[g];
+      });
+      STOCK_SIZES = normalized;
+      if(srcEl) srcEl.textContent='(live from Settings → Product Catalog)';
+    }
+  } catch(e) {
+    // Network/parse failure — silently keep the hardcoded fallback above
+    // rather than breaking the calculator.
+    console.warn('loadLiveStockSizes failed, using built-in defaults', e);
+    if(srcEl) srcEl.textContent='(using built-in defaults — could not reach Supabase)';
+  }
+}
+
+function parseSheetDims(sizeStr){
+  const nums = String(sizeStr||'').match(/[\d.]+/g);
+  if(!nums || nums.length < 2) return null;
+  const w = parseFloat(nums[0]), l = parseFloat(nums[1]);
+  if(!w || !l) return null;
+  return {w, l};
+}
+
+function calcFlatSheetWtPerPc(gauge, sizeStr){
+  const g = String(gauge||'').replace('ga','').replace(' ','').trim();
+  const lbPerSqFt = GA_LBS_PER_SQFT[g];
+  const dims = parseSheetDims(sizeStr);
+  if(!lbPerSqFt || !dims) return 0;
+  return (dims.w * dims.l / 144) * lbPerSqFt;
+}
+
+function calcCutYield(gauge, pieceW, pieceL, qtyNeeded){
+  const sizes = STOCK_SIZES[gauge] || [];
+  const results = [];
+  sizes.forEach(sizeStr=>{
+    const dims = parseSheetDims(sizeStr);
+    if(!dims) return;
+    const fitNoRot = Math.floor(dims.w/pieceW) * Math.floor(dims.l/pieceL);
+    const fitRot   = Math.floor(dims.w/pieceL) * Math.floor(dims.l/pieceW);
+    const piecesPerSheet = Math.max(fitNoRot, fitRot);
+    const rotated = fitRot > fitNoRot;
+    if(piecesPerSheet <= 0){ results.push({sizeStr, fits:false}); return; }
+    const sheetsNeeded = Math.ceil(qtyNeeded / piecesPerSheet);
+    const stockAreaTotal = sheetsNeeded * dims.w * dims.l;
+    const usedArea = qtyNeeded * pieceW * pieceL;
+    const wastePct = ((stockAreaTotal - usedArea) / stockAreaTotal) * 100;
+    const wtPerSheet = calcFlatSheetWtPerPc(gauge, sizeStr) || 0;
+    results.push({
+      sizeStr, dims, fits:true, piecesPerSheet, rotated, sheetsNeeded,
+      wastePct, totalStockWeight: wtPerSheet*sheetsNeeded
+    });
+  });
+  results.sort((a,b)=>{
+    if(a.fits !== b.fits) return a.fits ? -1 : 1;
+    if(!a.fits) return 0;
+    if(a.sheetsNeeded !== b.sheetsNeeded) return a.sheetsNeeded - b.sheetsNeeded;
+    return a.wastePct - b.wastePct;
+  });
+  return results;
+}
+
+function mc1Calc(){
+  const gauge=document.getElementById('mc1-gauge').value;
+  const w=parseFloat(document.getElementById('mc1-width').value)||0;
+  const l=parseFloat(document.getElementById('mc1-length').value)||0;
+  const qty=parseFloat(document.getElementById('mc1-qty').value)||1;
+  const el=document.getElementById('mc1-result');
+  if(!w||!l){ el.textContent='Enter dimensions above'; return; }
+  const perPc=calcFlatSheetWtPerPc(gauge, `${w}x${l}`);
+  if(!perPc){ el.innerHTML='⚠ No weight table for that gauge'; return; }
+  el.innerHTML=`<strong>${perPc.toFixed(2)} lbs/pc</strong> × ${qty} = <strong>${(perPc*qty).toFixed(2)} lbs total</strong>`;
+}
+
+function mc2Calc(){
+  const gauge=document.getElementById('mc2-gauge').value;
+  const pieceW=parseFloat(document.getElementById('mc2-width').value)||0;
+  const pieceL=parseFloat(document.getElementById('mc2-length').value)||0;
+  const qty=parseFloat(document.getElementById('mc2-qty').value)||1;
+  const box=document.getElementById('mc2-results');
+  if(!pieceW||!pieceL){ box.innerHTML='<div class="placeholder">Enter piece dimensions above</div>'; return; }
+  const results=calcCutYield(gauge, pieceW, pieceL, qty);
+  if(!results.length){ box.innerHTML='<div class="placeholder">No standard stock sizes on file for this gauge</div>'; return; }
+  box.innerHTML=`
+    <table>
+      <thead><tr>
+        <th>Stock Size</th><th>Pcs/Sheet</th><th>Sheets Needed</th><th>Waste</th><th>Stock Weight</th>
+      </tr></thead>
+      <tbody>
+        ${results.map((r,i)=>{
+          if(!r.fits){
+            return `<tr style="opacity:.5"><td>${r.sizeStr}</td><td colspan="4" style="color:var(--text3)">Piece too large for this stock size</td></tr>`;
+          }
+          return `<tr class="${i===0?'best':''}">
+            <td>${r.sizeStr}${i===0?' <span style="color:var(--green);font-size:11px">★ best</span>':''}</td>
+            <td>${r.piecesPerSheet}${r.rotated?' <span style="font-size:10px;color:var(--text3)">(rotated)</span>':''}</td>
+            <td>${r.sheetsNeeded}</td>
+            <td>${r.wastePct.toFixed(1)}%</td>
+            <td>${r.totalStockWeight?r.totalStockWeight.toFixed(1)+' lbs':'—'}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+}
+
+function initGaugeSelects(){
+  const opts = Object.keys(GA_LBS_PER_SQFT).map(g=>`<option value="${g}">${g.replace('CR',' CR')} ga</option>`).join('');
+  document.getElementById('mc1-gauge').innerHTML = opts;
+  document.getElementById('mc2-gauge').innerHTML = opts;
+}
+
+initGaugeSelects();
+mc1Calc();
+mc2Calc();
+
+// Refresh the Cut Yield section once live stock sizes arrive, so it
+// reflects whatever's actually configured in Settings → Product Catalog
+// rather than the hardcoded fallback for longer than necessary.
+loadLiveStockSizes().then(()=>{ mc2Calc(); });
+</script>
+</body>
+</html>

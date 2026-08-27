@@ -529,6 +529,9 @@ select{cursor:pointer}
       <span class="icon">🛒</span> Stock Needs
       <span class="nav-badge" id="badge-stockneeds" style="display:none"></span>
     </div>
+    <div class="nav-item" onclick="nav('weightcalc',this)">
+      <span class="icon">🧮</span> Material Calculator
+    </div>
   </div>
   <div class="nav-section">
     <div class="nav-label">Analytics</div>
@@ -1920,6 +1923,7 @@ const VIEWS = {
   create:{title:'New Work Order',actions:'<div class="flex gap8"><button class="btn" onclick="triggerQBImport()">📥 Import from QuickBooks</button><button class="btn btn-primary no-print" onclick="saveWO()">💾 Save Work Order</button></div>'},
   bundlelog:{title:'Bundle Usage History',actions:'<div class="flex gap8"><button class="btn btn-sm btn-primary" onclick="openAddBundleModal()">+ Add Record</button><button class="btn btn-sm" onclick="refreshBundleLog()">🔄 Refresh</button><button class="btn btn-sm" onclick="exportBundleCSV()">⬇ Export CSV</button></div>'},
   stockneeds:{title:'Stock Needs',actions:''},
+  weightcalc:{title:'Material Calculator',actions:''},
   assign:{title:'Assign & Manage WOs',actions:'<div class="flex gap8" style="align-items:center"><input type="text" id="assign-search" placeholder="Search WO, customer..." oninput="filterAssignInPlace(this.value)" style="width:200px;padding:6px 10px;font-size:13px"><button id="assign-toggle" class="btn btn-sm" onclick="showAllAssign=!showAllAssign;updateAssignToggle();renderAssign(document.getElementById(\'assign-search\').value)">Show All</button></div>'},
   queue:{title:'Shop Queue — Unassigned',actions:'<div class="flex gap8"><button id="queue-toggle" class="btn btn-sm" onclick="showAllQueue=!showAllQueue;updateQueueToggle();scheduleRenderQueue()">Show All</button><button class="btn btn-sm" onclick="resetQueuePriorities()" title="Clear manual priorities — revert to delivery date order">↺ Reset Order</button><button class="btn btn-sm" style="background:#2a0a0a;color:#e05555;border:1px solid #5a1a1a;position:relative" onclick="showWaitingModal()">⏳ Waiting <span id="badge-waiting" style="background:#e05555;color:#fff;border-radius:10px;padding:1px 6px;font-size:11px;font-weight:700;margin-left:4px">0</span></button></div>'},
   stock:{title:'Fabricated Stock',actions:'<input type="text" id="stock-search" placeholder="Search customer, WO#, spec..." oninput="renderStockView(this.value)" style="width:220px;padding:6px 10px;font-size:13px"> <button class="btn btn-primary btn-sm" onclick="openAddStockModal()">+ Add Stock</button>'},
@@ -1968,6 +1972,14 @@ function nav(view,el){
     frame.style.display='flex';
     const pageSrc = view==='forecast' ? 'forecast.html' : 'inventory.html';
     if(frame.dataset.loaded!==pageSrc){frame.src=pageSrc;frame.dataset.loaded=pageSrc;}
+    return;
+  }
+  // iframe view — standalone page, no access code needed (no sensitive data,
+  // just a reference calculator — see material-calc.html)
+  if(view==='weightcalc'){
+    c.style.display='none';
+    frame.style.display='flex';
+    if(frame.dataset.loaded!=='material-calc.html'){frame.src='material-calc.html';frame.dataset.loaded='material-calc.html';}
     return;
   }
   // normal views — hide iframe, show content
