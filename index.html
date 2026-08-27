@@ -620,6 +620,41 @@ const SHEET_WEIGHTS = {
   '16|60x120':116.210938,'14|48x96':91.875,'11|48x96':144.375
 };
 
+// Galvanized steel weight per square foot, by gauge — derived from the exact
+// SHEET_WEIGHTS table above (every standard size for a given gauge divides
+// out to the same lb/sqft, confirming it's a true material constant, not a
+// per-size lookup). Used to compute weight for ANY size — including
+// specialty/custom cuts that have no entry in SHEET_WEIGHTS — via
+// weight = lbPerSqFt × (width_in × length_in ÷ 144) × qty.
+// Galvanized only — do not reuse for stainless/aluminum, which have
+// different densities and are not covered by this table.
+const GA_LBS_PER_SQFT = {
+  '28': 0.6835938, '26': 0.7929688, '24': 1.0117188, '22': 1.2304688,
+  '20': 1.4492188, '18': 1.8867188, '16': 2.3242188, '16CR': 2.1875,
+  '14': 2.8710938, '11': 4.5117188
+};
+
+// Parses a flat-sheet size string like '48x96', '48" x 96"', '4 x 55.5',
+// '4"x55.5"' into {w, l} in inches. Returns null if it can't find two
+// numbers (e.g. a linear-product "length" string like "8' Drive").
+function parseSheetDims(sizeStr){
+  const nums = String(sizeStr||'').match(/[\d.]+/g);
+  if(!nums || nums.length < 2) return null;
+  const w = parseFloat(nums[0]), l = parseFloat(nums[1]);
+  if(!w || !l) return null;
+  return {w, l};
+}
+
+// Computes per-piece weight for a galvanized flat sheet of any size —
+// including non-standard/specialty cuts not present in SHEET_WEIGHTS.
+function calcFlatSheetWtPerPc(gauge, sizeStr){
+  const g = String(gauge||'').replace('ga','').replace(' ','').trim();
+  const lbPerSqFt = GA_LBS_PER_SQFT[g];
+  const dims = parseSheetDims(sizeStr);
+  if(!lbPerSqFt || !dims) return 0;
+  return (dims.w * dims.l / 144) * lbPerSqFt;
+}
+
 // Linear products: key = "gauge|product", value = {wt: lbs/pc, bundle: pcs per bundle}
 const HARDWARE_PACKAGING = {
   'H Flange':"1500'/bundle (75pcs)",'H Corner':'400/box',
@@ -762,7 +797,11 @@ function getProductWeight(cat,gauge,size,qty){
   if(cat==='Flat Sheet'){
     const key=`${g}|${s.replace(' x ','x').replace('×','x')}`;
     const wt=SHEET_WEIGHTS[key]||SHEET_WEIGHTS[g+'CR|'+s.replace(' x ','x')]||0;
-    return wt*qty;
+    if(wt) return wt*qty;
+    // No exact match in the standard-size table (specialty/custom cut) —
+    // fall back to the formula: lb/sqft-for-this-gauge × area. Galvanized
+    // only; returns 0 (leaving it to manual entry) for unrecognized gauges.
+    return calcFlatSheetWtPerPc(g, s) * qty;
   }
   const lkey=`${g}|${s}`;
   if(LINEAR_WEIGHTS[lkey])return LINEAR_WEIGHTS[lkey].wt*qty;
@@ -2337,7 +2376,9 @@ function addLI(data){
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:8px">
     <div class="field">
-      <label class="lbl">Wt / Unit (lbs) <span style="font-weight:400;color:var(--green);font-size:10px" id="li-wt-src-${n}">auto</span></label>
+      <label class="lbl">Wt / Unit (lbs) <span style="font-weight:400;color:var(--green);font-size:10px" id="li-wt-src-${n}">auto</span>
+        <span onclick="openWtCalc('${n}')" title="Calculate weight for a specialty/custom-size cut" style="cursor:pointer;font-weight:400;color:var(--blue);font-size:10px;margin-left:6px">🧮 Calc</span>
+      </label>
       <input class="li-wtunit" type="number" min="0" step="0.01" placeholder="per pc" value="${data?data.wtUnit||'':''}"
         oninput="liWtUnitChange('${n}',this.value)" style="background:var(--green-l);border-color:#c0dd97">
     </div>
@@ -2504,6 +2545,87 @@ function liSizeChange(n, size, preWtUnit=null){
   }
   if(bndlHint){bndlHint.textContent=bsz?`Bundle = ${bsz} pcs`:hwPkg?`Pkg: ${hwPkg}`:'';}
   liRecalcWeight(n);
+}
+
+// ── Standalone weight calculator for specialty/custom flat-sheet cuts ─────
+// For sizes not in the standard dropdown/lookup table. Galvanized steel
+// only — uses the same GA_LBS_PER_SQFT constants as the auto-calc fallback
+// in getProductWeight, just exposed as an on-demand tool with a manual
+// gauge/dimensions entry instead of relying on the size dropdown.
+function openWtCalc(n){
+  const existing=document.getElementById('wtcalc-modal');
+  if(existing)existing.remove();
+  const el=document.getElementById('li-'+n);
+  const curGauge=el?el.querySelector('.li-gauge')?.value.replace(' ','').replace('ga',''):'';
+  const modal=document.createElement('div');
+  modal.id='wtcalc-modal';
+  modal.dataset.targetRow=n;
+  modal.style.cssText='position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:16px';
+  modal.onclick=e=>{if(e.target===modal)closeWtCalc();};
+  const gaugeOpts=Object.keys(GA_LBS_PER_SQFT).map(g=>`<option value="${g}"${g===curGauge?' selected':''}>${g.replace('CR',' CR')} ga</option>`).join('');
+  modal.innerHTML=`
+  <div style="background:var(--surface);border-radius:var(--rad2);padding:20px;width:100%;max-width:380px;box-shadow:0 8px 32px rgba(0,0,0,.2)">
+    <div class="flex-between mb12">
+      <div style="font-size:15px;font-weight:700">🧮 Calculate Sheet Weight</div>
+      <button class="btn btn-sm" onclick="closeWtCalc()">✕</button>
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:12px">Galvanized steel only. For a specialty/custom cut not in the standard size list.</div>
+    <div class="field mb12"><label class="lbl">Gauge</label>
+      <select id="wc-gauge" style="width:100%">${gaugeOpts}</select></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr" class="mb12" style="gap:8px">
+      <div class="field"><label class="lbl">Width (in)</label>
+        <input type="number" id="wc-width" min="0" step="0.0625" placeholder="e.g. 4" style="width:100%" oninput="calcWtPreview()"></div>
+      <div class="field"><label class="lbl">Length (in)</label>
+        <input type="number" id="wc-length" min="0" step="0.0625" placeholder="e.g. 55.5" style="width:100%" oninput="calcWtPreview()"></div>
+    </div>
+    <div class="field mb12"><label class="lbl">Qty (pieces)</label>
+      <input type="number" id="wc-qty" min="1" value="1" style="width:100%" oninput="calcWtPreview()"></div>
+    <div id="wc-preview" style="background:var(--blue-l);border:1px solid #b5d4f4;border-radius:var(--rad);padding:10px 12px;margin-bottom:12px;font-size:13px;text-align:center">
+      Enter dimensions above
+    </div>
+    <button class="btn btn-primary" style="width:100%" onclick="applyWtCalc('${n}')">Use This Weight</button>
+  </div>`;
+  document.body.appendChild(modal);
+  document.getElementById('wc-gauge').onchange=calcWtPreview;
+  calcWtPreview();
+}
+
+function closeWtCalc(){
+  const m=document.getElementById('wtcalc-modal');
+  if(m)m.remove();
+}
+
+function calcWtPreview(){
+  const gauge=document.getElementById('wc-gauge')?.value;
+  const w=parseFloat(document.getElementById('wc-width')?.value)||0;
+  const l=parseFloat(document.getElementById('wc-length')?.value)||0;
+  const qty=parseFloat(document.getElementById('wc-qty')?.value)||1;
+  const preview=document.getElementById('wc-preview');
+  if(!preview)return;
+  if(!w||!l){ preview.textContent='Enter dimensions above'; return; }
+  const perPc=calcFlatSheetWtPerPc(gauge, `${w}x${l}`);
+  if(!perPc){ preview.innerHTML='⚠ No weight table for that gauge'; return; }
+  const total=perPc*qty;
+  preview.innerHTML=`<strong>${perPc.toFixed(2)} lbs/pc</strong> × ${qty} = <strong>${total.toFixed(2)} lbs total</strong>`;
+}
+
+function applyWtCalc(n){
+  const gauge=document.getElementById('wc-gauge')?.value;
+  const w=parseFloat(document.getElementById('wc-width')?.value)||0;
+  const l=parseFloat(document.getElementById('wc-length')?.value)||0;
+  if(!w||!l){toast('⚠ Enter both dimensions');return;}
+  const perPc=calcFlatSheetWtPerPc(gauge, `${w}x${l}`);
+  if(!perPc){toast('⚠ No weight table for that gauge');return;}
+  const el=document.getElementById('li-'+n);
+  if(el){
+    const wtUnitEl=el.querySelector('.li-wtunit');
+    if(wtUnitEl){
+      wtUnitEl.value=perPc.toFixed(4).replace(/\.?0+$/,'');
+      liWtUnitChange(n, wtUnitEl.value);
+    }
+  }
+  toast(`✓ Applied ${perPc.toFixed(2)} lbs/pc`);
+  closeWtCalc();
 }
 
 function liWtUnitChange(n, val){
