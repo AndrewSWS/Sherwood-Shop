@@ -8077,8 +8077,9 @@ function renderTruckCard(t, filterDay){
         ${woDelivered?'✓':i+1}
       </div>
       <div style="flex:1;min-width:0;cursor:pointer" onclick="toggleStopDetail('${t.id}-${s.woId}')">
-        <div style="font-weight:600;font-size:13px;${woDelivered?'text-decoration:line-through;color:var(--text2);':''}cursor:pointer;display:flex;align-items:center;gap:4px">
-          ${s.customer} <span style="font-size:10px;color:var(--text3)">▾</span>
+        <div style="font-weight:600;font-size:13px;${woDelivered?'text-decoration:line-through;color:var(--text2);':''}cursor:pointer;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          ${s.customer}
+          <span id="stop-pill-${t.id}-${s.woId}" style="font-size:9px;font-weight:700;color:var(--blue);background:var(--blue-l);border:1px solid #b5d4f4;border-radius:10px;padding:2px 7px;letter-spacing:.02em;text-transform:uppercase;white-space:nowrap">🚚 Move / Reschedule ▾</span>
         </div>
         <div style="font-size:11px;color:var(--text2)">WO #${s.woNum}</div>
         <div class="stop-zone" style="margin-top:2px">${liveZone} · ${liveCityst}</div>
@@ -8214,7 +8215,10 @@ function closeDashWOPopout(){
 function toggleStopDetail(key){
   const el = document.getElementById('stop-detail-'+key);
   if(!el) return;
-  el.style.display = el.style.display==='none' ? 'block' : 'none';
+  const willOpen = el.style.display==='none';
+  el.style.display = willOpen ? 'block' : 'none';
+  const pill = document.getElementById('stop-pill-'+key);
+  if(pill) pill.innerHTML = willOpen ? '🚚 Move / Reschedule ▴' : '🚚 Move / Reschedule ▾';
 }
 
 function changeTruckFromPlanner(woId, newTruckId){
@@ -8242,14 +8246,14 @@ function changeDateFromPlanner(woId, newDate){
 
 function openWOFromPlanner(woId){
   const wo = state.wos.find(w=>w.id===woId); if(!wo) return;
-  // Navigate to assign view and open the WO
-  window._pendingEditReturnView = state.activeView; // capture true origin before nav() overwrites it
-  const navEl = document.querySelector('.nav-item[onclick*="assign"]');
-  nav('assign', navEl);
-  setTimeout(()=>{
-    const row = document.getElementById('wo-'+woId);
-    if(row){ row.scrollIntoView({behavior:'smooth',block:'center'}); row.click(); }
-  }, 300);
+  // Open the edit form directly — editWO() renders straight into #content
+  // and doesn't need the Assign & Manage list rendered first, so there's
+  // no need to navigate there, wait, and simulate a click on its row (the
+  // old approach also briefly flashed the Assign & Manage list on screen
+  // before landing on the edit form, and depended on a fixed timeout that
+  // could fail if rendering took longer than expected).
+  window._pendingEditReturnView = state.activeView; // capture true origin before editWO() switches it
+  editWO(woId);
 }
 
 function quickAssignTruck(woId,tId){
