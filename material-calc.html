@@ -502,17 +502,32 @@ let _mc3RowCounter = 0;
 // by which requested cut size they are) onto sheets of binW×binH,
 // returning the full shelf/item placement — not just a count — so this
 // can be drawn later. See shelfPack() below for a count-only wrapper.
+//
+// Checks EVERY sheet opened so far for leftover room — both an existing
+// shelf with spare width, and spare height for a brand-new shelf — before
+// ever opening another sheet, in the order sheets were created. Without
+// this, a smaller piece processed after a run of larger ones (pieces are
+// sorted tallest-first) would only ever be tried against whichever sheet
+// happened to be open at that moment, missing obvious leftover space on
+// earlier, already-closed sheets — e.g. small squares getting pushed onto
+// a fresh last sheet instead of filling a visible unused strip on sheet 1.
 function shelfPackDetailed(pieces, binW, binH){
   const sorted = [...pieces].sort((a,b)=>b.h-a.h);
   if(sorted.some(p=>p.w>binW || p.h>binH)) return {sheets:[], impossible:true};
-  const sheets = [];
-  let curShelves = null, heightUsed = 0;
-  function newSheet(){ curShelves=[]; sheets.push(curShelves); heightUsed=0; }
+  const sheets = [];       // each: {shelves:[...], heightUsed}
+  const allShelves = [];   // flat, in creation order, across every sheet
+
+  function newSheet(){
+    const sheet = {shelves:[], heightUsed:0};
+    sheets.push(sheet);
+    return sheet;
+  }
 
   for(const p of sorted){
-    if(!curShelves) newSheet();
     let placed = false;
-    for(const shelf of curShelves){
+
+    // 1. Any existing shelf, on any sheet, with spare width.
+    for(const shelf of allShelves){
       if(shelf.usedWidth + p.w <= binW && p.h <= shelf.height){
         shelf.items.push({x:shelf.usedWidth, w:p.w, h:p.h, sizeIdx:p.sizeIdx});
         shelf.usedWidth += p.w;
@@ -520,18 +535,34 @@ function shelfPackDetailed(pieces, binW, binH){
         break;
       }
     }
-    if(!placed && heightUsed + p.h <= binH){
-      curShelves.push({y:heightUsed, height:p.h, usedWidth:p.w, items:[{x:0,w:p.w,h:p.h,sizeIdx:p.sizeIdx}]});
-      heightUsed += p.h;
-      placed = true;
-    }
+
+    // 2. A new shelf within any existing sheet's remaining height budget,
+    //    earliest sheet first — keep filling sheets already in progress
+    //    before starting another one.
     if(!placed){
-      newSheet();
-      curShelves.push({y:0, height:p.h, usedWidth:p.w, items:[{x:0,w:p.w,h:p.h,sizeIdx:p.sizeIdx}]});
-      heightUsed = p.h;
+      for(const sheet of sheets){
+        if(sheet.heightUsed + p.h <= binH){
+          const shelf = { y:sheet.heightUsed, height:p.h, usedWidth:p.w, items:[{x:0,w:p.w,h:p.h,sizeIdx:p.sizeIdx}] };
+          sheet.shelves.push(shelf);
+          allShelves.push(shelf);
+          sheet.heightUsed += p.h;
+          placed = true;
+          break;
+        }
+      }
+    }
+
+    // 3. Nothing fits anywhere already opened — start a new sheet.
+    if(!placed){
+      const sheet = newSheet();
+      const shelf = { y:0, height:p.h, usedWidth:p.w, items:[{x:0,w:p.w,h:p.h,sizeIdx:p.sizeIdx}] };
+      sheet.shelves.push(shelf);
+      allShelves.push(shelf);
+      sheet.heightUsed = p.h;
     }
   }
-  return {sheets, impossible:false};
+
+  return { sheets: sheets.map(s=>s.shelves), impossible:false };
 }
 
 function shelfPack(pieces, binW, binH){
