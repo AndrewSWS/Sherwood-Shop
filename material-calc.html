@@ -19,6 +19,7 @@
   .header .sub{font-size:11px;color:rgba(255,255,255,.5);}
   .main{max-width:840px;margin:0 auto;padding:24px;}
   .note{font-size:12px;color:var(--text3);margin-bottom:16px;}
+  .theoretical-banner{background:var(--amber-l);border:1px solid var(--amber);border-radius:var(--rad);padding:10px 14px;color:#7a5410;font-size:12.5px;line-height:1.5;}
   .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rad2);padding:20px;margin-bottom:20px;}
   .card h2{font-size:15px;margin-bottom:4px;}
   .card .desc{font-size:12px;color:var(--text3);margin-bottom:14px;}
@@ -43,7 +44,6 @@
     <div class="sub">Material Calculator</div>
   </div>
   <div class="main">
-    <div class="note">Galvanized steel only — figures are estimates, not a substitute for measuring actual stock on hand.</div>
 
     <div class="card">
       <h2>📐 Sheet Weight</h2>
@@ -86,6 +86,26 @@
       <button class="btn" onclick="addMc3Row()" style="margin-top:8px;margin-bottom:14px">+ Add Cut Size</button>
       <div id="mc3-results"></div>
       <div style="font-size:11px;color:var(--text3);margin-top:10px">Estimate only — uses a standard shelf-packing method. An experienced fabricator laying it out by hand may do slightly better on some combinations.</div>
+    </div>
+
+    <div class="card">
+      <h2>🧩 Sheet Layout — Pick Your Own Sheet Size</h2>
+      <div class="desc">Enter the sheet you actually have (any size — not limited to your standard stock list) and the piece you're cutting, and see how many come out of it, with a diagram.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr" class="mb12" style="gap:8px">
+        <div class="field"><label>Sheet Width (in)</label>
+          <input type="number" id="mc4-sheetw" min="0" step="0.0625" placeholder="e.g. 60" oninput="mc4Calc()"></div>
+        <div class="field"><label>Sheet Length (in)</label>
+          <input type="number" id="mc4-sheetl" min="0" step="0.0625" placeholder="e.g. 120" oninput="mc4Calc()"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr" class="mb12" style="gap:8px">
+        <div class="field"><label>Piece Width (in)</label>
+          <input type="number" id="mc4-piecew" min="0" step="0.0625" placeholder="e.g. 7" oninput="mc4Calc()"></div>
+        <div class="field"><label>Piece Length (in)</label>
+          <input type="number" id="mc4-piecel" min="0" step="0.0625" placeholder="e.g. 50" oninput="mc4Calc()"></div>
+        <div class="field"><label>Qty Needed (optional)</label>
+          <input type="number" id="mc4-qty" min="1" placeholder="e.g. 25" oninput="mc4Calc()"></div>
+      </div>
+      <div id="mc4-results"></div>
     </div>
   </div>
 
@@ -178,16 +198,115 @@ function calcFlatSheetWtPerPc(gauge, sizeStr){
   return (dims.w * dims.l / 144) * lbPerSqFt;
 }
 
+// Best number of w×l pieces (rotation allowed) that fit in one W×L sheet.
+// Finds the best guillotine cut layout for w×l pieces (rotation allowed)
+// on a single W×L sheet, and returns the actual geometry of that layout
+// (not just the count) so it can be drawn as a diagram. Goes beyond a
+// single uniform grid — also checks the common real-world technique of
+// cutting the bulk of the sheet in one orientation, then using the
+// leftover strip for a few more pieces turned the other way (e.g. a
+// 60x120 sheet cutting 7x50 pieces: a straight grid one orientation gets
+// 17, but using the 10"-wide leftover strip for 2 more sideways gets 19).
+// This is a guillotine (straight full-width/length cuts only) method,
+// matching how sheet metal is actually sheared — not arbitrary nesting.
+function planSheetCut(W, L, w, l){
+  function grid(bigW, bigL, a, b){ return { cols: Math.floor(bigW/a), rows: Math.floor(bigL/b) }; }
+  function count(g){ return g.cols * g.rows; }
+  function region(x,y,a,b,g){ return { x, y, pw:a, ph:b, cols:g.cols, rows:g.rows }; }
+
+  let best = null;
+  function consider(total, regions){
+    if(!best || total > best.total) best = { total, regions, sheetW:W, sheetL:L };
+  }
+
+  // Uniform grid, each orientation, no leftover strip used.
+  [[w,l],[l,w]].forEach(([a,b])=>{
+    const g = grid(W,L,a,b);
+    consider(count(g), [region(0,0,a,b,g)]);
+  });
+
+  // Split along W (vertical cut): main block + leftover width-strip, each
+  // strip orientation tried independently.
+  [[w,l],[l,w]].forEach(([a,b])=>{
+    const nW = Math.floor(W/a);
+    const mainG = { cols:nW, rows:Math.floor(L/b) };
+    const leftoverW = W - nW*a;
+    if(leftoverW<=0) return;
+    const stripA = grid(leftoverW,L,a,b), stripB = grid(leftoverW,L,b,a);
+    const useA = count(stripA) >= count(stripB);
+    const stripG = useA ? stripA : stripB, stripDims = useA ? [a,b] : [b,a];
+    const regions = [region(0,0,a,b,mainG)];
+    if(count(stripG)>0) regions.push(region(nW*a, 0, stripDims[0], stripDims[1], stripG));
+    consider(count(mainG) + count(stripG), regions);
+  });
+
+  // Split along L (horizontal cut): symmetric case, leftover strip below.
+  [[w,l],[l,w]].forEach(([a,b])=>{
+    const nL = Math.floor(L/b);
+    const mainG = { cols:Math.floor(W/a), rows:nL };
+    const leftoverL = L - nL*b;
+    if(leftoverL<=0) return;
+    const stripA = grid(W,leftoverL,a,b), stripB = grid(W,leftoverL,b,a);
+    const useA = count(stripA) >= count(stripB);
+    const stripG = useA ? stripA : stripB, stripDims = useA ? [a,b] : [b,a];
+    const regions = [region(0,0,a,b,mainG)];
+    if(count(stripG)>0) regions.push(region(0, nL*b, stripDims[0], stripDims[1], stripG));
+    consider(count(mainG) + count(stripG), regions);
+  });
+
+  return best;
+}
+
+function bestPiecesPerSheet(W, L, w, l){
+  const plan = planSheetCut(W, L, w, l);
+  return { piecesPerSheet: plan.total, mixedCuts: plan.regions.length>1 };
+}
+
+// Draws the winning cut plan as an SVG diagram: sheet outline, each piece
+// as its own rectangle (colored by which region/orientation it belongs
+// to), and any true leftover material left as visible background (scrap).
+function renderCutDiagram(plan){
+  const maxW = 560, maxH = 380;
+  const scale = Math.min(maxW/plan.sheetW, maxH/plan.sheetL);
+  const svgW = plan.sheetW*scale, svgH = plan.sheetL*scale;
+  const regionColors = ['#3B6D11','#2D6A2D','#BA7517'];
+
+  let rects = `<rect x="0" y="0" width="${svgW}" height="${svgH}" fill="#f4ede0" stroke="#c9c2b3" stroke-width="1.5"/>`;
+  plan.regions.forEach((r,ri)=>{
+    const color = regionColors[ri % regionColors.length];
+    for(let c=0;c<r.cols;c++){
+      for(let row=0; row<r.rows; row++){
+        const x = (r.x + c*r.pw)*scale;
+        const y = (r.y + row*r.ph)*scale;
+        const w = r.pw*scale;
+        const h = r.ph*scale;
+        rects += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${Math.max(0,w-1).toFixed(1)}" height="${Math.max(0,h-1).toFixed(1)}" fill="${color}" fill-opacity="0.78" stroke="#fff" stroke-width="1"/>`;
+      }
+    }
+  });
+
+  const legend = plan.regions.map((r,ri)=>{
+    const color = regionColors[ri % regionColors.length];
+    const n = r.cols*r.rows;
+    return `<span style="display:inline-flex;align-items:center;gap:5px;margin-right:14px">
+      <span style="width:11px;height:11px;background:${color};display:inline-block;border-radius:2px"></span>
+      ${n} pcs at ${r.pw}"×${r.ph}"${ri>0?' <span style="color:var(--text3)">(turned)</span>':''}
+    </span>`;
+  }).join('');
+
+  return `
+    <svg viewBox="0 0 ${svgW.toFixed(1)} ${svgH.toFixed(1)}" style="width:100%;max-width:${Math.round(svgW)}px;height:auto;display:block;border:1px solid var(--border);border-radius:var(--rad);background:#fff">${rects}</svg>
+    <div style="margin-top:8px;font-size:12px">${legend}<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:11px;height:11px;background:#f4ede0;border:1px solid #c9c2b3;display:inline-block;border-radius:2px"></span>scrap</span></div>
+  `;
+}
+
 function calcCutYield(gauge, pieceW, pieceL, qtyNeeded){
   const sizes = STOCK_SIZES[gauge] || [];
   const results = [];
   sizes.forEach(sizeStr=>{
     const dims = parseSheetDims(sizeStr);
     if(!dims) return;
-    const fitNoRot = Math.floor(dims.w/pieceW) * Math.floor(dims.l/pieceL);
-    const fitRot   = Math.floor(dims.w/pieceL) * Math.floor(dims.l/pieceW);
-    const piecesPerSheet = Math.max(fitNoRot, fitRot);
-    const rotated = fitRot > fitNoRot;
+    const { piecesPerSheet, mixedCuts } = bestPiecesPerSheet(dims.w, dims.l, pieceW, pieceL);
     if(piecesPerSheet <= 0){ results.push({sizeStr, fits:false}); return; }
     const sheetsNeeded = Math.ceil(qtyNeeded / piecesPerSheet);
     const stockAreaTotal = sheetsNeeded * dims.w * dims.l;
@@ -195,7 +314,7 @@ function calcCutYield(gauge, pieceW, pieceL, qtyNeeded){
     const wastePct = ((stockAreaTotal - usedArea) / stockAreaTotal) * 100;
     const wtPerSheet = calcFlatSheetWtPerPc(gauge, sizeStr) || 0;
     results.push({
-      sizeStr, dims, fits:true, piecesPerSheet, rotated, sheetsNeeded,
+      sizeStr, dims, fits:true, piecesPerSheet, mixedCuts, sheetsNeeded,
       wastePct, totalStockWeight: wtPerSheet*sheetsNeeded
     });
   });
@@ -220,6 +339,45 @@ function mc1Calc(){
   el.innerHTML=`<strong>${perPc.toFixed(2)} lbs/pc</strong> × ${qty} = <strong>${(perPc*qty).toFixed(2)} lbs total</strong>`;
 }
 
+// ── Generic diagram modal (used by all three cut tools) ────────────────
+function openDiagramModal(title, bodyHtml){
+  closeDiagramModal();
+  const modal = document.createElement('div');
+  modal.id = 'diagram-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:16px';
+  modal.onclick = e=>{ if(e.target===modal) closeDiagramModal(); };
+  modal.innerHTML = `
+  <div style="background:#fff;border-radius:12px;padding:20px;width:100%;max-width:640px;max-height:88vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.25)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div style="font-size:15px;font-weight:700">${title}</div>
+      <div style="display:flex;gap:8px">
+        <button onclick="printDiagram()" style="padding:6px 12px;font-size:12px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer">🖨 Print</button>
+        <button onclick="closeDiagramModal()" style="padding:6px 12px;font-size:12px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer">✕ Close</button>
+      </div>
+    </div>
+    <div id="diagram-modal-body">${bodyHtml}</div>
+  </div>`;
+  document.body.appendChild(modal);
+}
+
+function closeDiagramModal(){
+  const m = document.getElementById('diagram-modal');
+  if(m) m.remove();
+}
+
+function printDiagram(){
+  const body = document.getElementById('diagram-modal-body');
+  if(!body) return;
+  const w = window.open('', '_blank', 'width=700,height=800');
+  w.document.write(`<!DOCTYPE html><html><head><title>Cut Diagram</title>
+    <style>body{font-family:-apple-system,sans-serif;padding:20px;color:#1C2E1C}
+    table{border-collapse:collapse;font-size:13px}</style></head>
+    <body>${body.innerHTML}</body></html>`);
+  w.document.close();
+  w.focus();
+  setTimeout(()=>{ w.print(); }, 250);
+}
+
 function mc2Calc(){
   const gauge=document.getElementById('mc2-gauge').value;
   const pieceW=parseFloat(document.getElementById('mc2-width').value)||0;
@@ -229,26 +387,42 @@ function mc2Calc(){
   if(!pieceW||!pieceL){ box.innerHTML='<div class="placeholder">Enter piece dimensions above</div>'; return; }
   const results=calcCutYield(gauge, pieceW, pieceL, qty);
   if(!results.length){ box.innerHTML='<div class="placeholder">No standard stock sizes on file for this gauge</div>'; return; }
+  window._mc2LastPiece = {pieceW, pieceL};
   box.innerHTML=`
     <table>
       <thead><tr>
-        <th>Stock Size</th><th>Pcs/Sheet</th><th>Sheets Needed</th><th>Waste</th><th>Stock Weight</th>
+        <th>Stock Size</th><th>Pcs/Sheet</th><th>Sheets Needed</th><th>Waste</th><th>Stock Weight</th><th></th>
       </tr></thead>
       <tbody>
         ${results.map((r,i)=>{
           if(!r.fits){
-            return `<tr style="opacity:.5"><td>${r.sizeStr}</td><td colspan="4" style="color:var(--text3)">Piece too large for this stock size</td></tr>`;
+            return `<tr style="opacity:.5"><td>${r.sizeStr}</td><td colspan="5" style="color:var(--text3)">Piece too large for this stock size</td></tr>`;
           }
           return `<tr class="${i===0?'best':''}">
             <td>${r.sizeStr}${i===0?' <span style="color:var(--green);font-size:11px">★ best</span>':''}</td>
-            <td>${r.piecesPerSheet}${r.rotated?' <span style="font-size:10px;color:var(--text3)">(rotated)</span>':''}</td>
+            <td>${r.piecesPerSheet}${r.mixedCuts?' <span style="font-size:10px;color:var(--text3)">(mixed cuts)</span>':''}</td>
             <td>${r.sheetsNeeded}</td>
             <td>${r.wastePct.toFixed(1)}%</td>
             <td>${r.totalStockWeight?r.totalStockWeight.toFixed(1)+' lbs':'—'}</td>
+            <td><button onclick="viewMc2Diagram('${r.sizeStr}')" style="padding:4px 9px;font-size:11px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;white-space:nowrap">View Diagram</button></td>
           </tr>`;
         }).join('')}
       </tbody>
     </table>`;
+}
+
+function viewMc2Diagram(sizeStr){
+  const {pieceW, pieceL} = window._mc2LastPiece||{};
+  const dims = parseSheetDims(sizeStr);
+  if(!dims || !pieceW || !pieceL) return;
+  const plan = planSheetCut(dims.w, dims.l, pieceW, pieceL);
+  if(!plan){ return; }
+  const usedArea = plan.total*pieceW*pieceL, sheetArea = dims.w*dims.l;
+  const wastePct = ((sheetArea-usedArea)/sheetArea)*100;
+  openDiagramModal(`${sizeStr}" sheet — ${pieceW}"×${pieceL}" pieces`, `
+    <div style="font-size:13px;margin-bottom:10px"><strong>${plan.total} pieces</strong> per sheet — ${wastePct.toFixed(1)}% waste</div>
+    ${renderCutDiagram(plan)}
+  `);
 }
 
 function initGaugeSelects(){
@@ -271,38 +445,45 @@ function initGaugeSelects(){
 // size independently.
 let _mc3RowCounter = 0;
 
-function shelfPack(pieces, binW, binH){
-  // pieces: [{w,h}], already oriented long-side-as-w, short-side-as-h
+// Packs pieces (each tagged with sizeIdx so a diagram can color-code them
+// by which requested cut size they are) onto sheets of binW×binH,
+// returning the full shelf/item placement — not just a count — so this
+// can be drawn later. See shelfPack() below for a count-only wrapper.
+function shelfPackDetailed(pieces, binW, binH){
   const sorted = [...pieces].sort((a,b)=>b.h-a.h);
-  let sheets = 0;
-  let shelves = [];
-  let heightUsed = 0;
-
-  function newSheet(){ sheets++; shelves=[]; heightUsed=0; }
+  if(sorted.some(p=>p.w>binW || p.h>binH)) return {sheets:[], impossible:true};
+  const sheets = [];
+  let curShelves = null, heightUsed = 0;
+  function newSheet(){ curShelves=[]; sheets.push(curShelves); heightUsed=0; }
 
   for(const p of sorted){
-    if(p.w > binW || p.h > binH) return {sheets: Infinity, impossible: true};
-    if(sheets===0) newSheet();
+    if(!curShelves) newSheet();
     let placed = false;
-    for(const shelf of shelves){
+    for(const shelf of curShelves){
       if(shelf.usedWidth + p.w <= binW && p.h <= shelf.height){
+        shelf.items.push({x:shelf.usedWidth, w:p.w, h:p.h, sizeIdx:p.sizeIdx});
         shelf.usedWidth += p.w;
         placed = true;
         break;
       }
     }
     if(!placed && heightUsed + p.h <= binH){
-      shelves.push({height:p.h, usedWidth:p.w});
+      curShelves.push({y:heightUsed, height:p.h, usedWidth:p.w, items:[{x:0,w:p.w,h:p.h,sizeIdx:p.sizeIdx}]});
       heightUsed += p.h;
       placed = true;
     }
     if(!placed){
       newSheet();
-      shelves.push({height:p.h, usedWidth:p.w});
-      heightUsed += p.h;
+      curShelves.push({y:0, height:p.h, usedWidth:p.w, items:[{x:0,w:p.w,h:p.h,sizeIdx:p.sizeIdx}]});
+      heightUsed = p.h;
     }
   }
-  return {sheets: sheets||0, impossible:false};
+  return {sheets, impossible:false};
+}
+
+function shelfPack(pieces, binW, binH){
+  const r = shelfPackDetailed(pieces, binW, binH);
+  return r.impossible ? {sheets:Infinity, impossible:true} : {sheets:r.sheets.length, impossible:false};
 }
 
 function calcMultiCutYield(gauge, pieceDefs){
@@ -313,18 +494,16 @@ function calcMultiCutYield(gauge, pieceDefs){
     return {tooMany:true};
   }
   const instances = [];
-  pieceDefs.forEach(p=>{
+  pieceDefs.forEach((p,idx)=>{
     const h = Math.min(p.w,p.l), w = Math.max(p.w,p.l);
-    for(let i=0;i<p.qty;i++) instances.push({w,h});
+    for(let i=0;i<p.qty;i++) instances.push({w,h,sizeIdx:idx});
   });
   const totalUsedArea = pieceDefs.reduce((s,p)=>s+p.w*p.l*p.qty,0);
 
   function singleFit(w,l,qty,binW,binH){
-    const fitNoRot = Math.floor(binW/w) * Math.floor(binH/l);
-    const fitRot   = Math.floor(binW/l) * Math.floor(binH/w);
-    const best = Math.max(fitNoRot, fitRot);
-    if(best<=0) return Infinity;
-    return Math.ceil(qty/best);
+    const { piecesPerSheet } = bestPiecesPerSheet(binW, binH, w, l);
+    if(piecesPerSheet<=0) return Infinity;
+    return Math.ceil(qty/piecesPerSheet);
   }
 
   const results = [];
@@ -335,10 +514,12 @@ function calcMultiCutYield(gauge, pieceDefs){
     // Strategy A: pack every size together on shared sheets (shelf heuristic)
     const packA = shelfPack(instances, dims.w, dims.l);
     const packB = shelfPack(instances, dims.l, dims.w);
-    const combinedSheets = Math.min(
-      packA.impossible ? Infinity : packA.sheets,
-      packB.impossible ? Infinity : packB.sheets
-    );
+    let combinedSheets, combinedBinW, combinedBinH;
+    if(!packA.impossible && (packB.impossible || packA.sheets<=packB.sheets)){
+      combinedSheets = packA.sheets; combinedBinW = dims.w; combinedBinH = dims.l;
+    } else {
+      combinedSheets = packB.impossible ? Infinity : packB.sheets; combinedBinW = dims.l; combinedBinH = dims.w;
+    }
 
     // Strategy B: dedicate separate sheets per size — the shelf heuristic
     // isn't guaranteed optimal and can occasionally do WORSE than simply
@@ -352,16 +533,18 @@ function calcMultiCutYield(gauge, pieceDefs){
       else separateSheets += s;
     });
 
-    const sheetsNeeded = Math.min(
-      combinedSheets,
-      anySeparateImpossible ? Infinity : separateSheets
-    );
+    const useCombined = combinedSheets <= (anySeparateImpossible ? Infinity : separateSheets);
+    const sheetsNeeded = useCombined ? combinedSheets : separateSheets;
     if(!isFinite(sheetsNeeded)){ results.push({sizeStr, fits:false}); return; }
 
     const stockAreaTotal = sheetsNeeded * dims.w * dims.l;
     const wastePct = ((stockAreaTotal - totalUsedArea) / stockAreaTotal) * 100;
     const wtPerSheet = calcFlatSheetWtPerPc(gauge, sizeStr) || 0;
-    results.push({ sizeStr, fits:true, sheetsNeeded, wastePct, totalStockWeight: wtPerSheet*sheetsNeeded });
+    results.push({
+      sizeStr, fits:true, sheetsNeeded, wastePct, totalStockWeight: wtPerSheet*sheetsNeeded,
+      strategy: useCombined ? 'combined' : 'separate',
+      combinedBinW, combinedBinH, dims
+    });
   });
   results.sort((a,b)=>{
     if(a.fits !== b.fits) return a.fits ? -1 : 1;
@@ -397,6 +580,78 @@ function removeMc3Row(n){
   mc3Calc();
 }
 
+// Draws one packed sheet from the "combine multiple cuts" shelf-packing
+// strategy — each individual piece drawn at its real placement, colored
+// by which requested cut size it is (see palette/legend in viewMc3Diagram).
+function renderShelfDiagram(shelves, binW, binH, palette){
+  const maxW = 560, maxH = 380;
+  const scale = Math.min(maxW/binW, maxH/binH);
+  const svgW = binW*scale, svgH = binH*scale;
+  let rects = `<rect x="0" y="0" width="${svgW}" height="${svgH}" fill="#f4ede0" stroke="#c9c2b3" stroke-width="1.5"/>`;
+  shelves.forEach(shelf=>{
+    shelf.items.forEach(item=>{
+      const x = item.x*scale, y = shelf.y*scale, w = item.w*scale, h = item.h*scale;
+      const color = palette[item.sizeIdx % palette.length];
+      rects += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${Math.max(0,w-1).toFixed(1)}" height="${Math.max(0,h-1).toFixed(1)}" fill="${color}" fill-opacity="0.78" stroke="#fff" stroke-width="1"/>`;
+    });
+  });
+  return `<svg viewBox="0 0 ${svgW.toFixed(1)} ${svgH.toFixed(1)}" style="width:100%;max-width:${Math.round(svgW)}px;height:auto;display:block;border:1px solid var(--border);border-radius:var(--rad);background:#fff">${rects}</svg>`;
+}
+
+const _DIAGRAM_PALETTE = ['#3B6D11','#2D6A2D','#BA7517','#2D6AAE','#8E44AD','#C0392B'];
+
+function viewMc3Diagram(sizeStr){
+  const pieceDefs = window._mc3LastPieceDefs;
+  const gauge = window._mc3LastGauge;
+  if(!pieceDefs || !pieceDefs.length) return;
+  const calc = calcMultiCutYield(gauge, pieceDefs);
+  const r = calc.results.find(x=>x.sizeStr===sizeStr);
+  if(!r || !r.fits) return;
+
+  const legend = pieceDefs.map((p,idx)=>`<span style="display:inline-flex;align-items:center;gap:5px;margin-right:14px">
+    <span style="width:11px;height:11px;background:${_DIAGRAM_PALETTE[idx%_DIAGRAM_PALETTE.length]};display:inline-block;border-radius:2px"></span>
+    ${p.w}"×${p.l}" (qty ${p.qty})
+  </span>`).join('');
+
+  let bodyHtml = `<div style="font-size:12px;margin-bottom:12px">${legend}</div>`;
+
+  if(r.strategy === 'combined'){
+    const instances = [];
+    pieceDefs.forEach((p,idx)=>{
+      const h = Math.min(p.w,p.l), w = Math.max(p.w,p.l);
+      for(let i=0;i<p.qty;i++) instances.push({w,h,sizeIdx:idx});
+    });
+    const packed = shelfPackDetailed(instances, r.combinedBinW, r.combinedBinH);
+    const maxShow = 6;
+    packed.sheets.slice(0,maxShow).forEach((shelves,si)=>{
+      bodyHtml += `<div style="margin-bottom:14px">
+        <div style="font-size:12px;font-weight:600;margin-bottom:4px">Sheet ${si+1} of ${packed.sheets.length}</div>
+        ${renderShelfDiagram(shelves, r.combinedBinW, r.combinedBinH, _DIAGRAM_PALETTE)}
+      </div>`;
+    });
+    if(packed.sheets.length > maxShow){
+      bodyHtml += `<div style="font-size:12px;color:var(--text3)">+ ${packed.sheets.length-maxShow} more sheet${packed.sheets.length-maxShow!==1?'s':''} follow the same general pattern</div>`;
+    }
+  } else {
+    // "separate" strategy won — each piece size gets its own dedicated
+    // sheets, so show each as its own single-size diagram.
+    pieceDefs.forEach((p,idx)=>{
+      const plan = planSheetCut(r.dims.w, r.dims.l, p.w, p.l);
+      if(!plan || plan.total<=0) return;
+      const sheetsForThis = Math.ceil(p.qty/plan.total);
+      bodyHtml += `<div style="margin-bottom:16px">
+        <div style="font-size:12px;font-weight:600;margin-bottom:4px">
+          <span style="display:inline-block;width:11px;height:11px;background:${_DIAGRAM_PALETTE[idx%_DIAGRAM_PALETTE.length]};border-radius:2px;margin-right:5px"></span>
+          ${p.w}"×${p.l}" — ${plan.total} per sheet, ${sheetsForThis} sheet${sheetsForThis!==1?'s':''} needed
+        </div>
+        ${renderCutDiagram(plan)}
+      </div>`;
+    });
+  }
+
+  openDiagramModal(`${sizeStr}" sheet — combined cut plan`, bodyHtml);
+}
+
 function mc3Calc(){
   const gauge = document.getElementById('mc3-gauge')?.value;
   const box = document.getElementById('mc3-results');
@@ -414,31 +669,74 @@ function mc3Calc(){
   const calc = calcMultiCutYield(gauge, pieceDefs);
   if(calc.tooMany){ box.innerHTML = '<div class="placeholder">⚠ Too many total pieces to estimate at once (over 4,000) — try splitting into smaller batches.</div>'; return; }
   if(!calc.results.length){ box.innerHTML = '<div class="placeholder">No standard stock sizes on file for this gauge</div>'; return; }
+  window._mc3LastPieceDefs = pieceDefs;
+  window._mc3LastGauge = gauge;
 
   box.innerHTML = `
     <div style="font-size:12px;color:var(--text3);margin-bottom:8px">${pieceDefs.length} cut size${pieceDefs.length!==1?'s':''}, ${calc.totalQty} pieces total</div>
     <table>
-      <thead><tr><th>Stock Size</th><th>Sheets Needed</th><th>Waste</th><th>Stock Weight</th></tr></thead>
+      <thead><tr><th>Stock Size</th><th>Sheets Needed</th><th>Waste</th><th>Stock Weight</th><th></th></tr></thead>
       <tbody>
         ${calc.results.map((r,i)=>{
           if(!r.fits){
-            return `<tr style="opacity:.5"><td>${r.sizeStr}</td><td colspan="3" style="color:var(--text3)">One or more pieces too large for this stock size</td></tr>`;
+            return `<tr style="opacity:.5"><td>${r.sizeStr}</td><td colspan="4" style="color:var(--text3)">One or more pieces too large for this stock size</td></tr>`;
           }
           return `<tr class="${i===0?'best':''}">
             <td>${r.sizeStr}${i===0?' <span style="color:var(--green);font-size:11px">★ best</span>':''}</td>
             <td>${r.sheetsNeeded}</td>
             <td>${r.wastePct.toFixed(1)}%</td>
             <td>${r.totalStockWeight?r.totalStockWeight.toFixed(1)+' lbs':'—'}</td>
+            <td><button onclick="viewMc3Diagram('${r.sizeStr}')" style="padding:4px 9px;font-size:11px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;white-space:nowrap">View Diagram</button></td>
           </tr>`;
         }).join('')}
       </tbody>
     </table>`;
 }
 
+// ── Section 4: custom sheet size + diagram ─────────────────────────────
+function mc4Calc(){
+  const sheetW = parseFloat(document.getElementById('mc4-sheetw')?.value)||0;
+  const sheetL = parseFloat(document.getElementById('mc4-sheetl')?.value)||0;
+  const pieceW = parseFloat(document.getElementById('mc4-piecew')?.value)||0;
+  const pieceL = parseFloat(document.getElementById('mc4-piecel')?.value)||0;
+  const qty = parseFloat(document.getElementById('mc4-qty')?.value)||0;
+  const box = document.getElementById('mc4-results');
+  if(!box) return;
+
+  if(!sheetW || !sheetL || !pieceW || !pieceL){
+    box.innerHTML = '<div class="placeholder">Enter both the sheet size and the piece size above</div>';
+    return;
+  }
+  if(pieceW>sheetW && pieceW>sheetL || pieceL>sheetW && pieceL>sheetL){
+    box.innerHTML = '<div class="placeholder">⚠ Piece is too large to fit on this sheet at all</div>';
+    return;
+  }
+
+  const plan = planSheetCut(sheetW, sheetL, pieceW, pieceL);
+  if(!plan || plan.total<=0){
+    box.innerHTML = '<div class="placeholder">⚠ Piece does not fit on this sheet</div>';
+    return;
+  }
+
+  const usedArea = plan.total * pieceW * pieceL;
+  const sheetArea = sheetW * sheetL;
+  const wastePct = ((sheetArea-usedArea)/sheetArea)*100;
+  const sheetsLine = qty>0
+    ? `<div style="font-size:13px;margin-bottom:10px"><strong>${Math.ceil(qty/plan.total)} sheet${Math.ceil(qty/plan.total)!==1?'s':''}</strong> needed for ${qty} pieces (${plan.total} per sheet)</div>`
+    : '';
+
+  box.innerHTML = `
+    <div style="font-size:13px;margin-bottom:10px"><strong>${plan.total} pieces</strong> per ${sheetW}"×${sheetL}" sheet — ${wastePct.toFixed(1)}% waste${plan.regions.length>1?' <span style="color:var(--text3);font-size:11px">(mixed cuts)</span>':''}</div>
+    ${sheetsLine}
+    ${renderCutDiagram(plan)}
+  `;
+}
+
 initGaugeSelects();
 mc1Calc();
 mc2Calc();
 addMc3Row();
+mc4Calc();
 
 // Refresh the Cut Yield section once live stock sizes arrive, so it
 // reflects whatever's actually configured in Settings → Product Catalog
