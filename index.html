@@ -4893,8 +4893,13 @@ function deleteWO(id){
 
 function editWO(id){
   const wo=state.wos.find(w=>w.id===id);if(!wo)return;
-  // Remember where we came from (e.g. the Shop Queue) so Save/Cancel return there
-  window._editReturnView = state.activeView;
+  // Remember where we came from so Save/Cancel return there. Prefer
+  // _pendingEditReturnView (set by openWOFromDash/openWOFromPlanner right
+  // before they navigate to Assign & Manage to render the edit UI) over
+  // state.activeView, which by this point has already been switched to
+  // 'assign' and would otherwise always report the wrong origin.
+  window._editReturnView = window._pendingEditReturnView || state.activeView;
+  window._pendingEditReturnView = null;
   window._editReturnQStation = typeof activeQStation!=='undefined' ? activeQStation : null;
   state.activeView='assign';
   const c=document.getElementById('content');
@@ -5097,6 +5102,12 @@ function returnFromWOEdit(){
   if(rv==='queue'){
     if(rs && typeof activeQStation!=='undefined') activeQStation = rs;
     nav('queue', document.querySelector('.nav-item[onclick*=queue]'));
+  } else if(rv && rv!=='assign'){
+    // Return to wherever the edit was actually opened from — Master
+    // Dashboard, Fabricated Stock, Bundle History, etc. — instead of
+    // always landing on Assign & Manage.
+    const navEl = document.querySelector('.nav-item[onclick*="nav(\''+rv+'\'"]') || document.querySelector('.nav-item[onclick*='+rv+']');
+    nav(rv, navEl);
   } else {
     nav('assign', document.querySelector('.nav-item[onclick*=assign]'));
   }
@@ -8220,6 +8231,7 @@ function changeDateFromPlanner(woId, newDate){
 function openWOFromPlanner(woId){
   const wo = state.wos.find(w=>w.id===woId); if(!wo) return;
   // Navigate to assign view and open the WO
+  window._pendingEditReturnView = state.activeView; // capture true origin before nav() overwrites it
   const navEl = document.querySelector('.nav-item[onclick*="assign"]');
   nav('assign', navEl);
   setTimeout(()=>{
@@ -9248,6 +9260,7 @@ function toggleDayDetail(iso, forceOpen=false){
 
 function openWOFromDash(woId){
   // Navigate to Assign & Manage and open this WO's detail
+  window._pendingEditReturnView = state.activeView; // capture true origin before nav() overwrites it
   const assignNav=document.querySelector('.nav-item[onclick*="assign"]');
   nav('assign', assignNav);
   // Small delay to let renderAssign complete, then expand the WO
