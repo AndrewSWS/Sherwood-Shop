@@ -2581,7 +2581,7 @@ function openWtCalc(n){
       <div style="font-size:15px;font-weight:700">🧮 Calculate Sheet Weight</div>
       <button class="btn btn-sm" onclick="closeWtCalc()">✕</button>
     </div>
-    <div style="font-size:11px;color:var(--text3);margin-bottom:12px">Galvanized steel only. For a specialty/custom cut not in the standard size list.</div>
+    <div style="font-size:11px;color:#7a5410;background:var(--amber-l);border:1px solid var(--amber);border-radius:var(--rad);padding:8px 10px;margin-bottom:12px;line-height:1.4">⚠ <strong>Theoretical weight</strong> from standard gauge tables, not a scale reading — actual weight can vary slightly with mill tolerances. Galvanized steel only.</div>
     <div class="field mb12"><label class="lbl">Gauge</label>
       <select id="wc-gauge" style="width:100%">${gaugeOpts}</select></div>
     <div style="display:grid;grid-template-columns:1fr 1fr" class="mb12" style="gap:8px">
@@ -12433,7 +12433,7 @@ function updateQBPillCount(){
   el.textContent = remaining + ' left';
 }
 
-function expandQBModal(){
+async function expandQBModal(){
   const modal = document.getElementById('qb-modal');
   if(!modal) return;
   modal.style.alignItems='center';
@@ -12442,6 +12442,15 @@ function expandQBModal(){
   modal.style.pointerEvents='all';
   const inner = modal.firstElementChild;
   if(!inner) return;
+  inner.style.cssText='background:var(--surface);border-radius:var(--rad2);padding:24px;width:100%;max-width:680px;max-height:88vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.25)';
+  inner.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)">Loading…</div>';
+  // Same self-heal as showQBSelector's initial open — without this, WOs
+  // whose items aren't loaded client-side (see _activeOrRecentIds in
+  // sbLoadState) would show "0 items" here and get falsely flagged as
+  // "DUPLICATE — REVIEW NEEDED" even when they're clean, already-imported
+  // orders. This path (re-expanding a minimized modal) was missing that
+  // backfill even though the initial-open path already had it.
+  await backfillDupeWOItems(_qbInvoices);
   // Restore full modal styles
   inner.style.cssText='background:var(--surface);border-radius:var(--rad2);padding:24px;width:100%;max-width:680px;max-height:88vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.25)';
   // Re-render the invoice list
