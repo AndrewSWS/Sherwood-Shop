@@ -265,6 +265,59 @@ function bestPiecesPerSheet(W, L, w, l){
 // Draws the winning cut plan as an SVG diagram: sheet outline, each piece
 // as its own rectangle (colored by which region/orientation it belongs
 // to), and any true leftover material left as visible background (scrap).
+// On a partial last sheet, don't force the full per-sheet-efficient layout
+// if fewer pieces are actually needed there. Fills regions in priority
+// order (main grid first, then the mixed-cuts leftover strip) and stops
+// as soon as the needed quantity is covered — any region not reached at
+// all is left completely untouched, so it stays one large, genuinely
+// usable remnant instead of being fragmented for pieces that aren't
+// actually needed on this sheet.
+function trimPlanForQty(fullPlan, neededQty){
+  if(neededQty >= fullPlan.total) return fullPlan; // nothing to trim — this sheet is fully used
+  let remaining = neededQty;
+  const regions = [];
+  for(const r of fullPlan.regions){
+    if(remaining<=0) break;
+    const capacity = r.cols*r.rows;
+    if(remaining >= capacity){
+      regions.push(r);
+      remaining -= capacity;
+    } else {
+      const rows = Math.ceil(remaining / r.cols);
+      regions.push({ ...r, rows });
+      remaining = 0;
+    }
+  }
+  return { ...fullPlan, regions, total: neededQty };
+}
+
+// Renders one diagram per sheet needed for a given quantity — the full
+// efficient layout for every sheet except the last, and a trimmed layout
+// (see trimPlanForQty) for the last partial one, so any genuinely unused
+// leftover shows up as one clean remnant instead of a fragmented layout
+// nobody actually needs to cut.
+function renderMultiSheetDiagramsHtml(fullPlan, qtyNeeded, maxShow){
+  maxShow = maxShow || 6;
+  const perSheet = fullPlan.total;
+  const sheetsNeeded = Math.max(1, Math.ceil(qtyNeeded / perSheet));
+  let html = '';
+  const toShow = Math.min(sheetsNeeded, maxShow);
+  for(let i=0; i<toShow; i++){
+    const isLast = (i === sheetsNeeded-1);
+    const remainder = qtyNeeded - perSheet*i;
+    const partial = isLast && remainder < perSheet;
+    const thisPlan = partial ? trimPlanForQty(fullPlan, remainder) : fullPlan;
+    html += `<div style="margin-bottom:14px">
+      <div style="font-size:12px;font-weight:600;margin-bottom:4px">Sheet ${i+1} of ${sheetsNeeded}${partial?` — only ${remainder} needed here, rest left as one remnant`:''}</div>
+      ${renderCutDiagram(thisPlan)}
+    </div>`;
+  }
+  if(sheetsNeeded > maxShow){
+    html += `<div style="font-size:12px;color:var(--text3)">+ ${sheetsNeeded-maxShow} more full sheet${sheetsNeeded-maxShow!==1?'s':''} follow the same pattern</div>`;
+  }
+  return html;
+}
+
 function renderCutDiagram(plan){
   const maxW = 560, maxH = 380;
   const scale = Math.min(maxW/plan.sheetW, maxH/plan.sheetL);
@@ -387,7 +440,7 @@ function mc2Calc(){
   if(!pieceW||!pieceL){ box.innerHTML='<div class="placeholder">Enter piece dimensions above</div>'; return; }
   const results=calcCutYield(gauge, pieceW, pieceL, qty);
   if(!results.length){ box.innerHTML='<div class="placeholder">No standard stock sizes on file for this gauge</div>'; return; }
-  window._mc2LastPiece = {pieceW, pieceL};
+  window._mc2LastPiece = {pieceW, pieceL, qty};
   box.innerHTML=`
     <table>
       <thead><tr>
@@ -412,7 +465,7 @@ function mc2Calc(){
 }
 
 function viewMc2Diagram(sizeStr){
-  const {pieceW, pieceL} = window._mc2LastPiece||{};
+  const {pieceW, pieceL, qty} = window._mc2LastPiece||{};
   const dims = parseSheetDims(sizeStr);
   if(!dims || !pieceW || !pieceL) return;
   const plan = planSheetCut(dims.w, dims.l, pieceW, pieceL);
@@ -420,8 +473,8 @@ function viewMc2Diagram(sizeStr){
   const usedArea = plan.total*pieceW*pieceL, sheetArea = dims.w*dims.l;
   const wastePct = ((sheetArea-usedArea)/sheetArea)*100;
   openDiagramModal(`${sizeStr}" sheet — ${pieceW}"×${pieceL}" pieces`, `
-    <div style="font-size:13px;margin-bottom:10px"><strong>${plan.total} pieces</strong> per sheet — ${wastePct.toFixed(1)}% waste</div>
-    ${renderCutDiagram(plan)}
+    <div style="font-size:13px;margin-bottom:10px"><strong>${plan.total} pieces</strong> per full sheet — ${wastePct.toFixed(1)}% waste</div>
+    ${renderMultiSheetDiagramsHtml(plan, qty||plan.total)}
   `);
 }
 
@@ -533,7 +586,12 @@ function calcMultiCutYield(gauge, pieceDefs){
       else separateSheets += s;
     });
 
-    const useCombined = combinedSheets <= (anySeparateImpossible ? Infinity : separateSheets);
+    // Ties go to "separate," not "combined" — the combined shelf-packer
+    // doesn't know the same-piece mixed-cuts trick that bestPiecesPerSheet
+    // (used by the separate strategy) already applies, so when they tie on
+    // total sheets, "separate" is the more refined, better-looking layout
+    // to actually show and cut from.
+    const useCombined = combinedSheets < (anySeparateImpossible ? Infinity : separateSheets);
     const sheetsNeeded = useCombined ? combinedSheets : separateSheets;
     if(!isFinite(sheetsNeeded)){ results.push({sizeStr, fits:false}); return; }
 
@@ -634,17 +692,17 @@ function viewMc3Diagram(sizeStr){
     }
   } else {
     // "separate" strategy won — each piece size gets its own dedicated
-    // sheets, so show each as its own single-size diagram.
+    // sheets, so show each as its own single-size diagram set (all sheets,
+    // with the last partial one trimmed to preserve a usable remnant).
     pieceDefs.forEach((p,idx)=>{
       const plan = planSheetCut(r.dims.w, r.dims.l, p.w, p.l);
       if(!plan || plan.total<=0) return;
-      const sheetsForThis = Math.ceil(p.qty/plan.total);
       bodyHtml += `<div style="margin-bottom:16px">
-        <div style="font-size:12px;font-weight:600;margin-bottom:4px">
+        <div style="font-size:12px;font-weight:600;margin-bottom:8px">
           <span style="display:inline-block;width:11px;height:11px;background:${_DIAGRAM_PALETTE[idx%_DIAGRAM_PALETTE.length]};border-radius:2px;margin-right:5px"></span>
-          ${p.w}"×${p.l}" — ${plan.total} per sheet, ${sheetsForThis} sheet${sheetsForThis!==1?'s':''} needed
+          ${p.w}"×${p.l}" — ${plan.total} per full sheet
         </div>
-        ${renderCutDiagram(plan)}
+        ${renderMultiSheetDiagramsHtml(plan, p.qty)}
       </div>`;
     });
   }
@@ -728,7 +786,7 @@ function mc4Calc(){
   box.innerHTML = `
     <div style="font-size:13px;margin-bottom:10px"><strong>${plan.total} pieces</strong> per ${sheetW}"×${sheetL}" sheet — ${wastePct.toFixed(1)}% waste${plan.regions.length>1?' <span style="color:var(--text3);font-size:11px">(mixed cuts)</span>':''}</div>
     ${sheetsLine}
-    ${renderCutDiagram(plan)}
+    ${renderMultiSheetDiagramsHtml(plan, qty>0?qty:plan.total)}
   `;
 }
 
