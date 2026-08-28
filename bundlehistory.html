@@ -1,0 +1,1965 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sherwood Steel — Bundle History</title>
+<style>
+:root{
+  --blue:#2D6A2D;--blue-l:#E8F4E8;--blue-d:#1A4A1A;
+  --green:#3B6D11;--green-l:#EAF3DE;--green-m:#639922;
+  --amber:#BA7517;--amber-l:#FAEEDA;
+  --red:#A32D2D;--red-l:#FCEBEB;
+  --border:#d8dce6;--surface:#fff;--card:#fff;--page:#f0f2f5;
+  --text:#1C2E1C;--text2:#4a5f4a;--text3:#7a8f7a;
+  --rad:8px;--rad2:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--page);color:var(--text);min-height:100vh}
+
+#header{background:#1C2E1C;color:#fff;padding:0 20px;display:flex;align-items:center;gap:14px;height:56px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+#header .logo{font-size:15px;font-weight:700}
+#header .logo span{color:#A8D5A8}
+#header .hspace{flex:1}
+#bh-user{display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,.75);cursor:pointer}
+#bh-user:hover{color:#fff}
+
+.tab-bar{background:#1C2E1C;border-bottom:2px solid #2D6A2D;display:flex;padding:0 20px;gap:2px}
+.bh-tab{background:none;border:none;color:rgba(168,213,168,.65);padding:11px 18px;font-size:13px;font-weight:600;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px}
+.bh-tab:hover{color:#A8D5A8}
+.bh-tab.active{color:#A8D5A8;border-bottom-color:#A8D5A8}
+
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 20px;display:flex;justify-content:flex-end;gap:8px}
+
+.flex{display:flex;align-items:center}
+.flex-between{display:flex;align-items:center;justify-content:space-between}
+.gap8{gap:8px}
+.mb12{margin-bottom:12px}
+
+.field{margin-bottom:12px}
+.field:last-child{margin-bottom:0}
+label.lbl{display:block;font-size:11px;font-weight:600;letter-spacing:.05em;color:var(--text2);text-transform:uppercase;margin-bottom:5px}
+input[type=text],input[type=number],input[type=date],select,textarea{
+  width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--rad);
+  background:#fff;color:var(--text);font-size:13px;font-family:inherit;
+}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(24,95,165,.12)}
+
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--rad);border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;font-size:13px;font-family:inherit;font-weight:500;white-space:nowrap;text-decoration:none}
+.btn:hover{background:#f5f6fa;border-color:#c0c5d8}
+.btn-primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+.btn-primary:hover{background:var(--blue-d);border-color:var(--blue-d)}
+.btn-sm{padding:5px 10px;font-size:12px}
+
+.toast{position:fixed;bottom:24px;right:24px;background:#1C2E1C;color:#fff;padding:12px 20px;border-radius:var(--rad);font-size:13px;font-weight:500;z-index:1000;opacity:0;transform:translateY(10px);transition:all .25s;pointer-events:none;max-width:300px}
+.toast.show{opacity:1;transform:translateY(0)}
+
+/* ── Bundles/Coils: inventory.html-style flat grouped table ── */
+.bh-table{width:100%;border-collapse:collapse;font-size:13px}
+.bh-table thead th{background:#1C2E1C;color:#A8D5A8;padding:10px 12px;text-align:left;font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;white-space:nowrap;position:sticky;top:0;z-index:5}
+.bh-table tbody tr{border-bottom:1px solid var(--border)}
+.bh-table tbody tr:nth-child(even){background:#F5FAF5}
+.bh-table tbody tr:hover{background:#EBF5EB}
+.bh-table tbody tr.section-header td{font-weight:700;font-size:12px;padding:8px 12px 6px;border-bottom:2px solid #A8C0A8;background:#1C2E1C!important;color:#A8D5A8}
+.bh-table tbody tr.section-header:hover{background:#1C2E1C}
+.gauge-chip{display:inline-block;background:#C8D8D4;color:#1C2E1C;font-size:11px;font-weight:700;padding:2px 7px;border-radius:3px}
+.vendor-badge{display:inline-block;background:#1C2E1C;color:#A8D5A8;font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px}
+.td-num{text-align:right;font-variant-numeric:tabular-nums}
+.td-total{text-align:right;font-variant-numeric:tabular-nums;font-weight:700}
+.qty-input{width:70px;padding:3px 6px;border:1px solid #A8C0A8;border-radius:4px;font-size:12.5px;font-family:inherit;text-align:right;outline:none;background:#fff;color:var(--text)}
+.qty-input:focus{border-color:#2D6A2D}
+</style>
+</head>
+<body>
+
+<div id="header">
+  <div class="logo">SHERWOOD STEEL — <span>Bundle History</span></div>
+  <div class="hspace"></div>
+  <div id="bh-user" onclick="promptCurrentUser()">
+    👤 <span id="bh-user-display">Set your name</span>
+  </div>
+</div>
+
+<div class="tab-bar">
+  <button class="bh-tab active" data-tab="bundles" onclick="switchTab('bundles')">🧵 Bundles</button>
+  <button class="bh-tab" data-tab="coils" onclick="switchTab('coils')">🌀 Coils</button>
+  <button class="bh-tab" data-tab="history" onclick="switchTab('history')">📦 Usage History</button>
+</div>
+
+<div class="topbar">
+  <div id="bh-actions" class="flex gap8">
+    <button class="btn btn-sm btn-primary" onclick="openNewBundleModal()">+ New Bundle</button>
+    <button class="btn btn-sm" onclick="refreshBundlesView()">🔄 Refresh</button>
+  </div>
+</div>
+
+<div id="bundles-panel"></div>
+<div id="coils-panel" style="display:none"></div>
+<div id="history-panel" style="display:none"></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════════════
+// SUPABASE SYNC LAYER — same constants/helpers as index.html
+// (duplicated, not shared — no build step, matches the pattern
+// already used by inventory.html/forecast.html/schedule.html)
+// ══════════════════════════════════════════════════════
+const _SB_URL = 'https://ecndvwmbycyppqkbvuzs.supabase.co';
+const _SB_KEY = 'sb_publishable_DPSLNDOI___sDI-lt3YbpQ_TGJbHaV-';
+const _SB_HDR = { 'Content-Type': 'application/json', 'apikey': _SB_KEY, 'Authorization': 'Bearer ' + _SB_KEY };
+
+async function _sbGet(table, params='') {
+  try {
+    const url = `${_SB_URL}/rest/v1/${table}${params ? '?' + params : ''}`;
+    const r = await fetch(url, { headers: _SB_HDR });
+    if (!r.ok) { console.warn('SB GET error', table, await r.text()); return null; }
+    return await r.json();
+  } catch(e) { console.warn('SB GET fetch error', table, e.message); return null; }
+}
+
+async function _sbGetAll(table, params='') {
+  const pageSize = 1000;
+  const cleanParams = params.replace(/(^|&)limit=\d+/, '').replace(/^&/, '');
+  let offset = 0;
+  let all = [];
+  try {
+    while (true) {
+      const url = `${_SB_URL}/rest/v1/${table}${cleanParams ? '?' + cleanParams : ''}`;
+      const r = await fetch(url, { headers: { ..._SB_HDR, 'Range-Unit': 'items', 'Range': `${offset}-${offset+pageSize-1}` } });
+      if (!r.ok) {
+        console.warn('SB GET(all) error', table, r.status, await r.text());
+        return all.length ? all : null;
+      }
+      const batch = await r.json();
+      all = all.concat(batch);
+      if (batch.length < pageSize) break;
+      offset += pageSize;
+    }
+    return all;
+  } catch(e) {
+    console.warn('SB GET(all) fetch error', table, e.message);
+    return all.length ? all : null;
+  }
+}
+
+async function _sbPost(table, body) {
+  try {
+    const r = await fetch(`${_SB_URL}/rest/v1/${table}`, {
+      method: 'POST', headers: { ..._SB_HDR, 'Prefer': 'return=representation' },
+      body: JSON.stringify(body)
+    });
+    if (!r.ok) { console.warn('SB POST error', table, await r.text()); return null; }
+    return await r.json();
+  } catch(e) { return null; }
+}
+
+async function _sbPatch(table, match, body) {
+  try {
+    const params = Object.entries(match).map(([k,v])=>`${k}=eq.${encodeURIComponent(v)}`).join('&');
+    const r = await fetch(`${_SB_URL}/rest/v1/${table}?${params}`, {
+      method: 'PATCH', headers: { ..._SB_HDR, 'Prefer': 'return=representation' },
+      body: JSON.stringify(body)
+    });
+    if (!r.ok) { console.warn('SB PATCH error', table, await r.text()); return null; }
+    return await r.json();
+  } catch(e) { return null; }
+}
+
+async function _sbDelete(table, match) {
+  try {
+    const params = Object.entries(match).map(([k,v])=>`${k}=eq.${encodeURIComponent(v)}`).join('&');
+    await fetch(`${_SB_URL}/rest/v1/${table}?${params}`, { method: 'DELETE', headers: _SB_HDR });
+  } catch(e) {}
+}
+
+// ══════════════════════════════════════════════════════
+// SHARED HELPERS (copied from index.html — see file discipline note)
+// ══════════════════════════════════════════════════════
+function toast(msg,dur=2500){
+  const t=document.getElementById('toast');if(!t)return;t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),dur);
+}
+function localISO(d){
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const dd = String(d.getDate()).padStart(2,'0');
+  return y+'-'+m+'-'+dd;
+}
+function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// Stations + category display names are admin-configurable in index.html
+// (admin_config table) — pulled here read-only so labels match, without
+// duplicating the whole admin settings UI in this file.
+let _stationsList = ['IOWA','SHEAR','IOWA → SHEAR','IOWA → SHEAR → BREAK','SLIP','DRIVE','BREAK','SHEAR → BREAK','PLENUMS','PICK / PULL','STANDING S','RETURN AIR FRAMES','ROLLERS','OTHER'];
+function getStations(){ return _stationsList; }
+
+let CATEGORY_DISPLAY_NAMES = {};
+function catLabel(cat){ return CATEGORY_DISPLAY_NAMES[cat] || cat; }
+
+async function loadAdminLabels(){
+  const rows = await _sbGet('admin_config', 'select=key,value&key=in.(stations,category_names)').catch(()=>null);
+  (rows||[]).forEach(r=>{
+    try{
+      const val = typeof r.value==='string' ? JSON.parse(r.value) : r.value;
+      if(r.key==='stations' && Array.isArray(val) && val.length) _stationsList = val;
+      if(r.key==='category_names' && val && typeof val==='object') Object.assign(CATEGORY_DISPLAY_NAMES, val);
+    }catch(e){}
+  });
+}
+
+// "Logged by" — a lightweight name tag (not a real login) so manual bundle
+// records and new-bundle entries record who added them. Persisted locally
+// per device, same spirit as the driver picker on schedule.html.
+function getCurrentUser(){ return (localStorage.getItem('bh_user')||'').trim(); }
+function setCurrentUser(name){
+  localStorage.setItem('bh_user', (name||'').trim());
+  const el = document.getElementById('bh-user-display');
+  if(el) el.textContent = getCurrentUser() || 'Set your name';
+}
+function promptCurrentUser(){
+  const name = prompt('Your name (shown as who logged records):', getCurrentUser()||'');
+  if(name!==null) setCurrentUser(name);
+}
+
+// ══════════════════════════════════════════════════════
+// PRODUCT_CATS — needed only for the New Bundle category dropdown.
+// Kept as a flat key list (display labels resolved via catLabel/admin
+// config above) rather than the full gauge/size tree index.html uses,
+// since this page never needs to compute weights or valid size options.
+// ══════════════════════════════════════════════════════
+const PRODUCT_CATS = {
+  'Flat Sheet': true,
+  'Drive': true,
+  'Slip': true,
+  'Standing S': true,
+  'Panning': true,
+  'RAF': true,
+  'Angles': true,
+  'U-Channel': true,
+  'Hanger Strap (1x120)': true,
+  'Plenums': true,
+  'Coils': true,
+  'Other / Hardware': true
+};
+
+// ══════════════════════════════════════════════════════
+// RECENT/ACTIVE WORK ORDERS — for the Add Bundle Usage WO picker only.
+// Scoped deliberately (not the full work_orders history index.html holds
+// in memory) to keep this page's Supabase egress low: not-yet-delivered
+// orders, or anything created in the last 90 days. Loaded once per
+// session, refreshed on demand from the modal's own Refresh affordance.
+// ══════════════════════════════════════════════════════
+let _recentWOs = [];
+let _recentWOsLoaded = false;
+
+async function loadRecentWOs(force){
+  if(_recentWOsLoaded && !force) return;
+  const cutoffISO = new Date(Date.now() - 90*24*60*60*1000).toISOString();
+  const woRows = await _sbGetAll('work_orders',
+    `select=id,wo_num,customer,is_stock,delivered,created_at&or=(delivered.eq.false,created_at.gte.${cutoffISO})&order=created_at.desc`
+  ).catch(()=>null);
+  const wos = woRows || [];
+  const ids = wos.map(w=>w.id);
+  let items = [];
+  // Chunk the wo_id IN(...) filter — URL length limits make one giant
+  // request for hundreds of ids unreliable.
+  for(let i=0;i<ids.length;i+=150){
+    const chunk = ids.slice(i,i+150);
+    if(!chunk.length) continue;
+    const rows = await _sbGetAll('line_items',
+      `select=id,wo_id,wo_num,customer,product_cat,gauge,size,qty,weight,station,delivery&wo_id=in.(${chunk.join(',')})`
+    ).catch(()=>null);
+    if(rows) items = items.concat(rows);
+  }
+  const itemsByWo = {};
+  items.forEach(r=>{
+    const it = {
+      id: r.id, _dbId: r.id, productCat: r.product_cat, gauge: r.gauge, size: r.size,
+      qty: r.qty, weight: r.weight, station: r.station, woNum: r.wo_num,
+      customer: r.customer, delivery: r.delivery
+    };
+    (itemsByWo[r.wo_id] = itemsByWo[r.wo_id]||[]).push(it);
+  });
+  _recentWOs = wos.map(w=>({
+    id: w.id, woNum: w.wo_num, customer: w.customer, isStock: w.is_stock,
+    created: w.created_at, items: itemsByWo[w.id]||[]
+  }));
+  _recentWOsLoaded = true;
+}
+
+// ══════════════════════════════════════════════════════
+// TAB SWITCHING — two views, no sidebar (this is a focused single-purpose
+// page, unlike index.html's full app shell)
+// ══════════════════════════════════════════════════════
+let _activeTab = 'bundles';
+let _coilsViewRendered = false; // separate from window._coilsLoaded — Bundles
+// tab preloads coil data (for lineage labels) which sets _coilsLoaded early,
+// before the Coils tab's own layout has ever been built. This flag tracks
+// specifically whether renderCoilsView has run, so switching to Coils
+// always gets its search/filter skeleton at least once.
+function switchTab(tab){
+  _activeTab = tab;
+  document.querySelectorAll('.bh-tab').forEach(el=>el.classList.toggle('active', el.dataset.tab===tab));
+  document.getElementById('bundles-panel').style.display = tab==='bundles' ? '' : 'none';
+  document.getElementById('coils-panel').style.display = tab==='coils' ? '' : 'none';
+  document.getElementById('history-panel').style.display = tab==='history' ? '' : 'none';
+  if(tab==='bundles') document.getElementById('bh-actions').innerHTML = '<button class="btn btn-sm btn-primary" onclick="openNewBundleModal()">+ New Bundle</button><button class="btn btn-sm" onclick="refreshBundlesView()">🔄 Refresh</button>';
+  else if(tab==='coils') document.getElementById('bh-actions').innerHTML = '<button class="btn btn-sm btn-primary" onclick="openNewCoilModal()">+ New Coil</button><button class="btn btn-sm" onclick="refreshCoilsView()">🔄 Refresh</button>';
+  else document.getElementById('bh-actions').innerHTML = '<button class="btn btn-sm btn-primary" onclick="openAddBundleModal()">+ Add Record</button><button class="btn btn-sm" onclick="refreshBundleLog()">🔄 Refresh</button><button class="btn btn-sm" onclick="exportBundleCSV()">⬇ Export CSV</button>';
+  if(tab==='bundles' && !window._bundlesLoaded) renderBundlesView(document.getElementById('bundles-panel'));
+  else if(tab==='bundles') bnRender();
+  if(tab==='coils' && !_coilsViewRendered) renderCoilsView(document.getElementById('coils-panel'));
+  else if(tab==='coils') cnRender();
+  if(tab==='history' && !_bundleLogLoaded) renderBundleLog(document.getElementById('history-panel'));
+}
+
+let _bundleLogData = [];
+let _bundleLogLoaded = false; // fetched once per session — see renderBundleLog
+let _bundleLogFilters = { customer: '', coilNum: '', bundle: '', dateFrom: '', dateTo: '', station: '', needsLink: false };
+
+// ══════════════════════════════════════════════════════
+// BUNDLES — master inventory (starting qty + remaining)
+// ══════════════════════════════════════════════════════
+// A "bundle" here is a physical bundle received into inventory (pre-made
+// linear product). Remaining = starting_qty - sum of qty_pulled logged
+// against it in bundle_usage (bundle_id link). This mirrors the exact
+// pattern already used for fabricated stock (see getStockRemaining) —
+// remaining is always computed from the deduction ledger, never stored,
+// so it can't drift out of sync with what was actually pulled.
+window._bundlesData = [];
+window._bundlesLoaded = false;
+window._bundleUsageMap = {};        // bundle_id -> summed qty_pulled
+window._bundleUsageMapLoaded = false;
+let _bundlesFilters = { search: '', onlyAvailable: false, gauge: '', cat: '' };
+
+// Fetches bundle_id + qty_pulled + who/what pulled it (not the full
+// bundle_usage rows) to keep this cheap — avoids re-pulling ~2,000 full
+// usage rows just to get remaining-qty totals. Only rows with a bundle_id
+// match (i.e. pulls made through the updated Add Bundle Usage picker) —
+// the legacy free-text rows aren't linked and won't show here; those
+// still show up via "View pulls" → Bundle History. Cached for the
+// session like _bundleLogLoaded; updated in-memory (see
+// submitAddBundleRecords) whenever a new pull is logged, so it stays
+// current without a re-fetch.
+async function loadBundleUsageMap(force){
+  if(window._bundleUsageMapLoaded && !force) return;
+  const rows = await _sbGetAll('bundle_usage', 'select=bundle_id,qty_pulled,customer,wo_num,completed_at&bundle_id=not.is.null').catch(()=>null);
+  window._bundleUsageMap = {};
+  window._bundlePulls = {};
+  (rows||[]).forEach(r=>{
+    if(!r.bundle_id) return;
+    window._bundleUsageMap[r.bundle_id] = (window._bundleUsageMap[r.bundle_id]||0) + (parseFloat(r.qty_pulled)||0);
+    (window._bundlePulls[r.bundle_id] = window._bundlePulls[r.bundle_id]||[]).push({
+      customer: r.customer, wo_num: r.wo_num, qty: r.qty_pulled, date: r.completed_at
+    });
+  });
+  window._bundleUsageMapLoaded = true;
+}
+
+function getBundleUsed(bundle){
+  return window._bundleUsageMap[bundle.id] || 0;
+}
+function getBundleRemaining(bundle){
+  return Math.max(0, (parseFloat(bundle.starting_qty)||0) - getBundleUsed(bundle));
+}
+function getBundlePulls(bundle){
+  return (window._bundlePulls||{})[bundle.id] || [];
+}
+
+async function loadBundlesData(force){
+  if(window._bundlesLoaded && !force) return;
+  const rows = await _sbGetAll('bundles', 'order=created_at.desc').catch(()=>null);
+  window._bundlesData = rows || [];
+  window._bundlesLoaded = true;
+}
+
+function refreshBundlesView(){
+  window._bundlesLoaded = false;
+  window._bundleUsageMapLoaded = false;
+  renderBundlesView(document.getElementById('content'));
+}
+
+function bnGaugeOptions(){
+  return [...new Set((window._bundlesData||[]).map(b=>b.gauge).filter(Boolean))]
+    .sort((a,b)=>{ const va=_gaugeSortVal(a), vb=_gaugeSortVal(b); return va!==vb ? va-vb : a.localeCompare(b); });
+}
+function bnCatOptions(){
+  return [...new Set((window._bundlesData||[]).map(b=>b.product_cat).filter(Boolean))].sort();
+}
+
+async function renderBundlesView(c){
+  if(!c) c=document.getElementById('content');
+  c.innerHTML = `<div style="padding:20px;max-width:1100px;margin:0 auto">
+    <div style="display:flex;gap:10px;margin-bottom:16px;align-items:flex-end;flex-wrap:wrap">
+      <div style="flex:1;min-width:200px">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:4px">Search</div>
+        <input id="bn-search" type="text" placeholder="Bundle #, product, gauge, size…" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px" oninput="bnFilter()">
+      </div>
+      <div style="min-width:130px">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:4px">Gauge</div>
+        <select id="bn-gauge-filter" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px" onchange="bnFilter()">
+          <option value="">All gauges</option>
+        </select>
+      </div>
+      <div style="min-width:160px">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:4px">Category</div>
+        <select id="bn-cat-filter" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px" onchange="bnFilter()">
+          <option value="">All categories</option>
+        </select>
+      </div>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text2);padding-bottom:6px;cursor:pointer">
+        <input type="checkbox" id="bn-only-avail" onchange="bnFilter()"> Only with remaining stock
+      </label>
+      <button class="btn btn-sm" style="margin-bottom:1px" onclick="bnClearFilters()">✕ Clear</button>
+    </div>
+    <div id="bn-summary" style="margin-bottom:12px;font-size:13px;color:var(--text2)"></div>
+    <div id="bn-table" style="overflow-x:auto"></div>
+  </div>`;
+  document.getElementById('bn-table').innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)">Loading…</div>';
+  try {
+    // loadCoilsData is lightweight (a small table) and needed here purely
+    // to resolve "made from coil #X" lineage labels on bundle rows — not
+    // for any weight math, so no usage-map fetch needed alongside it.
+    await Promise.all([loadBundlesData(), loadBundleUsageMap(), loadCoilsData()]);
+    const gSel = document.getElementById('bn-gauge-filter');
+    bnGaugeOptions().forEach(g=>gSel.insertAdjacentHTML('beforeend', `<option value="${escHtml(g)}">${escHtml(g)}</option>`));
+    const cSel = document.getElementById('bn-cat-filter');
+    bnCatOptions().forEach(cat=>cSel.insertAdjacentHTML('beforeend', `<option value="${escHtml(cat)}">${escHtml(catLabel(cat))}</option>`));
+    bnRender();
+  } catch(e) {
+    document.getElementById('bn-table').innerHTML = '<div style="padding:20px;color:var(--red)">Failed to load — check connection</div>';
+  }
+}
+
+function bnFilter(){
+  _bundlesFilters.search = (document.getElementById('bn-search')?.value||'').toLowerCase();
+  _bundlesFilters.onlyAvailable = !!document.getElementById('bn-only-avail')?.checked;
+  _bundlesFilters.gauge = document.getElementById('bn-gauge-filter')?.value || '';
+  _bundlesFilters.cat = document.getElementById('bn-cat-filter')?.value || '';
+  bnRender();
+}
+
+function bnClearFilters(){
+  const s=document.getElementById('bn-search'); if(s) s.value='';
+  const g=document.getElementById('bn-gauge-filter'); if(g) g.value='';
+  const c=document.getElementById('bn-cat-filter'); if(c) c.value='';
+  const a=document.getElementById('bn-only-avail'); if(a) a.checked=false;
+  _bundlesFilters = { search:'', onlyAvailable:false, gauge:'', cat:'' };
+  bnRender();
+}
+
+// Expand/collapse state persists across re-renders (e.g. after an inline
+// edit triggers bnRender again) — gauges default open, sizes default
+// closed, matching "quick glance at gauges, drill into sizes" intent.
+let _bnClosedGauges = new Set();
+let _bnOpenSizes = new Set();
+let _bnOpenPulls = new Set();
+function bnToggleGauge(g, isOpen){ if(isOpen) _bnClosedGauges.delete(g); else _bnClosedGauges.add(g); }
+function bnToggleSize(key, isOpen){ if(isOpen) _bnOpenSizes.add(key); else _bnOpenSizes.delete(key); }
+function toggleBundlePulls(bundleId){
+  if(_bnOpenPulls.has(bundleId)) _bnOpenPulls.delete(bundleId); else _bnOpenPulls.add(bundleId);
+  bnRender();
+}
+
+function _gaugeSortVal(g){ const n=parseFloat(g); return isNaN(n) ? Infinity : n; }
+function _sizeSortVal(s){ const m=String(s||'').match(/^([\d.]+)/); return m ? parseFloat(m[1]) : Infinity; }
+// Vendor was folded into the free-text notes field at import time
+// ("Vendor: XYZ · Type: ..."), rather than getting its own column — pull
+// it back out for display as a badge, matching the inventory.html look.
+function extractVendor(notes){
+  const m = String(notes||'').match(/Vendor:\s*([^·]+)/);
+  return m ? m[1].trim() : null;
+}
+
+function bnRender(){
+  const f = _bundlesFilters;
+  let rows = (window._bundlesData||[]).filter(b=>{
+    if(f.search){
+      const hay = [b.bundle_num,b.product_cat,b.gauge,b.size,b.notes].filter(Boolean).join(' ').toLowerCase();
+      if(!hay.includes(f.search)) return false;
+    }
+    if(f.gauge && b.gauge!==f.gauge) return false;
+    if(f.cat && b.product_cat!==f.cat) return false;
+    if(f.onlyAvailable && getBundleRemaining(b)<=0) return false;
+    return true;
+  });
+
+  document.getElementById('bn-summary').innerHTML =
+    `<strong style="color:var(--text)">${rows.length}</strong> bundle${rows.length!==1?'s':''} shown ·
+     <strong style="color:var(--text)">${rows.filter(b=>getBundleRemaining(b)>0).length}</strong> with stock remaining`;
+
+  if(!rows.length){
+    document.getElementById('bn-table').innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)">No bundles match. Click "+ New Bundle" to add one.</div>';
+    return;
+  }
+
+  // Group by gauge only — sort within each gauge by size, newest first
+  // as a tiebreaker. Matches inventory.html's flat, always-visible
+  // section-bar layout rather than a collapsible accordion.
+  const byGauge = {};
+  rows.forEach(b=>{ (byGauge[b.gauge||'—'] = byGauge[b.gauge||'—']||[]).push(b); });
+  const gauges = Object.keys(byGauge).sort((a,b)=>{
+    const va=_gaugeSortVal(a), vb=_gaugeSortVal(b);
+    return va!==vb ? va-vb : a.localeCompare(b);
+  });
+
+  let bodyHtml = '';
+  gauges.forEach(g=>{
+    const gaugeBundles = byGauge[g].sort((a,b)=>{
+      const va=_sizeSortVal(a.size), vb=_sizeSortVal(b.size);
+      if(va!==vb) return va-vb;
+      return (b.created_at||'').localeCompare(a.created_at||'');
+    });
+    const gaugeRemaining = gaugeBundles.reduce((s,b)=>s+getBundleRemaining(b),0);
+    bodyHtml += `<tr class="section-header"><td colspan="8">⚙ Gauge ${escHtml(g)} — Bundles <span style="font-weight:400;font-size:11px;margin-left:8px;opacity:.75">${gaugeBundles.length} bundle${gaugeBundles.length!==1?'s':''} · ${gaugeRemaining} remaining</span></td></tr>`;
+
+    gaugeBundles.forEach(b=>{
+      const remaining = getBundleRemaining(b);
+      const used = getBundleUsed(b);
+      const pulls = getBundlePulls(b);
+      const pct = (parseFloat(b.starting_qty)||0) > 0 ? remaining/(parseFloat(b.starting_qty)||1) : 0;
+      const remColor = remaining<=0 ? 'var(--red)' : (pct<0.15 ? 'var(--amber)' : 'var(--green)');
+      const vendor = extractVendor(b.notes);
+      const sourceCoil = b.source_coil_id ? (window._coilsData||[]).find(c=>c.id===b.source_coil_id) : null;
+      const pullsOpen = _bnOpenPulls.has(b.id);
+      const pullsCell = pulls.length
+        ? `<span style="color:var(--blue);cursor:pointer;text-decoration:underline" onclick="toggleBundlePulls(${b.id})">${pulls.length} pull${pulls.length!==1?'s':''}</span>`
+        : '<span style="color:var(--text3)">—</span>';
+      bodyHtml += `<tr>
+        <td><span class="gauge-chip">${escHtml(g)}</span></td>
+        <td>${b.size||'—'}</td>
+        <td>${vendor?`<span class="vendor-badge">${escHtml(vendor)}</span>`:'—'}</td>
+        <td class="td-num"><input class="qty-input" type="number" min="0" value="${b.starting_qty!=null?b.starting_qty:''}" onblur="saveBundleQtyInput(this,${b.id})"></td>
+        <td class="td-num">${used||0}</td>
+        <td class="td-num" style="color:${remColor};font-weight:700">${remaining}</td>
+        <td style="text-align:center">${pullsCell}</td>
+        <td style="font-family:monospace;font-size:12px;color:var(--blue);cursor:pointer" onclick="viewBundlePulls('${(b.bundle_num||'').replace(/'/g,"\\'")}')" title="View pulls in Bundle History">${b.bundle_num||'—'}${sourceCoil?`<div style="font-family:inherit;font-size:10px;color:var(--text3)">🌀 coil ${escHtml(sourceCoil.coil_num)}</div>`:''}</td>
+      </tr>`;
+      if(pullsOpen){
+        const pullRows = pulls.slice().sort((a,c)=>(c.date||'').localeCompare(a.date||'')).map(p=>{
+          const pd = p.date ? new Date(p.date).toLocaleDateString([],{month:'short',day:'numeric',year:'2-digit'}) : '—';
+          return `<div style="display:flex;gap:14px;padding:4px 0;border-bottom:1px solid var(--border);font-size:12px">
+            <span style="flex:1;font-weight:600">${escHtml(p.customer||'—')}</span>
+            <span style="color:var(--text2)">WO #${escHtml(p.wo_num||'—')}</span>
+            <span style="color:var(--text2)">${p.qty||'—'} ${b.unit||''}</span>
+            <span style="color:var(--text3);white-space:nowrap">${pd}</span>
+          </div>`;
+        }).join('');
+        bodyHtml += `<tr><td colspan="8" style="padding:8px 10px 10px 24px;background:rgba(0,0,0,.02)">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:4px">Pulled by</div>
+          ${pullRows}
+        </td></tr>`;
+      }
+    });
+  });
+
+  document.getElementById('bn-table').innerHTML = `<table class="bh-table">
+    <thead><tr>${['Gauge','Size','Vendor','Starting','Pulled','Remaining','Pulls','Bundle #'].map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+    <tbody>${bodyHtml}</tbody>
+  </table>`;
+}
+
+// Inline qty-edit input (inventory.html style: onblur-save, no click-to-
+// activate step needed since it's already an input).
+async function saveBundleQtyInput(inp, bundleId){
+  const b = (window._bundlesData||[]).find(x=>x.id===bundleId);
+  const previousVal = b ? b.starting_qty : null;
+  const newVal = parseFloat(inp.value);
+  if(isNaN(newVal) || newVal<0){ toast('⚠ Enter a valid quantity'); inp.value = previousVal!=null?previousVal:''; return; }
+  if(newVal === parseFloat(previousVal)) return; // unchanged, skip the write
+  const result = await _sbPatch('bundles', {id: bundleId}, {starting_qty: newVal}).catch(()=>null);
+  const ok = Array.isArray(result) && result.length > 0;
+  if(!ok){
+    toast('⚠ Failed to save — check connection and try again');
+    inp.value = previousVal!=null?previousVal:'';
+  } else {
+    if(b) b.starting_qty = newVal;
+    toast('✓ Saved');
+    bnRender();
+  }
+}
+
+function viewBundlePulls(bundleNum){
+  switchTab('history');
+  setTimeout(()=>{
+    const inp = document.getElementById('bl-bundle');
+    if(inp){ inp.value = bundleNum; blFilter(); }
+  }, 60);
+}
+
+// Click-to-edit starting qty directly on the Bundles list — for corrections
+// (miscount at receiving, etc.). Does not touch bundle_usage.
+function startEditBundleField(td, bundleId, field){
+  if(td.querySelector('input')) return;
+  const b = (window._bundlesData||[]).find(x=>x.id===bundleId);
+  if(!b) return;
+  const current = b[field]!=null ? b[field] : '';
+  td.innerHTML = `<input type="number" min="0" value="${current}" style="width:80px;padding:2px 6px;font-size:12px;border:1px solid var(--blue);border-radius:4px;background:var(--card);color:var(--text)" onclick="event.stopPropagation()" onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape')this.dataset.cancel='1',this.blur()" onblur="saveBundleField(this,${bundleId},'${field}')">`;
+  const inp = td.querySelector('input');
+  inp.focus(); inp.select();
+}
+
+async function saveBundleField(inp, bundleId, field){
+  const td = inp.parentElement;
+  const b = (window._bundlesData||[]).find(x=>x.id===bundleId);
+  const previousVal = b ? b[field] : null;
+  if(inp.dataset.cancel){ bnRender(); return; }
+  const newVal = parseFloat(inp.value);
+  if(isNaN(newVal) || newVal<0){ toast('⚠ Enter a valid quantity'); bnRender(); return; }
+  const patch = {}; patch[field] = newVal;
+  const result = await _sbPatch('bundles', {id: bundleId}, patch).catch(()=>null);
+  const ok = Array.isArray(result) && result.length > 0;
+  if(!ok){
+    toast('⚠ Failed to save — check connection and try again');
+    if(b) b[field] = previousVal;
+  } else {
+    if(b) b[field] = newVal;
+    toast('✓ Saved');
+  }
+  bnRender();
+}
+
+// ── New Bundle modal ───────────────────────────────────────────────────
+// onCreated(bundle) is an optional callback used by the Add Bundle Usage
+// picker's "+ Create new bundle" quick-add, so office doesn't have to leave
+// that flow to register a bundle that isn't in the master list yet.
+function openNewBundleModal(prefill, onCreated){
+  const existing=document.getElementById('newbundle-modal');
+  if(existing)existing.remove();
+  window._nbOnCreated = onCreated || null;
+  prefill = prefill || {};
+  const catOpts = Object.keys(PRODUCT_CATS).map(c=>`<option value="${c}"${prefill.product_cat===c?' selected':''}>${catLabel(c)}</option>`).join('');
+  const todayISO = localISO(new Date());
+  const modal=document.createElement('div');
+  modal.id='newbundle-modal';
+  modal.style.cssText='position:fixed;inset:0;z-index:650;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:16px';
+  modal.onclick=e=>{if(e.target===modal)closeNewBundleModal();};
+  modal.innerHTML=`
+  <div style="background:var(--surface);border-radius:var(--rad2);padding:20px;width:100%;max-width:480px;max-height:88vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.2)">
+    <div class="flex-between mb12">
+      <div style="font-size:15px;font-weight:700">🧵 New Bundle</div>
+      <button class="btn btn-sm" onclick="closeNewBundleModal()">✕ Cancel</button>
+    </div>
+    <div id="nb-dupe-warning"></div>
+    <div class="field mb12"><label class="lbl">Bundle #</label><input type="text" id="nb-num" value="${escHtml(prefill.bundle_num||'')}" placeholder="Bundle #" style="width:100%" oninput="nbCheckDupe()"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px" class="mb12">
+      <div class="field"><label class="lbl">Product Category</label><select id="nb-cat" style="width:100%"><option value="">—</option>${catOpts}</select></div>
+      <div class="field"><label class="lbl">Gauge</label><input type="text" id="nb-gauge" value="${escHtml(prefill.gauge||'')}" placeholder="e.g. 26" style="width:100%"></div>
+    </div>
+    <div class="field mb12"><label class="lbl">Size</label><input type="text" id="nb-size" value="${escHtml(prefill.size||'')}" placeholder="e.g. 8' Drive" style="width:100%"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px" class="mb12">
+      <div class="field"><label class="lbl">Starting Qty</label><input type="number" min="0" id="nb-qty" placeholder="Qty" style="width:100%"></div>
+      <div class="field"><label class="lbl">Unit</label><select id="nb-unit" style="width:100%"><option value="pcs">pcs</option><option value="ft">ft</option><option value="lbs">lbs</option></select></div>
+    </div>
+    <div class="field mb12"><label class="lbl">Received Date</label><input type="date" id="nb-date" value="${todayISO}" style="width:100%"></div>
+    <div class="field mb12" style="position:relative">
+      <label class="lbl">Made from Coil # <span style="color:var(--text3);font-weight:400;text-transform:none">(optional — for history/lineage only, doesn't deduct weight)</span></label>
+      <input type="text" id="nb-coil-search" value="${escHtml(prefill.coil_num||'')}" placeholder="Search coil #…" autocomplete="off" style="width:100%" oninput="renderNbCoilResults(this.value)" onfocus="renderNbCoilResults(this.value)">
+      <input type="hidden" id="nb-source-coil-id" value="${prefill.source_coil_id||''}">
+      <div id="nb-coil-results" style="position:absolute;z-index:10;left:0;right:0;top:100%;background:var(--surface);border-radius:0 0 var(--rad) var(--rad);max-height:160px;overflow-y:auto"></div>
+      <div id="nb-coil-selected" style="font-size:11px;color:var(--green);margin-top:2px">${prefill.source_coil_id?'✓ Linked to coil '+escHtml(prefill.coil_num||''):''}</div>
+    </div>
+    <div class="field mb12"><label class="lbl">Notes</label><input type="text" id="nb-notes" placeholder="Optional" style="width:100%"></div>
+    <button class="btn btn-primary" style="width:100%" onclick="submitNewBundle()">💾 Save Bundle</button>
+  </div>`;
+  document.body.appendChild(modal);
+  setTimeout(()=>{ document.getElementById('nb-num')?.focus(); nbCheckDupe(); loadCoilsData().catch(()=>{}); }, 50);
+}
+
+function renderNbCoilResults(query){
+  const box = document.getElementById('nb-coil-results');
+  if(!box) return;
+  const q = (query||'').trim().toLowerCase();
+  if(!q){ box.innerHTML=''; return; }
+  const matches = (window._coilsData||[]).filter(c=>(c.coil_num||'').toLowerCase().includes(q)).slice(0,10);
+  if(!matches.length){ box.innerHTML = '<div style="padding:6px 8px;font-size:12px;color:var(--text3)">No matching coils</div>'; return; }
+  box.innerHTML = matches.map(c=>{
+    const rem = getCoilRemaining(c);
+    return `<div onclick="selectNbCoil(${c.id})" style="padding:6px 8px;border-top:1px solid var(--border);cursor:pointer;font-size:12px" onmouseover="this.style.background='var(--blue-l)'" onmouseout="this.style.background=''">
+      <strong>${c.coil_num}</strong> — ${[c.gauge,c.width].filter(Boolean).join(' · ')||'—'}
+      <span style="float:right;color:${rem>0?'var(--green)':'var(--red)'}">${rem} lbs left</span>
+    </div>`;
+  }).join('');
+}
+
+function selectNbCoil(coilId){
+  const c = (window._coilsData||[]).find(x=>String(x.id)===String(coilId));
+  if(!c) return;
+  document.getElementById('nb-source-coil-id').value = c.id;
+  document.getElementById('nb-coil-search').value = c.coil_num;
+  document.getElementById('nb-coil-results').innerHTML='';
+  document.getElementById('nb-coil-selected').innerHTML = `✓ Linked to coil ${escHtml(c.coil_num)}`;
+}
+
+function closeNewBundleModal(){
+  const m=document.getElementById('newbundle-modal');
+  if(m)m.remove();
+  window._nbOnCreated = null;
+}
+
+async function nbCheckDupe(){
+  await loadBundlesData();
+  await loadBundleUsageMap();
+  const num = (document.getElementById('nb-num')?.value||'').trim().toLowerCase();
+  const box = document.getElementById('nb-dupe-warning');
+  if(!box) return;
+  if(!num){ box.innerHTML=''; return; }
+  const match = (window._bundlesData||[]).find(b=>(b.bundle_num||'').trim().toLowerCase()===num);
+  if(match){
+    const remaining = getBundleRemaining(match);
+    box.innerHTML = `<div style="background:var(--amber-l);border:1px solid #FAC775;border-radius:var(--rad);padding:8px 10px;font-size:12px;margin-bottom:10px">⚠ Bundle # "<strong>${match.bundle_num}</strong>" already exists (${remaining} remaining of ${match.starting_qty}). Saving will create a second, separate bundle with the same number.</div>`;
+  } else {
+    box.innerHTML='';
+  }
+}
+
+async function submitNewBundle(){
+  const num = document.getElementById('nb-num')?.value.trim();
+  const qty = parseFloat(document.getElementById('nb-qty')?.value);
+  if(!num){ toast('⚠ Bundle # is required'); return; }
+  if(isNaN(qty) || qty<0){ toast('⚠ Enter a valid starting qty'); return; }
+  const record = {
+    bundle_num: num,
+    product_cat: document.getElementById('nb-cat')?.value || null,
+    gauge: document.getElementById('nb-gauge')?.value.trim() || null,
+    size: document.getElementById('nb-size')?.value.trim() || null,
+    starting_qty: qty,
+    unit: document.getElementById('nb-unit')?.value || 'pcs',
+    received_date: document.getElementById('nb-date')?.value || null,
+    created_by: getCurrentUser() || null,
+    notes: document.getElementById('nb-notes')?.value.trim() || null,
+    source_coil_id: document.getElementById('nb-source-coil-id')?.value ? parseInt(document.getElementById('nb-source-coil-id').value) : null
+  };
+  const rows = await _sbPost('bundles', record).catch(()=>null);
+  if(!rows){ toast('⚠ Failed to save — check connection and try again'); return; }
+  const saved = Array.isArray(rows) ? rows[0] : rows;
+  window._bundlesData = window._bundlesData||[];
+  window._bundlesData.unshift(saved);
+  toast(`✓ Bundle ${saved.bundle_num} added`);
+  const cb = window._nbOnCreated;
+  closeNewBundleModal();
+  if(cb) cb(saved);
+  else if(_activeTab==='bundles') bnRender();
+}
+
+// ══════════════════════════════════════════════════════
+// COILS — raw stock master (tracked by weight, not piece count)
+// ══════════════════════════════════════════════════════
+// A coil is feedstock, not finished product: it's consumed either by
+// cutting directly to fulfill a WO line item (weight_used against
+// coil_id in bundle_usage — the "direct cut" path in Add Bundle Usage),
+// or by being cut down into new bundles (recorded only as a lineage
+// pointer — bundles.source_coil_id — with no automatic weight math,
+// since converting piece count back to coil weight isn't reliable
+// without the gauge/size weight tables that live in index.html).
+window._coilsData = [];
+window._coilsLoaded = false;
+window._coilUsageMap = {};   // coil_id -> summed weight_used
+window._coilUsageMapLoaded = false;
+window._coilPulls = {};      // coil_id -> [{customer, wo_num, qty, date}]
+let _coilsFilters = { search: '', onlyAvailable: false, gauge: '' };
+
+async function loadCoilsData(force){
+  if(window._coilsLoaded && !force) return;
+  const rows = await _sbGetAll('coils', 'order=created_at.desc').catch(()=>null);
+  window._coilsData = rows || [];
+  window._coilsLoaded = true;
+}
+
+async function loadCoilUsageMap(force){
+  if(window._coilUsageMapLoaded && !force) return;
+  const rows = await _sbGetAll('bundle_usage', 'select=coil_id,weight_used,customer,wo_num,completed_at&coil_id=not.is.null').catch(()=>null);
+  window._coilUsageMap = {};
+  window._coilPulls = {};
+  (rows||[]).forEach(r=>{
+    if(!r.coil_id) return;
+    window._coilUsageMap[r.coil_id] = (window._coilUsageMap[r.coil_id]||0) + (parseFloat(r.weight_used)||0);
+    (window._coilPulls[r.coil_id] = window._coilPulls[r.coil_id]||[]).push({
+      customer: r.customer, wo_num: r.wo_num, qty: r.weight_used, date: r.completed_at
+    });
+  });
+  window._coilUsageMapLoaded = true;
+}
+
+// Coils are tracked manually — starting_weight and remaining_weight are
+// both directly editable (someone weighs the coil and types in what's
+// left), unlike bundles which deduct precisely from a pull ledger. "Used"
+// here is just the difference, for display — never authoritative math,
+// since cutting loss/waste means a summed pull ledger wouldn't match a
+// real scale reading anyway. loadCoilUsageMap's data still powers the
+// "Pulls" list (who referenced this coil, for traceability) — it just
+// no longer feeds the remaining-weight calculation.
+function getCoilUsed(coil){
+  const starting = parseFloat(coil.starting_weight)||0;
+  const remaining = coil.remaining_weight!=null ? parseFloat(coil.remaining_weight) : starting;
+  return Math.max(0, starting - remaining);
+}
+function getCoilRemaining(coil){
+  return coil.remaining_weight!=null ? parseFloat(coil.remaining_weight) : (parseFloat(coil.starting_weight)||0);
+}
+function getCoilPulls(coil){ return (window._coilPulls||{})[coil.id] || []; }
+
+function refreshCoilsView(){
+  window._coilsLoaded = false;
+  window._coilUsageMapLoaded = false;
+  _coilsViewRendered = false;
+  renderCoilsView(document.getElementById('coils-panel'));
+}
+
+function cnGaugeOptions(){
+  return [...new Set((window._coilsData||[]).map(c=>c.gauge).filter(Boolean))]
+    .sort((a,b)=>{ const va=_gaugeSortVal(a), vb=_gaugeSortVal(b); return va!==vb ? va-vb : a.localeCompare(b); });
+}
+
+async function renderCoilsView(c){
+  if(!c) c=document.getElementById('coils-panel');
+  _coilsViewRendered = true;
+  c.innerHTML = `<div style="padding:20px;max-width:1100px;margin:0 auto">
+    <div style="display:flex;gap:10px;margin-bottom:16px;align-items:flex-end;flex-wrap:wrap">
+      <div style="flex:1;min-width:200px">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:4px">Search</div>
+        <input id="cn-search" type="text" placeholder="Coil #, gauge, width…" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px" oninput="cnFilter()">
+      </div>
+      <div style="min-width:130px">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:4px">Gauge</div>
+        <select id="cn-gauge-filter" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px" onchange="cnFilter()">
+          <option value="">All gauges</option>
+        </select>
+      </div>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text2);padding-bottom:6px;cursor:pointer">
+        <input type="checkbox" id="cn-only-avail" onchange="cnFilter()"> Only with remaining weight
+      </label>
+      <button class="btn btn-sm" style="margin-bottom:1px" onclick="cnClearFilters()">✕ Clear</button>
+    </div>
+    <div id="cn-summary" style="margin-bottom:12px;font-size:13px;color:var(--text2)"></div>
+    <div id="cn-table" style="overflow-x:auto"></div>
+  </div>`;
+  document.getElementById('cn-table').innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)">Loading…</div>';
+  try {
+    // loadCoilsData/loadCoilUsageMap are no-ops if the Bundles tab's
+    // lineage preload already populated them (see renderBundlesView) —
+    // force a re-check isn't needed since those loaders already cache
+    // correctly; only the view template itself needed its own flag.
+    await Promise.all([loadCoilsData(), loadCoilUsageMap()]);
+    const gSel = document.getElementById('cn-gauge-filter');
+    cnGaugeOptions().forEach(g=>gSel.insertAdjacentHTML('beforeend', `<option value="${escHtml(g)}">${escHtml(g)}</option>`));
+    cnRender();
+  } catch(e) {
+    document.getElementById('cn-table').innerHTML = '<div style="padding:20px;color:var(--red)">Failed to load — check connection</div>';
+  }
+}
+
+function cnFilter(){
+  _coilsFilters.search = (document.getElementById('cn-search')?.value||'').toLowerCase();
+  _coilsFilters.onlyAvailable = !!document.getElementById('cn-only-avail')?.checked;
+  _coilsFilters.gauge = document.getElementById('cn-gauge-filter')?.value || '';
+  cnRender();
+}
+
+function cnClearFilters(){
+  const s=document.getElementById('cn-search'); if(s) s.value='';
+  const g=document.getElementById('cn-gauge-filter'); if(g) g.value='';
+  const a=document.getElementById('cn-only-avail'); if(a) a.checked=false;
+  _coilsFilters = { search:'', onlyAvailable:false, gauge:'' };
+  cnRender();
+}
+
+// Expand/collapse + pull-list state persists across re-renders, same
+// pattern as the Bundles tab.
+let _cnClosedGauges = new Set();
+let _cnOpenWidths = new Set();
+let _cnOpenPulls = new Set();
+function cnToggleGauge(g, isOpen){ if(isOpen) _cnClosedGauges.delete(g); else _cnClosedGauges.add(g); }
+function cnToggleWidth(key, isOpen){ if(isOpen) _cnOpenWidths.add(key); else _cnOpenWidths.delete(key); }
+function toggleCoilPulls(coilId){
+  if(_cnOpenPulls.has(coilId)) _cnOpenPulls.delete(coilId); else _cnOpenPulls.add(coilId);
+  cnRender();
+}
+
+function getBundlesFromCoil(coil){
+  return (window._bundlesData||[]).filter(b=>b.source_coil_id===coil.id);
+}
+
+function quickNewBundleFromCoil(coilId){
+  const c = (window._coilsData||[]).find(x=>x.id===coilId);
+  if(!c) return;
+  openNewBundleModal({gauge: c.gauge, source_coil_id: c.id, coil_num: c.coil_num}, ()=>{ if(_activeTab==='coils') cnRender(); });
+}
+
+let _cnOpenBundlesMade = new Set();
+function toggleCoilBundlesMade(coilId){
+  if(_cnOpenBundlesMade.has(coilId)) _cnOpenBundlesMade.delete(coilId); else _cnOpenBundlesMade.add(coilId);
+  cnRender();
+}
+
+function cnRender(){
+  const f = _coilsFilters;
+  let rows = (window._coilsData||[]).filter(c=>{
+    if(f.search){
+      const hay = [c.coil_num,c.gauge,c.width,c.notes].filter(Boolean).join(' ').toLowerCase();
+      if(!hay.includes(f.search)) return false;
+    }
+    if(f.gauge && c.gauge!==f.gauge) return false;
+    if(f.onlyAvailable && getCoilRemaining(c)<=0) return false;
+    return true;
+  });
+
+  document.getElementById('cn-summary').innerHTML =
+    `<strong style="color:var(--text)">${rows.length}</strong> coil${rows.length!==1?'s':''} shown ·
+     <strong style="color:var(--text)">${rows.filter(c=>getCoilRemaining(c)>0).length}</strong> with weight remaining`;
+
+  if(!rows.length){
+    document.getElementById('cn-table').innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)">No coils match. Click "+ New Coil" to add one.</div>';
+    return;
+  }
+
+  const byGauge = {};
+  rows.forEach(c=>{ (byGauge[c.gauge||'—'] = byGauge[c.gauge||'—']||[]).push(c); });
+  const gauges = Object.keys(byGauge).sort((a,b)=>{
+    const va=_gaugeSortVal(a), vb=_gaugeSortVal(b);
+    return va!==vb ? va-vb : a.localeCompare(b);
+  });
+
+  let bodyHtml = '';
+  gauges.forEach(g=>{
+    const gaugeCoils = byGauge[g].sort((a,b)=>{
+      const va=_sizeSortVal(a.width), vb=_sizeSortVal(b.width);
+      if(va!==vb) return va-vb;
+      return (b.created_at||'').localeCompare(a.created_at||'');
+    });
+    const gaugeRemaining = gaugeCoils.reduce((s,c)=>s+getCoilRemaining(c),0);
+    bodyHtml += `<tr class="section-header"><td colspan="8">🌀 Gauge ${escHtml(g)} — Coils <span style="font-weight:400;font-size:11px;margin-left:8px;opacity:.75">${gaugeCoils.length} coil${gaugeCoils.length!==1?'s':''} · ${Math.round(gaugeRemaining).toLocaleString()} lbs remaining</span></td></tr>`;
+
+    gaugeCoils.forEach(c=>{
+      const remaining = getCoilRemaining(c);
+      const used = getCoilUsed(c);
+      const pulls = getCoilPulls(c);
+      const bundlesMade = getBundlesFromCoil(c);
+      const pct = (parseFloat(c.starting_weight)||0) > 0 ? remaining/(parseFloat(c.starting_weight)||1) : 0;
+      const remColor = remaining<=0 ? 'var(--red)' : (pct<0.15 ? 'var(--amber)' : 'var(--green)');
+      const vendor = extractVendor(c.notes);
+      const pullsOpen = _cnOpenPulls.has(c.id);
+      const bundlesMadeOpen = _cnOpenBundlesMade.has(c.id);
+      const pullsCell = pulls.length
+        ? `<span style="color:var(--blue);cursor:pointer;text-decoration:underline" onclick="toggleCoilPulls(${c.id})">${pulls.length} pull${pulls.length!==1?'s':''}</span>`
+        : '<span style="color:var(--text3)">—</span>';
+      const bundlesMadeCell = bundlesMade.length
+        ? `<span style="color:var(--blue);cursor:pointer;text-decoration:underline" onclick="toggleCoilBundlesMade(${c.id})">${bundlesMade.length} bundle${bundlesMade.length!==1?'s':''}</span>`
+        : '<span style="color:var(--text3)">—</span>';
+      const quickBundleBtn = `<span style="color:var(--blue);cursor:pointer;margin-left:8px" title="Create a new bundle from this coil" onclick="quickNewBundleFromCoil(${c.id})">+</span>`;
+      bodyHtml += `<tr>
+        <td><span class="gauge-chip">${escHtml(g)}</span></td>
+        <td>${c.width||'—'}</td>
+        <td>${vendor?`<span class="vendor-badge">${escHtml(vendor)}</span>`:'—'}</td>
+        <td class="td-num"><input class="qty-input" type="number" min="0" value="${c.starting_weight!=null?c.starting_weight:''}" onblur="saveCoilFieldInput(this,${c.id},'starting_weight')" title="Starting weight — edit directly"></td>
+        <td class="td-num"><input class="qty-input" type="number" min="0" value="${c.remaining_weight!=null?c.remaining_weight:''}" onblur="saveCoilFieldInput(this,${c.id},'remaining_weight')" title="Remaining weight — update after weighing the coil" style="border-color:${remColor}"></td>
+        <td class="td-num" style="color:var(--text2)">${used||0}</td>
+        <td style="text-align:center">${pullsCell}</td>
+        <td style="text-align:center">${bundlesMadeCell}${quickBundleBtn}</td>
+      </tr>`;
+      if(pullsOpen){
+        const pullRows = pulls.slice().sort((a,d)=>(d.date||'').localeCompare(a.date||'')).map(p=>{
+          const pd = p.date ? new Date(p.date).toLocaleDateString([],{month:'short',day:'numeric',year:'2-digit'}) : '—';
+          return `<div style="display:flex;gap:14px;padding:4px 0;border-bottom:1px solid var(--border);font-size:12px">
+            <span style="flex:1;font-weight:600">${escHtml(p.customer||'—')}</span>
+            <span style="color:var(--text2)">WO #${escHtml(p.wo_num||'—')}</span>
+            <span style="color:var(--text2)">${p.qty||'—'} lbs (logged, not auto-deducted)</span>
+            <span style="color:var(--text3);white-space:nowrap">${pd}</span>
+          </div>`;
+        }).join('');
+        bodyHtml += `<tr><td colspan="8" style="padding:8px 10px 10px 24px;background:rgba(0,0,0,.02)">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:4px">Pulled direct for a WO — remember to update Remaining above by hand</div>
+          ${pullRows}
+        </td></tr>`;
+      }
+      if(bundlesMadeOpen){
+        const bundleRows = bundlesMade.slice().sort((a,b)=>(b.created_at||'').localeCompare(a.created_at||'')).map(b=>{
+          const bd = b.created_at ? new Date(b.created_at).toLocaleDateString([],{month:'short',day:'numeric',year:'2-digit'}) : '—';
+          return `<div style="display:flex;gap:14px;padding:4px 0;border-bottom:1px solid var(--border);font-size:12px">
+            <span style="flex:1;font-weight:600;color:var(--blue);cursor:pointer" onclick="viewBundlePulls('${(b.bundle_num||'').replace(/'/g,"\\'")}')">${escHtml(b.bundle_num||'—')}</span>
+            <span style="color:var(--text2)">${b.size||'—'}</span>
+            <span style="color:var(--text2)">${b.starting_qty||'—'} ${b.unit||''}</span>
+            <span style="color:var(--text3);white-space:nowrap">${bd}</span>
+          </div>`;
+        }).join('');
+        bodyHtml += `<tr><td colspan="8" style="padding:8px 10px 10px 24px;background:rgba(0,0,0,.02)">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:4px">Bundles cut from this coil</div>
+          ${bundleRows}
+        </td></tr>`;
+      }
+    });
+  });
+
+  document.getElementById('cn-table').innerHTML = `<table class="bh-table">
+    <thead><tr>${['Gauge','Width','Vendor','Starting','Remaining','Used','Pulls','Bundles Made'].map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+    <tbody>${bodyHtml}</tbody>
+  </table>`;
+}
+
+async function saveCoilFieldInput(inp, coilId, field){
+  const c = (window._coilsData||[]).find(x=>x.id===coilId);
+  const previousVal = c ? c[field] : null;
+  const newVal = parseFloat(inp.value);
+  if(isNaN(newVal) || newVal<0){ toast('⚠ Enter a valid weight'); inp.value = previousVal!=null?previousVal:''; return; }
+  if(newVal === parseFloat(previousVal)) return;
+  const result = await _sbPatch('coils', {id: coilId}, {[field]: newVal}).catch(()=>null);
+  const ok = Array.isArray(result) && result.length > 0;
+  if(!ok){
+    toast('⚠ Failed to save — check connection and try again');
+    inp.value = previousVal!=null?previousVal:'';
+  } else {
+    if(c) c[field] = newVal;
+    toast('✓ Saved');
+    cnRender();
+  }
+}
+
+function viewCoilPulls(coilNum){
+  switchTab('history');
+  setTimeout(()=>{
+    const inp = document.getElementById('bl-coil');
+    if(inp){ inp.value = coilNum; blFilter(); }
+  }, 60);
+}
+
+function startEditCoilField(td, coilId, field){
+  if(td.querySelector('input')) return;
+  const c = (window._coilsData||[]).find(x=>x.id===coilId);
+  if(!c) return;
+  const current = c[field]!=null ? c[field] : '';
+  td.innerHTML = `<input type="number" min="0" value="${current}" style="width:80px;padding:2px 6px;font-size:12px;border:1px solid var(--blue);border-radius:4px;background:var(--card);color:var(--text)" onclick="event.stopPropagation()" onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape')this.dataset.cancel='1',this.blur()" onblur="saveCoilField(this,${coilId},'${field}')">`;
+  const inp = td.querySelector('input');
+  inp.focus(); inp.select();
+}
+
+async function saveCoilField(inp, coilId, field){
+  const td = inp.parentElement;
+  const c = (window._coilsData||[]).find(x=>x.id===coilId);
+  const previousVal = c ? c[field] : null;
+  if(inp.dataset.cancel){ cnRender(); return; }
+  const newVal = parseFloat(inp.value);
+  if(isNaN(newVal) || newVal<0){ toast('⚠ Enter a valid weight'); cnRender(); return; }
+  const patch = {}; patch[field] = newVal;
+  const result = await _sbPatch('coils', {id: coilId}, patch).catch(()=>null);
+  const ok = Array.isArray(result) && result.length > 0;
+  if(!ok){
+    toast('⚠ Failed to save — check connection and try again');
+    if(c) c[field] = previousVal;
+  } else {
+    if(c) c[field] = newVal;
+    toast('✓ Saved');
+  }
+  cnRender();
+}
+
+// ── New Coil modal ─────────────────────────────────────────────────────
+function openNewCoilModal(prefill, onCreated){
+  const existing=document.getElementById('newcoil-modal');
+  if(existing)existing.remove();
+  window._ncOnCreated = onCreated || null;
+  prefill = prefill || {};
+  const todayISO = localISO(new Date());
+  const modal=document.createElement('div');
+  modal.id='newcoil-modal';
+  modal.style.cssText='position:fixed;inset:0;z-index:650;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:16px';
+  modal.onclick=e=>{if(e.target===modal)closeNewCoilModal();};
+  modal.innerHTML=`
+  <div style="background:var(--surface);border-radius:var(--rad2);padding:20px;width:100%;max-width:480px;max-height:88vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.2)">
+    <div class="flex-between mb12">
+      <div style="font-size:15px;font-weight:700">🌀 New Coil</div>
+      <button class="btn btn-sm" onclick="closeNewCoilModal()">✕ Cancel</button>
+    </div>
+    <div id="nc-dupe-warning"></div>
+    <div class="field mb12"><label class="lbl">Coil #</label><input type="text" id="nc-num" value="${escHtml(prefill.coil_num||'')}" placeholder="Coil #" style="width:100%" oninput="ncCheckDupe()"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px" class="mb12">
+      <div class="field"><label class="lbl">Gauge</label><input type="text" id="nc-gauge" value="${escHtml(prefill.gauge||'')}" placeholder="e.g. 26" style="width:100%"></div>
+      <div class="field"><label class="lbl">Width</label><input type="text" id="nc-width" value="${escHtml(prefill.width||'')}" placeholder="e.g. 60" style="width:100%"></div>
+    </div>
+    <div class="field mb12"><label class="lbl">Starting Weight (lbs)</label><input type="number" min="0" id="nc-weight" placeholder="Weight"></div>
+    <div class="field mb12"><label class="lbl">Received Date</label><input type="date" id="nc-date" value="${todayISO}" style="width:100%"></div>
+    <div class="field mb12"><label class="lbl">Notes</label><input type="text" id="nc-notes" placeholder="Optional" style="width:100%"></div>
+    <button class="btn btn-primary" style="width:100%" onclick="submitNewCoil()">💾 Save Coil</button>
+  </div>`;
+  document.body.appendChild(modal);
+  setTimeout(()=>{ document.getElementById('nc-num')?.focus(); ncCheckDupe(); }, 50);
+}
+
+function closeNewCoilModal(){
+  const m=document.getElementById('newcoil-modal');
+  if(m)m.remove();
+  window._ncOnCreated = null;
+}
+
+async function ncCheckDupe(){
+  await loadCoilsData();
+  await loadCoilUsageMap();
+  const num = (document.getElementById('nc-num')?.value||'').trim().toLowerCase();
+  const box = document.getElementById('nc-dupe-warning');
+  if(!box) return;
+  if(!num){ box.innerHTML=''; return; }
+  const match = (window._coilsData||[]).find(c=>(c.coil_num||'').trim().toLowerCase()===num);
+  if(match){
+    const remaining = getCoilRemaining(match);
+    box.innerHTML = `<div style="background:var(--amber-l);border:1px solid #FAC775;border-radius:var(--rad);padding:8px 10px;font-size:12px;margin-bottom:10px">⚠ Coil # "<strong>${match.coil_num}</strong>" already exists (${remaining} lbs remaining of ${match.starting_weight}). Saving will create a second, separate coil with the same number.</div>`;
+  } else {
+    box.innerHTML='';
+  }
+}
+
+async function submitNewCoil(){
+  const num = document.getElementById('nc-num')?.value.trim();
+  const weight = parseFloat(document.getElementById('nc-weight')?.value);
+  if(!num){ toast('⚠ Coil # is required'); return; }
+  if(isNaN(weight) || weight<0){ toast('⚠ Enter a valid starting weight'); return; }
+  const record = {
+    coil_num: num,
+    gauge: document.getElementById('nc-gauge')?.value.trim() || null,
+    width: document.getElementById('nc-width')?.value.trim() || null,
+    unit: 'lbs',
+    starting_weight: weight,
+    remaining_weight: weight, // nothing's been used yet — starts equal to starting
+    received_date: document.getElementById('nc-date')?.value || null,
+    created_by: getCurrentUser() || null,
+    notes: document.getElementById('nc-notes')?.value.trim() || null
+  };
+  const rows = await _sbPost('coils', record).catch(()=>null);
+  if(!rows){ toast('⚠ Failed to save — check connection and try again'); return; }
+  const saved = Array.isArray(rows) ? rows[0] : rows;
+  window._coilsData = window._coilsData||[];
+  window._coilsData.unshift(saved);
+  toast(`✓ Coil ${saved.coil_num} added`);
+  const cb = window._ncOnCreated;
+  closeNewCoilModal();
+  if(cb) cb(saved);
+  else if(_activeTab==='coils') cnRender();
+}
+
+function refreshBundleLog(){
+  _bundleLogLoaded = false;
+  renderBundleLog(document.getElementById('content'));
+}
+
+async function renderBundleLog(c) {
+  c.innerHTML = `<div style="padding:20px;max-width:1200px;margin:0 auto">
+    <div id="bl-needs-banner" style="margin-bottom:12px"></div>
+    <div id="bl-filters" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;margin-bottom:18px;background:var(--surface);border-radius:var(--rad);padding:16px;border:1px solid var(--border)">
+      <div>
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:4px">Customer</div>
+        <input id="bl-cust"    type="text" placeholder="Filter…" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px" oninput="blFilter()">
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:4px">Coil #</div>
+        <input id="bl-coil"   type="text" placeholder="Filter…" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px" oninput="blFilter()">
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:4px">Bundle #</div>
+        <input id="bl-bundle" type="text" placeholder="Filter…" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px" oninput="blFilter()">
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:4px">Station</div>
+        <input id="bl-station" type="text" placeholder="Filter…" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px" oninput="blFilter()">
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:4px">From Date</div>
+        <input id="bl-from"   type="date" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px" onchange="blFilter()">
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:4px">To Date</div>
+        <input id="bl-to"     type="date" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px" onchange="blFilter()">
+      </div>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text2);padding-bottom:6px;cursor:pointer">
+        <input type="checkbox" id="bl-needs-link" onchange="blFilter()"> 🔴 Needs bundle/coil only
+      </label>
+      <div style="display:flex;align-items:flex-end">
+        <button class="btn btn-sm" onclick="blClearFilters()" style="width:100%">✕ Clear</button>
+      </div>
+    </div>
+    <div id="bl-summary" style="margin-bottom:12px"></div>
+    <div id="bl-table" style="overflow-x:auto"></div>
+  </div>`;
+
+  document.getElementById('bl-table').innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)">Loading…</div>';
+
+  // Fetched once per session — re-navigating to this page reuses the
+  // in-memory copy instead of re-pulling all 1000 rows every time. Inline
+  // edits and Add Record already patch this array directly, so it stays
+  // current with anything done from this device without a re-fetch. Use
+  // the Refresh button to pick up changes made from another device/tab.
+  if (_bundleLogLoaded) {
+    blRender();
+    return;
+  }
+
+  try {
+    // _sbGetAll paginates past Supabase/PostgREST's implicit row caps —
+    // a plain limit=1000 here was silently hiding every record older than
+    // the most recent 1,000 (confirmed: 1,994 total rows in bundle_usage
+    // vs. only 1,000 ever reaching this page). Bundles/coils lists load
+    // alongside — the inline link pickers need them, and they're cached
+    // the same way as everywhere else in this app.
+    const [rows] = await Promise.all([
+      _sbGetAll('bundle_usage', 'order=recorded_at.desc'),
+      loadBundlesData(), loadBundleUsageMap(), loadCoilsData(), loadCoilUsageMap()
+    ]);
+    _bundleLogData = rows || [];
+    _bundleLogLoaded = true;
+    blRender();
+  } catch(e) {
+    document.getElementById('bl-table').innerHTML = '<div style="padding:20px;color:var(--red)">Failed to load — check connection</div>';
+  }
+}
+
+function blFilter() {
+  _bundleLogFilters.customer  = (document.getElementById('bl-cust')?.value    || '').toLowerCase();
+  _bundleLogFilters.coilNum   = (document.getElementById('bl-coil')?.value    || '').toLowerCase();
+  _bundleLogFilters.bundle    = (document.getElementById('bl-bundle')?.value  || '').toLowerCase();
+  _bundleLogFilters.station   = (document.getElementById('bl-station')?.value || '').toLowerCase();
+  _bundleLogFilters.dateFrom  = document.getElementById('bl-from')?.value || '';
+  _bundleLogFilters.dateTo    = document.getElementById('bl-to')?.value   || '';
+  _bundleLogFilters.needsLink = !!document.getElementById('bl-needs-link')?.checked;
+  blRender();
+}
+
+function blClearFilters() {
+  ['bl-cust','bl-coil','bl-bundle','bl-station','bl-from','bl-to'].forEach(id => {
+    const el = document.getElementById(id); if(el) el.value = '';
+  });
+  const needsEl = document.getElementById('bl-needs-link'); if(needsEl) needsEl.checked = false;
+  _bundleLogFilters = { customer:'', coilNum:'', bundle:'', dateFrom:'', dateTo:'', station:'', needsLink:false };
+  blRender();
+}
+
+// Only counts rows where a bundle or coil genuinely applies — a completed
+// item with a product category that actually uses bundle/coil stock, not
+// e.g. hardware pulled straight from a bin. Kept simple: anything with
+// neither link AND at least a gauge/size recorded (meaning material was
+// actually involved) counts as needing attention.
+function blNeedsLinkRows(rows){
+  return rows.filter(r => !r.bundle_id && !r.coil_id && (r.gauge || r.size));
+}
+
+function blRender() {
+  const f = _bundleLogFilters;
+  let rows = _bundleLogData.filter(r => {
+    if (f.customer && !(r.customer||'').toLowerCase().includes(f.customer)) return false;
+    if (f.coilNum  && !(r.coil_num||'').toLowerCase().includes(f.coilNum))  return false;
+    if (f.bundle   && !(r.bundle||'').toLowerCase().includes(f.bundle))     return false;
+    if (f.station  && !(r.station||'').toLowerCase().includes(f.station))   return false;
+    if (f.dateFrom) {
+      const d = (r.completed_at||r.recorded_at||'').slice(0,10);
+      if (d < f.dateFrom) return false;
+    }
+    if (f.dateTo) {
+      const d = (r.completed_at||r.recorded_at||'').slice(0,10);
+      if (d > f.dateTo) return false;
+    }
+    if (f.needsLink && !(!r.bundle_id && !r.coil_id && (r.gauge || r.size))) return false;
+    return true;
+  });
+
+  // Persistent banner — stays visible regardless of the needsLink filter
+  // state, so an unresolved item can't quietly get lost. Scoped to the
+  // date-filtered set already on screen, matching "recent, going forward"
+  // rather than surfacing the entire historical backlog by default.
+  const needsLinkCount = blNeedsLinkRows(_bundleLogData.filter(r=>{
+    if (f.dateFrom) { const d=(r.completed_at||r.recorded_at||'').slice(0,10); if(d<f.dateFrom) return false; }
+    if (f.dateTo)   { const d=(r.completed_at||r.recorded_at||'').slice(0,10); if(d>f.dateTo)   return false; }
+    return true;
+  })).length;
+  const banner = document.getElementById('bl-needs-banner');
+  if(banner){
+    banner.innerHTML = needsLinkCount
+      ? `<div style="background:var(--amber-l);border:1px solid #FAC775;border-radius:var(--rad);padding:10px 14px;font-size:13px;display:flex;justify-content:space-between;align-items:center">
+          <span>🔴 <strong>${needsLinkCount}</strong> record${needsLinkCount!==1?'s':''} still ${needsLinkCount!==1?'need':'needs'} a bundle or coil confirmed/selected.</span>
+          <button class="btn btn-sm" onclick="document.getElementById('bl-needs-link').checked=true;blFilter()">Show them</button>
+        </div>`
+      : '';
+  }
+
+  // Sort by WO number, newest (highest) first. Simpler and more reliable
+  // than sorting by date — plenty of rows (especially backfilled/older
+  // ones) have no trustworthy completed_at or delivery_date, but every
+  // row has a WO #. Numeric part of the WO # is compared as a number so
+  // "47049" sorts above "9800"; falls back to plain string compare for
+  // anything non-numeric (e.g. stock WO#s like "S62926").
+  rows.sort((a,b) => {
+    const na = parseInt((a.wo_num||'').replace(/\D/g,''), 10);
+    const nb = parseInt((b.wo_num||'').replace(/\D/g,''), 10);
+    if(!isNaN(na) && !isNaN(nb) && na!==nb) return nb-na;
+    return String(b.wo_num||'').localeCompare(String(a.wo_num||''));
+  });
+
+  // Summary bar
+  const customers = new Set(rows.map(r=>r.customer).filter(Boolean));
+  const coils     = new Set(rows.map(r=>r.coil_num).filter(Boolean));
+  const bundles   = new Set(rows.map(r=>r.bundle).filter(Boolean));
+  document.getElementById('bl-summary').innerHTML = `
+    <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--text2)">
+      <span><strong style="color:var(--text)">${rows.length}</strong> records</span>
+      <span><strong style="color:var(--text)">${customers.size}</strong> customers</span>
+      <span><strong style="color:var(--text)">${coils.size}</strong> coils</span>
+      <span><strong style="color:var(--text)">${bundles.size}</strong> bundles</span>
+    </div>`;
+
+  if (!rows.length) {
+    document.getElementById('bl-table').innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)">No records match your filters</div>';
+    return;
+  }
+
+  const tbl = `<table style="width:100%;border-collapse:collapse;font-size:13px">
+    <thead>
+      <tr style="background:var(--surface);text-align:left">
+        ${['Date','WO #','Customer','Product','Gauge','Size','Qty','Weight','Coil #','Bundle #','Station','Done By'].map(h=>
+          `<th style="padding:8px 10px;font-size:10px;font-weight:800;text-transform:uppercase;color:var(--text3);white-space:nowrap;border-bottom:2px solid var(--border)">${h}</th>`
+        ).join('')}
+      </tr>
+    </thead>
+    <tbody>
+      ${rows.map((r,i) => {
+        const dispDate = r.completed_at || r.delivery_date || null;
+        // delivery_date is a plain date string (no time) — append noon to
+        // avoid it parsing as UTC midnight and displaying a day early in
+        // local timezones (same pattern used elsewhere in this app).
+        const dt = dispDate ? new Date(dispDate.length<=10 ? dispDate+'T12:00:00' : dispDate).toLocaleDateString([],{month:'short',day:'numeric',year:'2-digit'}) : '—';
+        const bg = i%2===0 ? 'transparent' : 'rgba(255,255,255,.02)';
+        // Rows saved through the bundle/coil picker carry a real bundle_id
+        // or coil_id — those show a ✓ since the qty is an exact, tracked
+        // deduction. Older/free-text rows (pre-dating the picker, or the
+        // shop-floor auto-log which doesn't use it) show plain — there's
+        // no way to know precisely which physical bundle they came from.
+        const qtyDisplay = r.bundle_id
+          ? `<strong>${r.qty_pulled ?? r.qty ?? '—'}</strong> <span style="color:var(--green)" title="Exact deduction — tracked against bundle #${escHtml(r.bundle||'')}">✓</span>`
+          : `${r.qty||'—'}`;
+        const coilCell = r.coil_id
+          ? `<td style="padding:8px 10px"><span style="font-family:monospace;font-size:12px;color:var(--green);font-weight:700" title="Referenced coil — tracked record">${r.coil_num||'—'} ✓</span></td>`
+          : `<td style="padding:8px 10px;font-family:monospace;font-size:12px;color:var(--amber);cursor:pointer" onclick="startLinkCoilCell(this,${r.id})" title="Click to pick a coil from the list">${r.coil_num||'— (click to link)'}</td>`;
+        const bundleCell = r.bundle_id
+          ? `<td style="padding:8px 10px"><span style="font-weight:700;color:var(--green)" title="Linked bundle — exact qty tracked">${r.bundle||'—'} ✓</span></td>`
+          : `<td style="padding:8px 10px;font-weight:700;color:var(--amber);cursor:pointer" onclick="startLinkBundleCell(this,${r.id})" title="Click to pick a bundle from the list (${r.gauge||'?'} ga / ${r.size||'?'})">${r.bundle||'— (click to link)'}</td>`;
+        return `<tr style="background:${bg};border-bottom:1px solid var(--border)">
+          <td style="padding:8px 10px;white-space:nowrap;color:var(--text2)">${dt}</td>
+          <td style="padding:8px 10px;font-weight:700">${r.wo_num||'—'}</td>
+          <td style="padding:8px 10px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.customer||'—'}</td>
+          <td style="padding:8px 10px;color:var(--text2)">${r.product_cat||'—'}</td>
+          <td style="padding:8px 10px;text-align:center">${r.gauge||'—'}</td>
+          <td style="padding:8px 10px">${r.size||'—'}</td>
+          <td style="padding:8px 10px;text-align:right">${qtyDisplay}</td>
+          <td style="padding:8px 10px;text-align:right;color:var(--text2)">${r.weight?Number(r.weight).toLocaleString()+' lbs':'—'}</td>
+          ${coilCell}
+          ${bundleCell}
+          <td style="padding:8px 10px;color:var(--text2)">${r.station||'—'}</td>
+          <td style="padding:8px 10px;color:var(--blue)">${r.completed_by||'—'}</td>
+        </tr>`;
+      }).join('')}
+    </tbody>
+  </table>`;
+
+  document.getElementById('bl-table').innerHTML = tbl;
+}
+
+// ── Link Coil #/Bundle # directly on an existing Usage History row ────────
+// Most rows come through auto-logged from the shop floor with just a free-
+// text bundle/coil number (or nothing at all) — this is the administrative
+// step to go confirm/select the REAL bundle or coil against the master
+// list, right here, rather than a separate modal. Filtered strictly to
+// this row's own gauge/size, same rule as the Add Bundle Usage picker.
+function startLinkBundleCell(td, rowId){
+  if(td.querySelector('.bl-link-picker')) return;
+  const rec = _bundleLogData.find(r=>r.id===rowId);
+  if(!rec) return;
+  const pseudoItem = { productCat: rec.product_cat, gauge: rec.gauge, size: rec.size };
+  td.onclick = null;
+  td.innerHTML = `<div class="bl-link-picker" style="position:relative;min-width:180px" onclick="event.stopPropagation()">
+    <input type="text" class="bl-link-search" placeholder="Search bundle #…" autocomplete="off" style="width:100%;padding:3px 6px;font-size:12px;border:1px solid var(--blue);border-radius:4px">
+    <div class="bl-link-results" style="position:absolute;z-index:20;left:0;right:0;top:100%;background:var(--surface);border:1px solid var(--border);border-radius:0 0 4px 4px;max-height:160px;overflow-y:auto"></div>
+    <div style="margin-top:2px"><button class="btn btn-xs" onclick="blRender()">✕ Cancel</button></div>
+  </div>`;
+  const searchInp = td.querySelector('.bl-link-search');
+  const resultsBox = td.querySelector('.bl-link-results');
+  function renderResults(q){
+    const matches = abBundleMatches(pseudoItem, q);
+    if(!matches.length){
+      resultsBox.innerHTML = `<div style="padding:6px 8px;font-size:12px;color:var(--text3)">No bundles match ${escHtml(rec.gauge||'?')} ga / ${escHtml(rec.size||'?')}</div>`;
+      return;
+    }
+    resultsBox.innerHTML = matches.map(b=>{
+      const rem = getBundleRemaining(b);
+      return `<div data-id="${b.id}" style="padding:6px 8px;border-top:1px solid var(--border);cursor:pointer;font-size:12px" onmouseover="this.style.background='var(--blue-l)'" onmouseout="this.style.background=''">
+        <strong>${escHtml(b.bundle_num)}</strong> <span style="float:right;color:${rem>0?'var(--green)':'var(--red)'}">${rem} left</span>
+      </div>`;
+    }).join('');
+    resultsBox.querySelectorAll('[data-id]').forEach(el=>{
+      el.onclick=()=>showLinkBundleQty(td, rowId, parseInt(el.dataset.id));
+    });
+  }
+  searchInp.oninput=()=>renderResults(searchInp.value);
+  renderResults('');
+  searchInp.focus();
+}
+
+function showLinkBundleQty(td, rowId, bundleId){
+  const rec = _bundleLogData.find(r=>r.id===rowId);
+  const b = (window._bundlesData||[]).find(x=>x.id===bundleId);
+  if(!rec||!b) return;
+  const remaining = getBundleRemaining(b);
+  td.innerHTML = `<div onclick="event.stopPropagation()">
+    <div style="font-size:11px;font-weight:700;margin-bottom:3px">${escHtml(b.bundle_num)} <span style="color:${remaining>0?'var(--green)':'var(--red)'};font-weight:400">(${remaining} left)</span></div>
+    <input type="number" class="bl-link-qty" min="0" value="${rec.qty||''}" placeholder="Qty" style="width:60px;padding:3px 6px;font-size:12px;border:1px solid var(--blue);border-radius:4px">
+    <button class="btn btn-xs btn-primary" onclick="confirmLinkBundle(${rowId},${bundleId})">✓</button>
+    <button class="btn btn-xs" onclick="blRender()">✕</button>
+  </div>`;
+  td.querySelector('.bl-link-qty').focus();
+}
+
+async function confirmLinkBundle(rowId, bundleId){
+  const rec = _bundleLogData.find(r=>r.id===rowId);
+  const b = (window._bundlesData||[]).find(x=>x.id===bundleId);
+  const qtyInp = document.querySelector('.bl-link-qty');
+  const qty = qtyInp ? parseFloat(qtyInp.value) : NaN;
+  if(!rec||!b) return;
+  if(isNaN(qty) || qty<=0){ toast('⚠ Enter a valid qty'); return; }
+  const patch = { bundle_id: bundleId, bundle: b.bundle_num, qty_pulled: qty };
+  const result = await _sbPatch('bundle_usage', {id: rowId}, patch).catch(()=>null);
+  const ok = Array.isArray(result) && result.length > 0;
+  if(!ok){ toast('⚠ Failed to save — check connection and try again'); return; }
+  Object.assign(rec, patch);
+  window._bundleUsageMap[bundleId] = (window._bundleUsageMap[bundleId]||0) + qty;
+  window._bundlePulls = window._bundlePulls||{};
+  (window._bundlePulls[bundleId] = window._bundlePulls[bundleId]||[]).push({
+    customer: rec.customer, wo_num: rec.wo_num, qty, date: rec.completed_at
+  });
+  toast(`✓ Linked to bundle ${b.bundle_num}`);
+  blRender();
+}
+
+function startLinkCoilCell(td, rowId){
+  if(td.querySelector('.bl-link-picker')) return;
+  const rec = _bundleLogData.find(r=>r.id===rowId);
+  if(!rec) return;
+  const pseudoItem = { gauge: rec.gauge };
+  td.onclick = null;
+  td.innerHTML = `<div class="bl-link-picker" style="position:relative;min-width:180px" onclick="event.stopPropagation()">
+    <input type="text" class="bl-link-search" placeholder="Search coil #…" autocomplete="off" style="width:100%;padding:3px 6px;font-size:12px;border:1px solid var(--blue);border-radius:4px">
+    <div class="bl-link-results" style="position:absolute;z-index:20;left:0;right:0;top:100%;background:var(--surface);border:1px solid var(--border);border-radius:0 0 4px 4px;max-height:160px;overflow-y:auto"></div>
+    <div style="margin-top:2px"><button class="btn btn-xs" onclick="blRender()">✕ Cancel</button></div>
+  </div>`;
+  const searchInp = td.querySelector('.bl-link-search');
+  const resultsBox = td.querySelector('.bl-link-results');
+  function renderResults(q){
+    const matches = abCoilMatches(pseudoItem, q);
+    if(!matches.length){
+      resultsBox.innerHTML = `<div style="padding:6px 8px;font-size:12px;color:var(--text3)">No coils match ${escHtml(rec.gauge||'?')} ga</div>`;
+      return;
+    }
+    resultsBox.innerHTML = matches.map(c=>{
+      const rem = getCoilRemaining(c);
+      return `<div data-id="${c.id}" style="padding:6px 8px;border-top:1px solid var(--border);cursor:pointer;font-size:12px" onmouseover="this.style.background='var(--blue-l)'" onmouseout="this.style.background=''">
+        <strong>${escHtml(c.coil_num)}</strong> <span style="float:right;color:${rem>0?'var(--green)':'var(--red)'}">${rem} lbs left</span>
+      </div>`;
+    }).join('');
+    resultsBox.querySelectorAll('[data-id]').forEach(el=>{
+      el.onclick=()=>confirmLinkCoil(rowId, parseInt(el.dataset.id));
+    });
+  }
+  searchInp.oninput=()=>renderResults(searchInp.value);
+  renderResults('');
+  searchInp.focus();
+}
+
+async function confirmLinkCoil(rowId, coilId){
+  const rec = _bundleLogData.find(r=>r.id===rowId);
+  const c = (window._coilsData||[]).find(x=>x.id===coilId);
+  if(!rec||!c) return;
+  const patch = { coil_id: coilId, coil_num: c.coil_num };
+  const result = await _sbPatch('bundle_usage', {id: rowId}, patch).catch(()=>null);
+  const ok = Array.isArray(result) && result.length > 0;
+  if(!ok){ toast('⚠ Failed to save — check connection and try again'); return; }
+  Object.assign(rec, patch);
+  window._coilPulls = window._coilPulls||{};
+  (window._coilPulls[coilId] = window._coilPulls[coilId]||[]).push({
+    customer: rec.customer, wo_num: rec.wo_num, qty: rec.weight, date: rec.completed_at
+  });
+  toast(`✓ Linked to coil ${c.coil_num} — remember to update its remaining weight on the Coils tab`, 4500);
+  blRender();
+}
+
+// ── Legacy click-to-edit (kept for any other free-text field cleanup) ─────
+function startEditBundleCell(td, rowId, field){
+  if(td.querySelector('input')) return; // already editing
+  const current = td.textContent.trim();
+  const val = current==='—' ? '' : current;
+  const safeVal = val.replace(/"/g,'&quot;');
+  td.dataset.field = field;
+  td.innerHTML = `<input type="text" value="${safeVal}" style="width:90px;padding:2px 6px;font-size:12px;border:1px solid var(--blue);border-radius:4px;background:var(--card);color:var(--text)" onclick="event.stopPropagation()" onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape')this.dataset.cancel='1',this.blur()" onblur="saveBundleCell(this,${rowId},'${field}')">`;
+  const inp = td.querySelector('input');
+  inp.focus(); inp.select();
+}
+
+async function saveBundleCell(inp, rowId, field){
+  const td = inp.parentElement;
+  const rec = _bundleLogData.find(r=>r.id===rowId);
+  const previousVal = rec ? (rec[field]||'') : '';
+  if(inp.dataset.cancel){
+    td.innerHTML = previousVal || '—';
+    td.setAttribute('onclick', `startEditBundleCell(this,${rowId},'${field}')`);
+    return;
+  }
+  const newVal = inp.value.trim();
+  // Optimistically show the new value while the PATCH is in flight...
+  td.innerHTML = newVal || '—';
+  td.setAttribute('onclick', `startEditBundleCell(this,${rowId},'${field}')`);
+  const patch = {}; patch[field] = newVal||null;
+  const result = await _sbPatch('bundle_usage', {id: rowId}, patch).catch(e=>{console.warn('saveBundleCell error',e);return null;});
+  // _sbPatch returns an array on success — but an empty array [] means the
+  // PATCH request itself succeeded while matching zero rows (bad id, or an
+  // RLS policy silently blocking the write). [] is truthy in JS, so a plain
+  // "if(!result)" check would report success even when nothing was actually
+  // written — which is exactly how edits could look saved but disappear on
+  // the next real fetch. Require an actual returned row.
+  const ok = Array.isArray(result) && result.length > 0;
+  if(!ok){
+    // ...revert both the DOM and local cache since it didn't actually persist
+    td.innerHTML = previousVal || '—';
+    if(rec) rec[field] = previousVal||null;
+    toast('⚠ Failed to save — check connection and try again');
+    console.warn('saveBundleCell: PATCH returned no rows', {rowId, field, result});
+  } else {
+    if(rec) rec[field] = newVal||null;
+    toast('✓ Saved');
+  }
+}
+
+// ── Manually add Bundle Usage record(s) against a specific Work Order ─────
+// For when office needs to log a bundle/coil pull that never went through
+// the normal item-completion flow (sbLogBundleUsage) — tied to the real WO
+// and line item it was pulled for, and supporting multiple bundles/coils
+// pulled against the same item in one go.
+function openAddBundleModal(){
+  const existing=document.getElementById('addbundle-modal');
+  if(existing)existing.remove();
+  window._abWO=null;
+  window._abItem=null;
+  window._abRowCounter=0;
+  // Bundle/coil picker rows need the master lists + remaining maps loaded
+  // (or reuse cached) before the modal opens. The WO search also needs
+  // the (lighter, recent-only) work order list loaded — see loadRecentWOs.
+  Promise.all([loadBundlesData(), loadBundleUsageMap(), loadCoilsData(), loadCoilUsageMap(), loadRecentWOs()]).catch(()=>{});
+  const modal=document.createElement('div');
+  modal.id='addbundle-modal';
+  modal.style.cssText='position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:16px';
+  modal.onclick=e=>{if(e.target===modal)closeAddBundleModal();};
+  modal.innerHTML=`
+  <div style="background:var(--surface);border-radius:var(--rad2);padding:20px;width:100%;max-width:640px;max-height:88vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.2)">
+    <div class="flex-between mb12">
+      <div style="font-size:15px;font-weight:700">📋 Add Bundle Usage — for a Work Order</div>
+      <button class="btn btn-sm" onclick="closeAddBundleModal()">✕ Cancel</button>
+    </div>
+    <div class="field mb12">
+      <label class="lbl">Work Order</label>
+      <input type="text" id="ab-wo-search" placeholder="Search WO # or customer..." autocomplete="off" style="width:100%" oninput="renderAbWoResults(this.value)">
+      <div id="ab-wo-results" style="max-height:180px;overflow-y:auto;margin-top:6px"></div>
+    </div>
+    <div id="ab-selected-wo"></div>
+    <div id="ab-item-wrap" style="display:none" class="mb12">
+      <label class="lbl">Line Item Pulled</label>
+      <select id="ab-item-sel" style="width:100%" onchange="abItemChange(this.value)"></select>
+    </div>
+    <div id="ab-rows-wrap" style="display:none">
+      <label class="lbl">Bundle(s) Pulled</label>
+      <div id="ab-rows"></div>
+      <button class="btn btn-sm" style="margin-top:6px" onclick="addAbRow()">+ Add Another Bundle</button>
+      <button class="btn btn-primary" style="width:100%;margin-top:14px" onclick="submitAddBundleRecords()">💾 Save Bundle Record(s)</button>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+  setTimeout(()=>document.getElementById('ab-wo-search')?.focus(),50);
+}
+
+function closeAddBundleModal(){
+  const m=document.getElementById('addbundle-modal');
+  if(m)m.remove();
+}
+
+function renderAbWoResults(q){
+  const box=document.getElementById('ab-wo-results');
+  if(!box)return;
+  const lq=(q||'').trim().toLowerCase();
+  if(!lq){box.innerHTML='';return;}
+  const matches=_recentWOs.filter(w=>
+    (w.woNum||'').toLowerCase().includes(lq) || (w.customer||'').toLowerCase().includes(lq)
+  ).sort((a,b)=>(b.created||'').localeCompare(a.created||'')).slice(0,15);
+  if(!matches.length){
+    box.innerHTML='<div style="padding:8px;color:var(--text3);font-size:12px">No matching work orders</div>';
+    return;
+  }
+  box.innerHTML=matches.map(w=>`<div onclick="selectAbWO(${w.id})" style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--rad);margin-bottom:4px;cursor:pointer;font-size:13px" onmouseover="this.style.background='var(--blue-l)'" onmouseout="this.style.background=''">
+    <strong>WO #${w.woNum}</strong> — ${w.customer}${w.isStock?' <span style="color:var(--text3)">(stock)</span>':''}
+  </div>`).join('');
+}
+
+function selectAbWO(id){
+  const wo=_recentWOs.find(w=>w.id===id);
+  if(!wo)return;
+  window._abWO=wo;
+  window._abItem=null;
+  document.getElementById('ab-wo-search').value='';
+  document.getElementById('ab-wo-results').innerHTML='';
+  document.getElementById('ab-selected-wo').innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--blue-l);border:1px solid #b5d4f4;border-radius:var(--rad);margin-bottom:12px;font-size:13px">
+      <span><strong>WO #${wo.woNum}</strong> — ${wo.customer}</span>
+      <span onclick="deselectAbWO()" style="cursor:pointer;font-weight:700">✕</span>
+    </div>`;
+  const itemWrap=document.getElementById('ab-item-wrap');
+  const itemSel=document.getElementById('ab-item-sel');
+  const items=wo.items||[];
+  if(!items.length){
+    itemWrap.style.display='none';
+    document.getElementById('ab-rows-wrap').style.display='none';
+    toast('⚠ This WO has no line items');
+    return;
+  }
+  itemSel.innerHTML=items.map((it,i)=>`<option value="${i}">${[it.productCat,it.gauge,it.size].filter(Boolean).join(' · ')||'—'} · qty ${it.qty||'—'}</option>`).join('');
+  itemWrap.style.display='block';
+  abItemChange('0');
+}
+
+function deselectAbWO(){
+  window._abWO=null;
+  window._abItem=null;
+  document.getElementById('ab-selected-wo').innerHTML='';
+  document.getElementById('ab-item-wrap').style.display='none';
+  document.getElementById('ab-rows-wrap').style.display='none';
+}
+
+function abItemChange(idxStr){
+  const wo=window._abWO;
+  if(!wo)return;
+  const idx=parseInt(idxStr);
+  const item=(wo.items||[])[idx];
+  if(!item)return;
+  window._abItem=item;
+  document.getElementById('ab-rows').innerHTML='';
+  window._abRowCounter=0;
+  document.getElementById('ab-rows-wrap').style.display='block';
+  addAbRow();
+}
+
+function addAbRow(){
+  const item=window._abItem;
+  if(!item){toast('⚠ Select a work order and line item first');return;}
+  window._abRowCounter++;
+  const n=window._abRowCounter;
+  const stationOpts=getStations().map(s=>`<option value="${s}"${item.station===s?' selected':''}>${s}</option>`).join('');
+  const todayISO=localISO(new Date());
+  const row=document.createElement('div');
+  row.className='ab-row';
+  row.id=`ab-row-${n}`;
+  row.style.cssText='border:1px solid var(--border);border-radius:var(--rad);padding:10px;margin-bottom:8px;position:relative';
+  row.innerHTML=`
+    <span onclick="removeAbRow(${n})" style="position:absolute;top:6px;right:8px;cursor:pointer;font-weight:700;color:var(--text3)" title="Remove">✕</span>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
+      <div class="field" style="position:relative">
+        <label class="lbl">Coil # <span style="color:var(--text3);font-weight:400;text-transform:none">(if cut direct)</span></label>
+        <input type="text" class="ab-coil-search" placeholder="Search coil #…" autocomplete="off" style="width:100%"
+          oninput="renderAbCoilResults(${n},this.value)" onfocus="renderAbCoilResults(${n},this.value)">
+        <input type="hidden" class="ab-coil-id" value="">
+        <div id="ab-coil-results-${n}" style="position:absolute;z-index:10;left:0;right:0;top:100%;background:var(--surface);border-radius:0 0 var(--rad) var(--rad);max-height:180px;overflow-y:auto"></div>
+        <div class="ab-coil-selected" style="font-size:11px;color:var(--green);margin-top:2px"></div>
+      </div>
+      <div class="field" style="position:relative">
+        <label class="lbl">Bundle # <span style="color:var(--text3);font-weight:400;text-transform:none">(pick from list)</span></label>
+        <input type="text" class="ab-bundle-search" placeholder="Search bundle #…" autocomplete="off" style="width:100%"
+          oninput="renderAbBundleResults(${n},this.value)" onfocus="renderAbBundleResults(${n},this.value)">
+        <input type="hidden" class="ab-bundle-id" value="">
+        <div id="ab-bundle-results-${n}" style="position:absolute;z-index:10;left:0;right:0;top:100%;background:var(--surface);border-radius:0 0 var(--rad) var(--rad);max-height:180px;overflow-y:auto"></div>
+        <div class="ab-bundle-selected" style="font-size:11px;color:var(--green);margin-top:2px"></div>
+      </div>
+      <div class="field"><label class="lbl">Qty Pulled</label><input type="number" class="ab-qty" min="0" placeholder="Qty" value="${item.qty||''}" style="width:100%" oninput="abCheckQtyVsRemaining(${n})"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px">
+      <div class="field"><label class="lbl">Weight (lbs) <span style="color:var(--text3);font-weight:400;text-transform:none">(record only — doesn't auto-deduct)</span></label><input type="number" class="ab-weight" min="0" step="0.01" value="${item.weight||''}" style="width:100%" oninput="abCheckWeightVsRemaining(${n})"></div>
+      <div class="field"><label class="lbl">Station</label><select class="ab-station" style="width:100%"><option value="">—</option>${stationOpts}</select></div>
+      <div class="field"><label class="lbl">Done By</label><input type="text" class="ab-doneby" value="${getCurrentUser()||''}" style="width:100%"></div>
+      <div class="field"><label class="lbl">Date</label><input type="date" class="ab-date" value="${todayISO}" style="width:100%"></div>
+    </div>`;
+  document.getElementById('ab-rows').appendChild(row);
+}
+
+// ── Coil picker for Add Bundle Usage rows ──────────────────────────────
+function abCoilMatches(item, query){
+  const q=(query||'').trim().toLowerCase();
+  const list=window._coilsData||[];
+  const specMatches = list.filter(c=>item && c.gauge===item.gauge);
+  let pool = q ? list : (specMatches.length ? specMatches : list);
+  if(q) pool = pool.filter(c=>(c.coil_num||'').toLowerCase().includes(q));
+  return pool.sort((a,b)=>getCoilRemaining(b)-getCoilRemaining(a)).slice(0,12);
+}
+
+function renderAbCoilResults(n, query){
+  const box=document.getElementById(`ab-coil-results-${n}`);
+  if(!box) return;
+  const matches=abCoilMatches(window._abItem, query);
+  const q=(query||'').trim();
+  const createLink = `<div style="padding:6px 8px;font-size:12px;color:var(--blue);cursor:pointer;text-decoration:underline" onclick="quickCreateCoilForRow(${n},'${q.replace(/'/g,"\\'")}')">+ Create new coil${q?` "${escHtml(q)}"`:''}</div>`;
+  if(!matches.length){
+    box.innerHTML = `<div style="padding:6px 8px;font-size:12px;color:var(--text3)">No matching coils.</div>${createLink}`;
+    return;
+  }
+  box.innerHTML = matches.map(c=>{
+    const rem=getCoilRemaining(c);
+    return `<div onclick="selectAbCoil(${n},${c.id})" style="padding:6px 8px;border-top:1px solid var(--border);cursor:pointer;font-size:12px" onmouseover="this.style.background='var(--blue-l)'" onmouseout="this.style.background=''">
+      <strong>${c.coil_num}</strong> — ${[c.gauge,c.width].filter(Boolean).join(' · ')||'—'}
+      <span style="float:right;color:${rem>0?'var(--green)':'var(--red)'}">${rem} lbs left</span>
+    </div>`;
+  }).join('') + createLink;
+}
+
+function selectAbCoil(n, coilId){
+  const c=(window._coilsData||[]).find(x=>String(x.id)===String(coilId));
+  const row=document.getElementById(`ab-row-${n}`);
+  if(!c||!row) return;
+  row.querySelector('.ab-coil-id').value=c.id;
+  row.querySelector('.ab-coil-search').value=c.coil_num;
+  row.querySelector(`#ab-coil-results-${n}`).innerHTML='';
+  abCheckWeightVsRemaining(n);
+}
+
+function abCheckWeightVsRemaining(n){
+  const row=document.getElementById(`ab-row-${n}`);
+  if(!row) return;
+  const id=row.querySelector('.ab-coil-id').value;
+  const noteEl=row.querySelector('.ab-coil-selected');
+  if(!id){ if(noteEl) noteEl.innerHTML=''; return; }
+  const c=(window._coilsData||[]).find(x=>String(x.id)===String(id));
+  if(!c) return;
+  const remaining=getCoilRemaining(c);
+  // Coil weight isn't deducted automatically here — this is just a
+  // reminder of what the coil currently shows as remaining, so whoever's
+  // logging the pull knows what to check on the scale. Saving this record
+  // does not change that number; update it on the Coils tab by hand.
+  noteEl.innerHTML=`ℹ Coil currently shows ${remaining} lbs remaining — remember to update it on the Coils tab after this cut`;
+  noteEl.style.color='var(--text2)';
+}
+
+function quickCreateCoilForRow(n, typedNum){
+  const item=window._abItem||{};
+  openNewCoilModal({coil_num: typedNum||'', gauge: item.gauge}, (created)=>{
+    selectAbCoil(n, created.id);
+  });
+}
+
+function removeAbRow(n){
+  const rows=document.querySelectorAll('.ab-row');
+  if(rows.length<=1){toast('⚠ At least one bundle row is required');return;}
+  document.getElementById(`ab-row-${n}`)?.remove();
+}
+
+// ── Bundle picker for Add Bundle Usage rows ────────────────────────────
+// Matches against the master bundles list — prioritizes bundles whose
+// spec (product/gauge/size) matches the selected line item, falling back
+// to a search across all bundles if nothing matches or the office user
+// is pulling something off-spec.
+function abBundleMatches(item, query){
+  const q=(query||'').trim().toLowerCase();
+  const list=window._bundlesData||[];
+  const specMatches = list.filter(b=>
+    item && b.product_cat===item.productCat && (!item.gauge||b.gauge===item.gauge) && (!item.size||b.size===item.size)
+  );
+  let pool = q ? list : (specMatches.length ? specMatches : list);
+  if(q) pool = pool.filter(b=>(b.bundle_num||'').toLowerCase().includes(q));
+  return pool.sort((a,b)=>getBundleRemaining(b)-getBundleRemaining(a)).slice(0,12);
+}
+
+function renderAbBundleResults(n, query){
+  const box=document.getElementById(`ab-bundle-results-${n}`);
+  if(!box) return;
+  const matches=abBundleMatches(window._abItem, query);
+  const q=(query||'').trim();
+  const createLink = `<div style="padding:6px 8px;font-size:12px;color:var(--blue);cursor:pointer;text-decoration:underline" onclick="quickCreateBundleForRow(${n},'${q.replace(/'/g,"\\'")}')">+ Create new bundle${q?` "${escHtml(q)}"`:''}</div>`;
+  if(!matches.length){
+    box.innerHTML = `<div style="padding:6px 8px;font-size:12px;color:var(--text3)">No matching bundles.</div>${createLink}`;
+    return;
+  }
+  box.innerHTML = matches.map(b=>{
+    const rem=getBundleRemaining(b);
+    return `<div onclick="selectAbBundle(${n},${b.id})" style="padding:6px 8px;border-top:1px solid var(--border);cursor:pointer;font-size:12px" onmouseover="this.style.background='var(--blue-l)'" onmouseout="this.style.background=''">
+      <strong>${b.bundle_num}</strong> — ${[b.product_cat,b.gauge,b.size].filter(Boolean).join(' · ')||'—'}
+      <span style="float:right;color:${rem>0?'var(--green)':'var(--red)'}">${rem} left</span>
+    </div>`;
+  }).join('') + createLink;
+}
+
+function selectAbBundle(n, bundleId){
+  const b=(window._bundlesData||[]).find(x=>String(x.id)===String(bundleId));
+  const row=document.getElementById(`ab-row-${n}`);
+  if(!b||!row) return;
+  row.querySelector('.ab-bundle-id').value=b.id;
+  row.querySelector('.ab-bundle-search').value=b.bundle_num;
+  row.querySelector(`#ab-bundle-results-${n}`).innerHTML='';
+  abCheckQtyVsRemaining(n);
+  // If this bundle was itself cut from a tracked coil, auto-link that coil
+  // too for full lineage (bundle came from coil, pull came from bundle) —
+  // purely informational, doesn't affect any deduction. Only auto-fills
+  // if the coil field is still empty, so it never overwrites something
+  // the person already picked by hand.
+  const coilIdEl = row.querySelector('.ab-coil-id');
+  if(b.source_coil_id && coilIdEl && !coilIdEl.value){
+    const srcCoil = (window._coilsData||[]).find(c=>c.id===b.source_coil_id);
+    if(srcCoil){
+      coilIdEl.value = srcCoil.id;
+      row.querySelector('.ab-coil-search').value = srcCoil.coil_num;
+      const note = row.querySelector('.ab-coil-selected');
+      if(note){ note.innerHTML = `🌀 auto-linked — bundle was cut from this coil`; note.style.color='var(--text3)'; }
+    }
+  }
+}
+
+function abCheckQtyVsRemaining(n){
+  const row=document.getElementById(`ab-row-${n}`);
+  if(!row) return;
+  const id=row.querySelector('.ab-bundle-id').value;
+  const noteEl=row.querySelector('.ab-bundle-selected');
+  if(!id){ if(noteEl) noteEl.innerHTML=''; return; }
+  const b=(window._bundlesData||[]).find(x=>String(x.id)===String(id));
+  if(!b) return;
+  const remaining=getBundleRemaining(b);
+  const qty=parseFloat(row.querySelector('.ab-qty')?.value)||0;
+  if(qty>remaining){
+    noteEl.innerHTML=`⚠ Only ${remaining} remaining on this bundle — saving anyway will take it negative`;
+    noteEl.style.color='var(--amber)';
+  } else {
+    noteEl.innerHTML=`✓ ${remaining} remaining of ${b.starting_qty}`;
+    noteEl.style.color='var(--green)';
+  }
+}
+
+// Lets office register a bundle that isn't in the master list yet without
+// leaving the Add Bundle Usage flow — prefills from the selected line item
+// and whatever they'd already typed as the bundle #.
+function quickCreateBundleForRow(n, typedNum){
+  const item=window._abItem||{};
+  openNewBundleModal({bundle_num: typedNum||'', product_cat: item.productCat, gauge: item.gauge, size: item.size}, (created)=>{
+    selectAbBundle(n, created.id);
+  });
+}
+
+async function submitAddBundleRecords(){
+  const wo=window._abWO, item=window._abItem;
+  if(!wo||!item){toast('⚠ Select a work order and line item');return;}
+  const rowEls=document.querySelectorAll('.ab-row');
+  if(!rowEls.length){toast('⚠ Add at least one bundle');return;}
+
+  const records=[];
+  for(const rowEl of rowEls){
+    const qty=rowEl.querySelector('.ab-qty')?.value.trim();
+    if(!qty){toast('⚠ Qty is required on every row');return;}
+    const bundleId=rowEl.querySelector('.ab-bundle-id')?.value.trim();
+    const bundleNum=rowEl.querySelector('.ab-bundle-search')?.value.trim();
+    const coilId=rowEl.querySelector('.ab-coil-id')?.value.trim();
+    const coilNum=rowEl.querySelector('.ab-coil-search')?.value.trim();
+    if(!bundleId && !coilId){toast('⚠ Pick a bundle or a coil from the list on every row');return;}
+    const weightVal = rowEl.querySelector('.ab-weight')?.value.trim();
+    records.push({
+      wo_id: wo.id,
+      wo_num: item.woNum||wo.woNum||null,
+      customer: item.customer||wo.customer||null,
+      delivery_date: item.delivery||wo.delivery||null,
+      line_item_id: item._dbId||null,
+      product_cat: item.productCat||null,
+      gauge: item.gauge||null,
+      size: item.size||null,
+      qty: qty||null,
+      weight: weightVal ? Number(weightVal) : null,
+      coil_num: coilNum||null,
+      coil_id: coilId ? parseInt(coilId) : null,
+      weight_used: coilId && weightVal ? Number(weightVal) : null,
+      bundle: bundleNum||null,
+      bundle_id: bundleId ? parseInt(bundleId) : null,
+      qty_pulled: bundleId ? Number(qty) : null,
+      skid_splits: null,
+      station: rowEl.querySelector('.ab-station')?.value||null,
+      completed_by: rowEl.querySelector('.ab-doneby')?.value.trim()||null,
+      completed_at: (()=>{
+        const d=rowEl.querySelector('.ab-date')?.value;
+        return d ? new Date(d+'T12:00:00').toISOString() : new Date().toISOString();
+      })(),
+      notes: '(manually added)'
+    });
+  }
+
+  const rows=await _sbPost('bundle_usage', records).catch(e=>{console.warn('submitAddBundleRecords error',e);return null;});
+  if(!rows){
+    toast('⚠ Failed to save — check connection and try again');
+    return;
+  }
+  const saved=Array.isArray(rows)?rows:[rows];
+  saved.forEach(r=>{
+    _bundleLogData.unshift(r);
+    // Keep the in-memory remaining maps and pull lists current without a
+    // re-fetch — so the Bundles/Coils pages (if opened next) reflect this
+    // pull immediately, including who pulled it.
+    if(r.bundle_id){
+      window._bundleUsageMap[r.bundle_id] = (window._bundleUsageMap[r.bundle_id]||0) + (parseFloat(r.qty_pulled)||0);
+      window._bundlePulls = window._bundlePulls||{};
+      (window._bundlePulls[r.bundle_id] = window._bundlePulls[r.bundle_id]||[]).push({
+        customer: r.customer, wo_num: r.wo_num, qty: r.qty_pulled, date: r.completed_at
+      });
+    }
+    if(r.coil_id){
+      window._coilUsageMap[r.coil_id] = (window._coilUsageMap[r.coil_id]||0) + (parseFloat(r.weight_used)||0);
+      window._coilPulls = window._coilPulls||{};
+      (window._coilPulls[r.coil_id] = window._coilPulls[r.coil_id]||[]).push({
+        customer: r.customer, wo_num: r.wo_num, qty: r.weight_used, date: r.completed_at
+      });
+    }
+  });
+  const usedACoil = saved.some(r=>r.coil_id);
+  toast(`✓ Added ${saved.length} record${saved.length!==1?'s':''} to WO #${wo.woNum}${usedACoil?' — remember to update the coil\u2019s remaining weight on the Coils tab':''}`, usedACoil ? 5000 : 2500);
+  closeAddBundleModal();
+  blRender();
+}
+
+function exportBundleCSV() {
+  const f = _bundleLogFilters;
+  let rows = _bundleLogData.filter(r => {
+    if (f.customer && !(r.customer||'').toLowerCase().includes(f.customer)) return false;
+    if (f.coilNum  && !(r.coil_num||'').toLowerCase().includes(f.coilNum))  return false;
+    if (f.bundle   && !(r.bundle||'').toLowerCase().includes(f.bundle))     return false;
+    if (f.station  && !(r.station||'').toLowerCase().includes(f.station))   return false;
+    if (f.dateFrom) { const d=(r.completed_at||r.recorded_at||'').slice(0,10); if(d<f.dateFrom) return false; }
+    if (f.dateTo)   { const d=(r.completed_at||r.recorded_at||'').slice(0,10); if(d>f.dateTo)   return false; }
+    return true;
+  });
+  const headers = ['Date','WO#','Customer','Delivery Date','Product Cat','Gauge','Size','Qty','Weight (lbs)','Coil #','Bundle #','Station','Completed By'];
+  const csvRows = [headers.join(',')];
+  rows.forEach(r => {
+    csvRows.push([
+      (r.completed_at||r.recorded_at||'').slice(0,10),
+      r.wo_num||'',
+      '"'+(r.customer||'').replace(/"/g,'""')+'"',
+      r.delivery_date||'',
+      '"'+(r.product_cat||'').replace(/"/g,'""')+'"',
+      r.gauge||'',
+      r.size||'',
+      r.bundle_id ? (r.qty_pulled ?? r.qty ?? '') : (r.qty||''),
+      r.weight||'',
+      r.coil_num||'',
+      r.bundle||'',
+      r.station||'',
+      r.completed_by||''
+    ].join(','));
+  });
+  const blob = new Blob([csvRows.join('\n')], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'bundle-history-'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+}
+
+setCurrentUser(getCurrentUser());
+loadAdminLabels().catch(()=>{});
+renderBundlesView(document.getElementById('bundles-panel'));
+</script>
+</body>
+</html>
