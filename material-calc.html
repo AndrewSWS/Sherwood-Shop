@@ -36,6 +36,15 @@
   .mc3-row{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;margin-bottom:8px;align-items:end;}
   .mc3-row .rm{background:none;border:1px solid var(--border);border-radius:var(--rad);color:var(--text3);cursor:pointer;padding:7px 10px;font-size:13px;}
   .mc3-row .rm:hover{background:var(--amber-l);color:var(--amber);border-color:var(--amber);}
+  .mc5-label{font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.03em;}
+  .mc5-mode-row{display:flex;gap:20px;margin-bottom:12px;font-size:13px;color:var(--text2);}
+  .mc5-mode-row label{display:flex;align-items:center;gap:5px;cursor:pointer;}
+  .mc5-breakdown{width:100%;font-size:13px;border-collapse:collapse;}
+  .mc5-breakdown td{padding:5px 0;border-bottom:1px solid var(--border);}
+  .mc5-breakdown td:nth-child(2),.mc5-breakdown td:nth-child(3){text-align:right;font-variant-numeric:tabular-nums;padding-left:14px;white-space:nowrap;}
+  .mc5-breakdown tr:first-child td{border-bottom:none;color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:.03em;padding-bottom:2px;}
+  .mc5-breakdown tr.total td{font-weight:700;border-bottom:none;border-top:2px solid var(--text);padding-top:8px;}
+  .mc5-breakdown tr.price td{font-weight:700;color:var(--green);font-size:15px;}
 </style>
 </head>
 <body>
@@ -106,6 +115,81 @@
           <input type="number" id="mc4-qty" min="1" placeholder="e.g. 25" oninput="mc4Calc()"></div>
       </div>
       <div id="mc4-results"></div>
+    </div>
+
+    <div class="card">
+      <h2>🔧 One-Off Job Cost Estimator</h2>
+      <div class="desc">For custom cuts/bends that aren't on the Product Margin List — material cost from current CRU-based $/lb pricing, plus labor for this specific job. Standard/repeat items should stay priced from the margin list, not this tool.</div>
+
+      <div class="mc5-label">Material</div>
+      <div class="grid4">
+        <div class="field"><label>CRU <span style="font-weight:400;color:var(--text3)">(today's)</span></label>
+          <input type="number" id="mc5-cru" min="0" step="0.01" value="71.5" oninput="mc5CruChange()"></div>
+        <div class="field"><label>Gauge</label>
+          <select id="mc5-gauge" onchange="mc5GaugeChange()"></select></div>
+        <div class="field"><label>$/cwt (100 lbs)</label>
+          <input type="number" id="mc5-cwt" min="0" step="0.01" oninput="mc5Calc()"></div>
+        <div class="field"><label>Qty (pieces)</label>
+          <input type="number" id="mc5-qty" min="1" value="1" oninput="mc5Calc()"></div>
+      </div>
+      <div class="grid4">
+        <div class="field"><label>Width (in)</label>
+          <input type="number" id="mc5-width" min="0" step="0.0625" placeholder="e.g. 24" oninput="mc5Calc()"></div>
+        <div class="field"><label>Length (in)</label>
+          <input type="number" id="mc5-length" min="0" step="0.0625" placeholder="e.g. 48" oninput="mc5Calc()"></div>
+        <div class="field" style="grid-column:span 2"><label>Stock Sheet Used</label>
+          <select id="mc5-stock" onchange="mc5Calc()"><option value="auto">Auto — best fit</option></select></div>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin:-4px 0 12px">$/cwt = CRU + a fixed per-gauge add-on (from the Majestic tab) — update CRU once here and every gauge follows. 11 ga has no known add-on and needs $/cwt entered manually.<br>You're billed for the full stock sheet(s) this job comes out of, not just the piece — "Auto" picks whichever standard stock size gives the fewest sheets/least waste (same logic as the Cut Yield tool above), and any leftover stays yours for future one-offs.</div>
+
+      <div class="mc5-label" style="margin-top:16px">Labor</div>
+      <div class="mc5-mode-row">
+        <label><input type="radio" name="mc5-labor-mode" value="time" checked onchange="mc5LaborModeChange()"> Time-based ($/hr)</label>
+        <label><input type="radio" name="mc5-labor-mode" value="flat" onchange="mc5LaborModeChange()"> Flat rate per cut/bend</label>
+      </div>
+
+      <div id="mc5-labor-time">
+        <div class="grid4">
+          <div class="field"><label>Shop Rate ($/hr)</label>
+            <input type="number" id="mc5-rate" min="0" step="1" value="80" oninput="mc5Calc()"></div>
+          <div class="field"><label>Setup (min)</label>
+            <input type="number" id="mc5-setupmin" min="0" step="1" value="0" oninput="mc5Calc()"></div>
+          <div class="field"><label># Cuts</label>
+            <input type="number" id="mc5-cuts" min="0" step="1" value="0" oninput="mc5Calc()"></div>
+          <div class="field"><label>Min / Cut</label>
+            <input type="number" id="mc5-mincut" min="0" step="0.25" value="1" oninput="mc5Calc()"></div>
+        </div>
+        <div class="grid4">
+          <div class="field"><label># Bends</label>
+            <input type="number" id="mc5-bends" min="0" step="1" value="0" oninput="mc5Calc()"></div>
+          <div class="field"><label>Min / Bend</label>
+            <input type="number" id="mc5-minbend" min="0" step="0.25" value="1" oninput="mc5Calc()"></div>
+        </div>
+      </div>
+
+      <div id="mc5-labor-flat" style="display:none">
+        <div class="grid4">
+          <div class="field"><label>$ / Cut</label>
+            <input type="number" id="mc5-flatcut" min="0" step="0.05" value="0" oninput="mc5Calc()"></div>
+          <div class="field"><label># Cuts</label>
+            <input type="number" id="mc5-flatcuts" min="0" step="1" value="0" oninput="mc5Calc()"></div>
+          <div class="field"><label>$ / Bend</label>
+            <input type="number" id="mc5-flatbend" min="0" step="0.05" value="0" oninput="mc5Calc()"></div>
+          <div class="field"><label># Bends</label>
+            <input type="number" id="mc5-flatbends" min="0" step="1" value="0" oninput="mc5Calc()"></div>
+        </div>
+        <div class="grid4">
+          <div class="field"><label>Flat Setup Fee ($)</label>
+            <input type="number" id="mc5-flatsetup" min="0" step="0.5" value="0" oninput="mc5Calc()"></div>
+        </div>
+      </div>
+
+      <div class="mc5-label" style="margin-top:16px">Pricing</div>
+      <div class="field" style="max-width:200px;margin-bottom:12px"><label>Margin %</label>
+        <select id="mc5-margin" onchange="mc5Calc()"></select></div>
+
+      <div id="mc5-result"></div>
+      <div style="font-size:11px;color:var(--text3);margin-top:10px">$/cwt defaults are pre-filled per gauge but won't track CRU automatically — check/update against the current Product Margin List before quoting. Suggested price uses the same Cost ÷ (1 − margin) formula as that list.</div>
     </div>
   </div>
 
@@ -483,6 +567,7 @@ function initGaugeSelects(){
   document.getElementById('mc1-gauge').innerHTML = opts;
   document.getElementById('mc2-gauge').innerHTML = opts;
   document.getElementById('mc3-gauge').innerHTML = opts;
+  document.getElementById('mc5-gauge').innerHTML = opts;
 }
 
 // ── Multi-cut combined yield ───────────────────────────────────────────
@@ -821,11 +906,193 @@ function mc4Calc(){
   `;
 }
 
+// ── Section 5: one-off job cost (material + labor for cuts/bends) ──────
+// $/cwt (cost per 100 lbs) for a gauge = CRU + a fixed per-gauge add-on.
+// The add-on is baked into the Majestic tab's per-gauge coil cost and
+// barely moves; CRU is what actually changes day to day. Add-ons below
+// are back-calculated from the Product Margin List (2026-8-12) snapshot
+// against CRU(71.5, "CRU W/ Fuel Surcharge" on Majestic!E1):
+//   28,26,24,22,20,18,16 — from the "S+D, 1", etc." tab's per-gauge
+//   header formulas (each references a specific Majestic coil-cost cell).
+//   14 — not on the S+D tab, so pulled directly from Majestic's 14ga
+//   60" G90 coil cost (Majestic!D59=83.5), the same reference line the
+//   S+D tab uses for 16ga (D55).
+//   16CR — pulled from Majestic's 16ga 60" CR (cold-rolled, uncoated)
+//   coil cost (Majestic!D56=72.05) — much smaller add-on since CR has
+//   no galvanizing cost baked in.
+// 11ga has no entry anywhere in the workbook — $/cwt must be typed in
+// by hand for that one.
+const MC5_GAUGE_ADDON = {
+  '28': 20.75, '26': 15.35, '24': 13.20, '22': 11.80,
+  '20': 13.45, '18': 12.75, '16': 12.00, '14': 12.00, '16CR': 0.55
+};
+
+// Same margin tiers as the Product Margin List's price columns, so a
+// one-off can be quoted on the same scale as everything else in the sheet.
+const MC5_MARGINS = [12.5,15,17.5,20,22.5,25,27.5,30,32.5,35,37.5,40,42.5,45];
+
+function initMc5(){
+  const marginSel = document.getElementById('mc5-margin');
+  marginSel.innerHTML = MC5_MARGINS.map(m=>`<option value="${m}"${m===30?' selected':''}>${m}%</option>`).join('');
+  mc5GaugeChange(); // seeds gauge + $/cwt from CRU + add-on, then calls mc5Calc()
+}
+
+// Recomputes $/cwt = CRU + add-on(gauge) and pushes it into the $/cwt
+// field. The $/cwt field stays manually editable afterward (e.g. to
+// override for a gauge with no known add-on, or a one-off quote at a
+// different price) — this just resets it to the CRU-derived value
+// whenever the CRU or gauge selection changes.
+function mc5ApplyCru(){
+  const cru = parseFloat(document.getElementById('mc5-cru').value) || 0;
+  const gauge = document.getElementById('mc5-gauge').value;
+  const addon = MC5_GAUGE_ADDON[gauge];
+  const cwtEl = document.getElementById('mc5-cwt');
+  cwtEl.value = (addon !== undefined) ? (cru + addon).toFixed(2) : '';
+}
+
+function mc5GaugeChange(){
+  mc5ApplyCru();
+  mc5Calc();
+}
+
+function mc5CruChange(){
+  mc5ApplyCru();
+  mc5Calc();
+}
+
+// Rebuilds the "Stock Sheet Used" dropdown for the current gauge/piece,
+// showing sheets-needed and waste% for every standard stock size that
+// fits (same results calcCutYield already produces for the Cut Yield
+// tool), disabling ones the piece doesn't fit on. Keeps the previous
+// selection if it's still a valid, fitting option; otherwise resets to
+// Auto so a stale pick from a different gauge/size doesn't silently win.
+function mc5RebuildStockOptions(gauge, cutResults, preserveVal){
+  const sel = document.getElementById('mc5-stock');
+  const sizes = STOCK_SIZES[gauge] || [];
+  let html = `<option value="auto">Auto — best fit</option>`;
+  sizes.forEach(sizeStr=>{
+    const r = cutResults.find(x=>x.sizeStr===sizeStr);
+    if(r && r.fits){
+      html += `<option value="${sizeStr}">${sizeStr} — ${r.sheetsNeeded} sheet${r.sheetsNeeded!==1?'s':''}, ${r.wastePct.toFixed(1)}% waste</option>`;
+    } else {
+      html += `<option value="${sizeStr}" disabled>${sizeStr} — piece too large</option>`;
+    }
+  });
+  sel.innerHTML = html;
+  const stillValid = [...sel.options].some(o=>o.value===preserveVal && !o.disabled);
+  sel.value = stillValid ? preserveVal : 'auto';
+}
+
+function mc5LaborModeChange(){
+  const mode = document.querySelector('input[name="mc5-labor-mode"]:checked').value;
+  document.getElementById('mc5-labor-time').style.display = (mode==='time') ? '' : 'none';
+  document.getElementById('mc5-labor-flat').style.display = (mode==='flat') ? '' : 'none';
+  mc5Calc();
+}
+
+function mc5Calc(){
+  const box = document.getElementById('mc5-result');
+  if(!box) return;
+
+  const gauge = document.getElementById('mc5-gauge').value;
+  const cwt = parseFloat(document.getElementById('mc5-cwt').value) || 0;
+  const width = parseFloat(document.getElementById('mc5-width').value) || 0;
+  const length = parseFloat(document.getElementById('mc5-length').value) || 0;
+  const qty = parseFloat(document.getElementById('mc5-qty').value) || 1;
+  const margin = parseFloat(document.getElementById('mc5-margin').value) || 0;
+
+  if(!width || !length){
+    box.innerHTML = '<div class="placeholder">Enter piece dimensions above</div>';
+    return;
+  }
+
+  const lbsPerPc = calcFlatSheetWtPerPc(gauge, `${width}x${length}`);
+  if(!lbsPerPc){
+    box.innerHTML = '<div class="placeholder">⚠ No weight table for that gauge</div>';
+    return;
+  }
+  if(!cwt){
+    box.innerHTML = '<div class="placeholder">Enter a $/cwt material price above</div>';
+    return;
+  }
+
+  // Bill for the full stock sheet(s) this job is cut from, not just the
+  // piece — same cut-yield math as the Cut Yield tool above (rotation
+  // allowed, guillotine cuts). "Auto" picks whichever standard stock size
+  // needs the fewest sheets (then least waste); the dropdown lets you
+  // pin a specific stock size instead (e.g. because that's what's on
+  // hand right now).
+  const cutResults = calcCutYield(gauge, width, length, qty);
+  const stockSel = document.getElementById('mc5-stock');
+  const preserveVal = stockSel.dataset.gauge===gauge ? stockSel.value : 'auto';
+  mc5RebuildStockOptions(gauge, cutResults, preserveVal);
+  stockSel.dataset.gauge = gauge;
+  const chosenVal = stockSel.value;
+  const chosenResult = (chosenVal==='auto')
+    ? cutResults.find(r=>r.fits)
+    : cutResults.find(r=>r.sizeStr===chosenVal && r.fits);
+
+  let matlCostTotal, matlDetail;
+  if(chosenResult){
+    const wtPerSheet = calcFlatSheetWtPerPc(gauge, chosenResult.sizeStr);
+    const sheetCost = (cwt/100) * wtPerSheet;
+    matlCostTotal = chosenResult.sheetsNeeded * sheetCost;
+    matlDetail = `${chosenResult.sheetsNeeded} × ${chosenResult.sizeStr} sheet${chosenResult.sheetsNeeded!==1?'s':''} @ $${sheetCost.toFixed(2)} ea (${chosenResult.piecesPerSheet} pc/sheet, ${chosenResult.wastePct.toFixed(1)}% waste)`;
+  } else {
+    // No standard stock size fits (or none configured for this gauge) —
+    // fall back to billing raw piece weight, same as before.
+    matlCostTotal = (cwt/100) * lbsPerPc * qty;
+    matlDetail = cutResults.length
+      ? `piece exceeds all standard stock sizes for this gauge — billed at raw ${lbsPerPc.toFixed(3)} lbs/pc (special-order sheet likely needed)`
+      : `no standard stock sizes on file for this gauge — billed at raw ${lbsPerPc.toFixed(3)} lbs/pc`;
+  }
+  const matlCostPerPc = matlCostTotal / qty;
+
+  const mode = document.querySelector('input[name="mc5-labor-mode"]:checked').value;
+  let laborCost = 0, laborDetail = '';
+  if(mode === 'time'){
+    const rate = parseFloat(document.getElementById('mc5-rate').value) || 0;
+    const setupMin = parseFloat(document.getElementById('mc5-setupmin').value) || 0;
+    const cuts = parseFloat(document.getElementById('mc5-cuts').value) || 0;
+    const minCut = parseFloat(document.getElementById('mc5-mincut').value) || 0;
+    const bends = parseFloat(document.getElementById('mc5-bends').value) || 0;
+    const minBend = parseFloat(document.getElementById('mc5-minbend').value) || 0;
+    const totalMin = setupMin + (cuts*minCut) + (bends*minBend);
+    laborCost = (rate/60) * totalMin;
+    laborDetail = `${totalMin.toFixed(1)} min @ $${rate.toFixed(0)}/hr (setup ${setupMin}m + ${cuts} cut${cuts!==1?'s':''} × ${minCut}m + ${bends} bend${bends!==1?'s':''} × ${minBend}m)`;
+  } else {
+    const flatCut = parseFloat(document.getElementById('mc5-flatcut').value) || 0;
+    const flatCuts = parseFloat(document.getElementById('mc5-flatcuts').value) || 0;
+    const flatBend = parseFloat(document.getElementById('mc5-flatbend').value) || 0;
+    const flatBends = parseFloat(document.getElementById('mc5-flatbends').value) || 0;
+    const flatSetup = parseFloat(document.getElementById('mc5-flatsetup').value) || 0;
+    laborCost = flatSetup + (flatCut*flatCuts) + (flatBend*flatBends);
+    laborDetail = `$${flatSetup.toFixed(2)} setup + ${flatCuts} cut${flatCuts!==1?'s':''} × $${flatCut.toFixed(2)} + ${flatBends} bend${flatBends!==1?'s':''} × $${flatBend.toFixed(2)}`;
+  }
+
+  const totalCost = matlCostTotal + laborCost;
+  const laborCostPerPc = laborCost / qty;
+  const totalCostPerPc = totalCost / qty;
+  const marginFrac = margin/100;
+  const suggestedPrice = marginFrac < 1 ? totalCost / (1 - marginFrac) : 0;
+  const pricePerPc = suggestedPrice / qty;
+
+  box.innerHTML = `
+    <table class="mc5-breakdown">
+      <tr><td></td><td>Total</td><td>Per Piece</td></tr>
+      <tr><td>Material (${matlDetail})</td><td>$${matlCostTotal.toFixed(2)}</td><td>$${matlCostPerPc.toFixed(2)}</td></tr>
+      <tr><td>Labor <span style="color:var(--text3);font-size:11px">(${laborDetail})</span></td><td>$${laborCost.toFixed(2)}</td><td>$${laborCostPerPc.toFixed(2)}</td></tr>
+      <tr class="total"><td>Total Cost</td><td>$${totalCost.toFixed(2)}</td><td>$${totalCostPerPc.toFixed(2)}</td></tr>
+      <tr class="price"><td>Suggested Price @ ${margin}% margin</td><td>$${suggestedPrice.toFixed(2)}</td><td>$${pricePerPc.toFixed(2)}</td></tr>
+    </table>`;
+}
+
 initGaugeSelects();
 mc1Calc();
 mc2Calc();
 addMc3Row();
 mc4Calc();
+initMc5();
 
 // Refresh the Cut Yield section once live stock sizes arrive, so it
 // reflects whatever's actually configured in Settings → Product Catalog
