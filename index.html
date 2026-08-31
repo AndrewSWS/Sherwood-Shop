@@ -948,6 +948,8 @@ function _woToRow(wo) {
     delivered_at: wo.deliveredAt||null, delivered_by: wo.deliveredBy||null,
     ready_for_pickup: wo.readyForPickup||false,
     pickup_expected_date: wo.pickupExpectedDate||null,
+    pickup_time_window: wo.pickupTimeWindow||null,
+    pickup_time: wo.pickupTime||null,
     bol_checked: wo.bolChecked||false, bol_checked_by: wo.bolCheckedBy||null,
     bol_checked_at: wo.bolCheckedAt||null,
     created_at: wo.created||new Date().toISOString()
@@ -1003,6 +1005,8 @@ function _rowToWO(row, items=[]) {
     deliveredAt: row.delivered_at||'', deliveredBy: row.delivered_by||'',
     readyForPickup: row.ready_for_pickup||false,
     pickupExpectedDate: row.pickup_expected_date||'',
+    pickupTimeWindow: row.pickup_time_window||'',
+    pickupTime: row.pickup_time||'',
     bolChecked: row.bol_checked||false, bolCheckedBy: row.bol_checked_by||'',
     bolCheckedAt: row.bol_checked_at||'',
     created: row.created_at, items
@@ -1873,6 +1877,19 @@ function localISO(d){
   return y+'-'+m+'-'+dd;
 }
 function fmtDate(d){if(!d)return'—';const dt=new Date(d+'T12:00:00');return dt.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}
+// Format a WO's pickup time for display: exact time takes precedence over
+// the general Morning/Afternoon window; returns '' if neither is set.
+function fmtPickupTime(wo){
+  if(wo.pickupTime){
+    const parts=wo.pickupTime.split(':');
+    let h=parseInt(parts[0],10);const m=parts[1]||'00';
+    const ap=h>=12?'PM':'AM';
+    h=h%12;if(h===0)h=12;
+    return h+':'+m+' '+ap;
+  }
+  if(wo.pickupTimeWindow) return wo.pickupTimeWindow;
+  return '';
+}
 function todayISO(){return localISO(new Date())}
 function woStatus(wo){
   if(!wo.items||!wo.items.length)return'Pending';
@@ -2106,9 +2123,20 @@ function renderCreate(c){
             &#x1F3EA; Pick Up
           </label>
         </div>
-        <div id="f-pickup-date-wrap" style="display:none;align-items:center;gap:8px;margin-top:6px">
-          <label class="lbl" style="margin:0;white-space:nowrap">Expected Pick Up</label>
-          <input type="date" id="f-pickup-date" style="flex:1">
+        <div id="f-pickup-date-wrap" style="display:none;flex-direction:column;gap:6px;margin-top:6px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <label class="lbl" style="margin:0;white-space:nowrap;width:110px">Expected Pick Up</label>
+            <input type="date" id="f-pickup-date" style="flex:1">
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <label class="lbl" style="margin:0;white-space:nowrap;width:110px">Time</label>
+            <select id="f-pickup-window" style="flex:1">
+              <option value="">Any time</option>
+              <option value="Morning">Morning</option>
+              <option value="Afternoon">Afternoon</option>
+            </select>
+            <input type="time" id="f-pickup-time" style="flex:1" title="Exact time (optional)">
+          </div>
         </div>
       </div>
     </div>
@@ -3220,6 +3248,8 @@ async function saveWO(){
     isPickup:document.getElementById('f-pickup')?.checked||false,
     isStock:document.getElementById('f-stock')?.checked||false,
     pickupExpectedDate:document.getElementById('f-pickup-date')?.value||'',
+    pickupTimeWindow:document.getElementById('f-pickup-window')?.value||'',
+    pickupTime:document.getElementById('f-pickup-time')?.value||'',
     truck:document.getElementById('f-stock')?.checked?'':document.getElementById('f-truck').value,
     notes:document.getElementById('f-notes').value,
     items,created:new Date().toISOString()
@@ -4477,7 +4507,8 @@ function renderBoardPickups(){
     let expBadge = '';
     if(wo.pickupExpectedDate){
       const isDue = wo.pickupExpectedDate <= todayISO;
-      expBadge = `<span style="font-size:9px;font-weight:700;color:${isDue?'#f0a500':'#7aa8d8'};margin-left:6px">📅 ${fmtDate(wo.pickupExpectedDate)}</span>`;
+      const timeStr = fmtPickupTime(wo);
+      expBadge = `<span style="font-size:9px;font-weight:700;color:${isDue?'#f0a500':'#7aa8d8'};margin-left:6px">📅 ${fmtDate(wo.pickupExpectedDate)}${timeStr?' · '+timeStr:''}</span>`;
     }
 
     return `<div onclick="showPickupModal(${wo.id})" style="
@@ -4508,6 +4539,26 @@ function setPickupExpectedDate(woId, dateVal){
   sbUpdateWO(wo).catch(e=>console.warn('setPickupExpectedDate error',e));
   renderBoardPickups();
   toast(dateVal ? '📅 Expected pick up date set' : 'Expected pick up date cleared');
+}
+
+function setPickupTimeWindow(woId, val){
+  const wo = state.wos.find(w=>w.id===woId);
+  if(!wo) return;
+  wo.pickupTimeWindow = val||'';
+  saveState();
+  sbUpdateWO(wo).catch(e=>console.warn('setPickupTimeWindow error',e));
+  renderBoardPickups();
+  toast(val ? '🕑 Pick up window set to '+val : 'Pick up window cleared');
+}
+
+function setPickupTime(woId, val){
+  const wo = state.wos.find(w=>w.id===woId);
+  if(!wo) return;
+  wo.pickupTime = val||'';
+  saveState();
+  sbUpdateWO(wo).catch(e=>console.warn('setPickupTime error',e));
+  renderBoardPickups();
+  toast(val ? '⏰ Exact pick up time set' : 'Exact pick up time cleared');
 }
 
 function setPickupReady(woId, ready){
@@ -4939,7 +4990,10 @@ function editWO(id){
     +'<div class="autocomplete-wrap"><input type="text" id="e-cust" value="'+wo.customer+'" placeholder="Type to search..." oninput="custSearch(this.value)" autocomplete="off"><div class="autocomplete-list" id="cust-drop" style="display:none"></div></div>'
     +'<div id="e-stock-note" style="display:'+(wo.isStock?'block':'none')+';margin-top:6px;font-size:11px;color:var(--text3)">Defaults to Sherwood Steel for internal stock — change it if this is customer-specific stock.</div>'
     +'</div>'
-    +'<div class="field"><label class="lbl">Delivery Date</label><div style="display:flex;align-items:center;gap:10px"><input type="date" id="e-delivery" value="'+(wo.isStock?'':(wo.delivery||''))+'"'+((wo.isPickup||wo.isStock)?' disabled':'')+' style="flex:1"><label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;cursor:pointer"><input type="checkbox" id="e-pickup" '+(wo.isPickup?'checked':'')+' onchange="if(this.checked){var d=document.getElementById(\'e-delivery\');d.value=\'\';d.disabled=true;document.getElementById(\'e-pickup-date-wrap\').style.display=\'flex\';}else{document.getElementById(\'e-delivery\').disabled=false;document.getElementById(\'e-pickup-date-wrap\').style.display=\'none\';}"> &#x1F3EA; Pick Up</label></div><div id="e-pickup-date-wrap" style="display:'+(wo.isPickup?'flex':'none')+';align-items:center;gap:8px;margin-top:6px"><label class="lbl" style="margin:0;white-space:nowrap">Expected Pick Up</label><input type="date" id="e-pickup-date" value="'+(wo.pickupExpectedDate||'')+'" style="flex:1"></div></div>'
+    +'<div class="field"><label class="lbl">Delivery Date</label><div style="display:flex;align-items:center;gap:10px"><input type="date" id="e-delivery" value="'+(wo.isStock?'':(wo.delivery||''))+'"'+((wo.isPickup||wo.isStock)?' disabled':'')+' style="flex:1"><label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;cursor:pointer"><input type="checkbox" id="e-pickup" '+(wo.isPickup?'checked':'')+' onchange="if(this.checked){var d=document.getElementById(\'e-delivery\');d.value=\'\';d.disabled=true;document.getElementById(\'e-pickup-date-wrap\').style.display=\'flex\';}else{document.getElementById(\'e-delivery\').disabled=false;document.getElementById(\'e-pickup-date-wrap\').style.display=\'none\';}"> &#x1F3EA; Pick Up</label></div><div id="e-pickup-date-wrap" style="display:'+(wo.isPickup?'flex':'none')+';flex-direction:column;gap:6px;margin-top:6px">'
+    +'<div style="display:flex;align-items:center;gap:8px"><label class="lbl" style="margin:0;white-space:nowrap;width:110px">Expected Pick Up</label><input type="date" id="e-pickup-date" value="'+(wo.pickupExpectedDate||'')+'" style="flex:1"></div>'
+    +'<div style="display:flex;align-items:center;gap:8px"><label class="lbl" style="margin:0;white-space:nowrap;width:110px">Time</label><select id="e-pickup-window" style="flex:1"><option value=""'+(wo.pickupTimeWindow?'':' selected')+'>Any time</option><option value="Morning"'+(wo.pickupTimeWindow==='Morning'?' selected':'')+'>Morning</option><option value="Afternoon"'+(wo.pickupTimeWindow==='Afternoon'?' selected':'')+'>Afternoon</option></select><input type="time" id="e-pickup-time" value="'+(wo.pickupTime||'')+'" style="flex:1" title="Exact time (optional)"></div>'
+    +'</div></div>'
     +'</div>'
     +'<div class="grid3 mb12">'
     +'<div class="field"><label class="lbl">Address</label><input type="text" id="e-addr" value="'+(wo.address||'')+'"></div>'
@@ -4999,6 +5053,8 @@ function saveEditWO(id){
   const editDelivery = document.getElementById('e-delivery').value;
   if(pickupChecked){
     wo.pickupExpectedDate = document.getElementById('e-pickup-date')?.value||'';
+    wo.pickupTimeWindow = document.getElementById('e-pickup-window')?.value||'';
+    wo.pickupTime = document.getElementById('e-pickup-time')?.value||'';
   }
   if(pickupChecked && editDelivery){
     // Pickup with date = customer picked up, mark all items complete
@@ -10383,7 +10439,7 @@ function renderPickupSection(pickups){
       +'<div style="font-weight:700;font-size:13px;cursor:pointer" onclick="openDashWOPopout('+wo.id+')">WO #'+wo.woNum+'</div>'
       +'<div style="font-size:12px;color:var(--blue);margin-bottom:6px;cursor:pointer" onclick="openDashWOPopout('+wo.id+')">'+wo.customer+'</div>'
       +statusPill(st)
-      +(wo.pickupExpectedDate?'<div style="font-size:11px;font-weight:700;color:'+(isDue?'#c0392b':'#5B9BD5')+';margin-top:4px">📅 Expected '+fmtDate(wo.pickupExpectedDate)+'</div>':'')
+      +(wo.pickupExpectedDate?'<div style="font-size:11px;font-weight:700;color:'+(isDue?'#c0392b':'#5B9BD5')+';margin-top:4px">📅 Expected '+fmtDate(wo.pickupExpectedDate)+(fmtPickupTime(wo)?' · '+fmtPickupTime(wo):'')+'</div>':'')
       +(wo.pickupDate?'<div style="font-size:11px;color:#185FA5;margin-top:4px">✓ Picked up '+fmtDate(wo.pickupDate)+'</div>':'')
       +'<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">'
       +'<button class="btn btn-xs btn-amber" onclick="editWO('+wo.id+')" title="Edit">✏</button>'
@@ -10394,6 +10450,18 @@ function renderPickupSection(pickups){
       +'<label style="font-size:10px;font-weight:700;color:#5B9BD5;text-transform:uppercase;display:block;margin-bottom:3px">📅 Expected Pick Up Date</label>'
       +'<input type="date" value="'+(wo.pickupExpectedDate||'')+'" style="width:100%;font-size:11px;padding:4px 6px;border:1px solid #5B9BD5;border-radius:4px;background:#fff" '
       +'onchange="setPickupExpectedDate('+wo.id+',this.value);renderDashboard(document.getElementById(\'content\'))">'
+      +'</div>'
+      +'<div style="margin-top:8px;display:flex;gap:6px;">'
+      +'<div style="flex:1"><label style="font-size:10px;font-weight:700;color:#5B9BD5;text-transform:uppercase;display:block;margin-bottom:3px">🕑 Time</label>'
+      +'<select style="width:100%;font-size:11px;padding:4px 6px;border:1px solid #5B9BD5;border-radius:4px;background:#fff" '
+      +'onchange="setPickupTimeWindow('+wo.id+',this.value);renderDashboard(document.getElementById(\'content\'))">'
+      +'<option value=""'+(wo.pickupTimeWindow?'':' selected')+'>Any time</option>'
+      +'<option value="Morning"'+(wo.pickupTimeWindow==='Morning'?' selected':'')+'>Morning</option>'
+      +'<option value="Afternoon"'+(wo.pickupTimeWindow==='Afternoon'?' selected':'')+'>Afternoon</option>'
+      +'</select></div>'
+      +'<div style="flex:1"><label style="font-size:10px;font-weight:700;color:#5B9BD5;text-transform:uppercase;display:block;margin-bottom:3px">⏰ Exact Time</label>'
+      +'<input type="time" value="'+(wo.pickupTime||'')+'" style="width:100%;font-size:11px;padding:4px 6px;border:1px solid #5B9BD5;border-radius:4px;background:#fff" '
+      +'onchange="setPickupTime('+wo.id+',this.value);renderDashboard(document.getElementById(\'content\'))"></div>'
       +'</div>'
       +'<div style="margin-top:8px;">'
       +'<label style="font-size:10px;font-weight:700;color:#c0392b;text-transform:uppercase;display:block;margin-bottom:3px">✓ Actual Pick Up Date — marks complete</label>'
