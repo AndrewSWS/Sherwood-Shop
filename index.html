@@ -7331,6 +7331,7 @@ function renderTruck(c){
     <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:50%;background:#1C2E1C;display:inline-block"></span>Shop</span>
     ${getActiveTrucks().map((t,i)=>`<span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:50%;background:${TRUCK_MAP_COLORS[i%TRUCK_MAP_COLORS.length]};display:inline-block"></span>${t.name}</span>`).join('')}
     <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:50%;background:#999;display:inline-block"></span>Unassigned</span>
+    <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:50%;background:#639922;color:#fff;font-size:8px;font-weight:700;display:inline-flex;align-items:center;justify-content:center">✓</span>Delivered</span>
   </div>
   ` : `
   <div class="${getActiveTrucks().length<=2?'grid2':'grid3'} gap16">
@@ -7521,10 +7522,15 @@ function renderTruckMap(dayISO){
     return null;
   }
 
-  function numberedIcon(num, color){
+  function numberedIcon(num, color, delivered){
+    // Delivered stops match the Cards view's convention (green fill + ✓
+    // instead of the stop number) so the map and card always agree on
+    // which stops are done without needing to flip views to check.
+    const bg = delivered ? '#639922' : color;
+    const label = delivered ? '✓' : num;
     return L.divIcon({
       className: '',
-      html: `<div style="width:26px;height:26px;border-radius:50%;background:${color};color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4)">${num}</div>`,
+      html: `<div style="width:26px;height:26px;border-radius:50%;background:${bg};color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4)">${label}</div>`,
       iconSize: [26,26], iconAnchor: [13,13]
     });
   }
@@ -7544,9 +7550,13 @@ function renderTruckMap(dayISO){
       const rawCoords = stopCoords(wo, s);
       if(!rawCoords){ skippedList.push({ truckName: t.name, woNum: wo?wo.woNum:'?', customer: wo?wo.customer:(s.customer||'?') }); return; }
       const coords = jitterCoords(rawCoords);
-      const marker = L.marker(coords, { icon: numberedIcon(i+1, color) }).addTo(map);
+      // Same delivered-status source the Cards view uses (WO's own flag,
+      // falling back to the stop's flag) so a stop marked delivered there
+      // shows delivered here too.
+      const woDelivered = wo ? (wo.delivered||false) : (s.delivered||false);
+      const marker = L.marker(coords, { icon: numberedIcon(i+1, color, woDelivered) }).addTo(map);
       marker.bindPopup(
-        `<strong>${t.name} — Stop ${i+1}</strong><br>`+
+        `<strong>${t.name} — Stop ${i+1}${woDelivered?' · ✓ Delivered':''}</strong><br>`+
         (wo?`WO #${wo.woNum} — ${wo.customer}<br>${getWOWeight(wo.id).toLocaleString()} lbs`:'')
       );
       // Permanent label on the FIRST plotted stop so the truck is identifiable
