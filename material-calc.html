@@ -73,6 +73,13 @@
     <div class="card">
       <h2>✂️ Cut Yield — Best Stock Size</h2>
       <div class="desc">How many stock sheets you'd need to cut, and how much waste, for each of your standard stock sizes in this gauge. Pieces can be rotated 90° to improve yield. <span id="mc2-source" style="color:var(--text3)"></span></div>
+      <div class="field mb12" style="max-width:340px">
+        <label>Rank "best" by</label>
+        <select id="mc2-sortmode" onchange="mc2Calc()">
+          <option value="sheets">Fewest sheets (fewest whole sheets billed)</option>
+          <option value="material">Least material (lowest $ — total lbs of stock used)</option>
+        </select>
+      </div>
       <div class="grid4">
         <div class="field"><label>Gauge</label>
           <select id="mc2-gauge" onchange="mc2Calc()"></select></div>
@@ -140,7 +147,7 @@
         <div class="field" style="grid-column:span 2"><label>Stock Sheet Used</label>
           <select id="mc5-stock" onchange="mc5Calc()"><option value="auto">Auto — best fit</option></select></div>
       </div>
-      <div style="font-size:11px;color:var(--text3);margin:-4px 0 12px">$/cwt = CRU + a fixed per-gauge add-on (from the Majestic tab) — update CRU once here and every gauge follows. 11 ga has no known add-on and needs $/cwt entered manually.<br>You're billed for the full stock sheet(s) this job comes out of, not just the piece — "Auto" picks whichever standard stock size gives the fewest sheets/least waste (same logic as the Cut Yield tool above), and any leftover stays yours for future one-offs.</div>
+      <div style="font-size:11px;color:var(--text3);margin:-4px 0 12px">$/cwt = CRU + a fixed per-gauge add-on (from the Majestic tab) — update CRU once here and every gauge follows. 11 ga has no known add-on and needs $/cwt entered manually.<br>You're billed for the full stock sheet(s) this job comes out of, not just the piece — "Auto" picks whichever standard stock size wins under the "Rank 'best' by" setting on the Cut Yield tool above (fewest sheets, or least material/$), and any leftover stays yours for future one-offs.</div>
 
       <div class="mc5-label" style="margin-top:16px">Labor</div>
       <div class="mc5-mode-row">
@@ -437,7 +444,13 @@ function renderCutDiagram(plan){
   `;
 }
 
-function calcCutYield(gauge, pieceW, pieceL, qtyNeeded){
+// sortMode: 'sheets' (default) = fewest sheets first, waste% breaks ties —
+// minimizes how many whole sheets you're billed for. 'material' = least
+// total stock weight first, waste% breaks ties — since $/lb pricing means
+// totalStockWeight tracks actual material cost directly, this minimizes $
+// spent on steel even if it means pulling from more sheets.
+function calcCutYield(gauge, pieceW, pieceL, qtyNeeded, sortMode){
+  sortMode = sortMode || 'sheets';
   const sizes = STOCK_SIZES[gauge] || [];
   const results = [];
   sizes.forEach(sizeStr=>{
@@ -458,6 +471,10 @@ function calcCutYield(gauge, pieceW, pieceL, qtyNeeded){
   results.sort((a,b)=>{
     if(a.fits !== b.fits) return a.fits ? -1 : 1;
     if(!a.fits) return 0;
+    if(sortMode==='material'){
+      if(a.totalStockWeight !== b.totalStockWeight) return a.totalStockWeight - b.totalStockWeight;
+      return a.wastePct - b.wastePct;
+    }
     if(a.sheetsNeeded !== b.sheetsNeeded) return a.sheetsNeeded - b.sheetsNeeded;
     return a.wastePct - b.wastePct;
   });
@@ -522,7 +539,8 @@ function mc2Calc(){
   const qty=parseFloat(document.getElementById('mc2-qty').value)||1;
   const box=document.getElementById('mc2-results');
   if(!pieceW||!pieceL){ box.innerHTML='<div class="placeholder">Enter piece dimensions above</div>'; return; }
-  const results=calcCutYield(gauge, pieceW, pieceL, qty);
+  const sortMode = document.getElementById('mc2-sortmode').value;
+  const results=calcCutYield(gauge, pieceW, pieceL, qty, sortMode);
   if(!results.length){ box.innerHTML='<div class="placeholder">No standard stock sizes on file for this gauge</div>'; return; }
   window._mc2LastPiece = {pieceW, pieceL, qty};
   box.innerHTML=`
@@ -1022,7 +1040,9 @@ function mc5Calc(){
   // needs the fewest sheets (then least waste); the dropdown lets you
   // pin a specific stock size instead (e.g. because that's what's on
   // hand right now).
-  const cutResults = calcCutYield(gauge, width, length, qty);
+  const sortModeEl = document.getElementById('mc2-sortmode');
+  const sortMode = sortModeEl ? sortModeEl.value : 'sheets';
+  const cutResults = calcCutYield(gauge, width, length, qty, sortMode);
   const stockSel = document.getElementById('mc5-stock');
   const preserveVal = stockSel.dataset.gauge===gauge ? stockSel.value : 'auto';
   mc5RebuildStockOptions(gauge, cutResults, preserveVal);
