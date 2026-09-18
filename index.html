@@ -7401,9 +7401,9 @@ function renderTruckMap(dayISO){
   if(_truckMapInstance){ _truckMapInstance.remove(); _truckMapInstance = null; }
 
   const map = L.map(container, { scrollWheelZoom: true }).setView([40.0, -75.1], 8);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png', {
     maxZoom: 18,
-    attribution: '© OpenStreetMap contributors'
+    attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>, &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
   }).addTo(map);
   _truckMapInstance = map;
 
@@ -9477,8 +9477,8 @@ function openLocationPicker(name){
     if(!mapEl) return;
     const map = L.map(mapEl).setView(startCoords, 16);
     _pickerMapInstance = map;
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19, attribution: '© OpenStreetMap contributors'
+    L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png', {
+      maxZoom: 19, attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>, &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(map);
     const marker = L.marker(startCoords, { draggable: true }).addTo(map);
     const coordsEl = document.getElementById('loc-picker-coords');
@@ -9887,9 +9887,9 @@ function renderCustomerMap(custList){
   if(_custMapInstance){ _custMapInstance.remove(); _custMapInstance = null; }
 
   const map = L.map(container, { scrollWheelZoom: true }).setView([40.0, -75.1], 8);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png', {
     maxZoom: 18,
-    attribution: '© OpenStreetMap contributors'
+    attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>, &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
   }).addTo(map);
   _custMapInstance = map;
 
