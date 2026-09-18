@@ -1472,7 +1472,15 @@ function startSBPoll() {
       const inputFocused = document.activeElement && ['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName);
       const dropOpen = document.querySelector('#cust-drop[style*="block"], .autocomplete-list[style*="block"]');
       const editingInline = !!window._editingWOId || !!document.querySelector('#e-wonum') || !!document.querySelector('.wo-edit-form');
-      if (modalOpen || editingInline || inputFocused || dropOpen) {
+      // Sitting on the Truck Planner's Map sub-view is also a "don't disturb"
+      // case — a full renderTruck() here would tear down and recreate the
+      // Leaflet map, re-fetching every map tile, purely because the 90s poll
+      // fired. Left open long enough, that's exactly the kind of repeated,
+      // automated tile-hammering OpenStreetMap's usage policy blocks (see
+      // the osm.wiki/Blocked incident). The map only needs to load when a
+      // person actually opens/switches to it, never on a background timer.
+      const onTruckMapView = state.activeView==='truck' && truckPlannerView==='map';
+      if (modalOpen || editingInline || inputFocused || dropOpen || onTruckMapView) {
         updateBadges();
         return;
       }
@@ -7694,6 +7702,7 @@ function renderTruckCard(t, filterDay){
       <div style="flex:1;min-width:0;cursor:pointer" onclick="toggleStopDetail('${t.id}-${s.woId}')">
         <div style="font-weight:600;font-size:13px;${woDelivered?'text-decoration:line-through;color:var(--text2);':''}cursor:pointer;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
           ${s.customer}
+          ${airMilesBadgeHTML(liveCust)}
           <span id="stop-pill-${t.id}-${s.woId}" style="font-size:9px;font-weight:700;color:var(--blue);background:var(--blue-l);border:1px solid #b5d4f4;border-radius:10px;padding:2px 7px;letter-spacing:.02em;text-transform:uppercase;white-space:nowrap">🚚 Move / Reschedule ▾</span>
         </div>
         <div style="font-size:11px;color:var(--text2)">WO #${s.woNum}</div>
@@ -8205,6 +8214,46 @@ let _weatherLastError = null;
 // point is meant to represent.
 const BENSALEM_LAT = 40.1059;
 const BENSALEM_LON = -74.9494;
+
+// Straight-line ("air mile") distance in miles between two lat/lon points —
+// the Haversine formula. Used for the FMCSA short-haul 150-air-mile-radius
+// check, which is defined in straight-line air miles, NOT road miles.
+function haversineMiles(lat1, lon1, lat2, lon2){
+  const R = 3958.8; // Earth's radius in miles
+  const toRad = d => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat/2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon/2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// Air-mile distance from the Bensalem yard to a customer, for short-haul
+// radius flagging. Returns null (no flag shown) rather than a misleading
+// guess when we don't have real coordinates on file for this customer yet —
+// see getCustCoords() for the geocoding precedence (precise street address
+// first, city-table fallback second).
+const SHORT_HAUL_AIR_MILE_LIMIT = 150;
+function airMilesFromBensalem(cust){
+  if(!cust) return null;
+  const coords = getCustCoords(cust);
+  if(!coords) return null;
+  return haversineMiles(BENSALEM_LAT, BENSALEM_LON, coords[0], coords[1]);
+}
+
+// Small inline badge used on both the Truck Planner cards and the printed
+// Load Sheet — shows the air-mile distance always (useful context on its
+// own), and switches to a red warning once it crosses the short-haul
+// exception's 150-air-mile limit, since that's the day this customer's
+// stop would knock the driver out of short-haul eligibility.
+function airMilesBadgeHTML(cust, opts){
+  const airMi = airMilesFromBensalem(cust);
+  if(airMi == null) return '';
+  const over = airMi > SHORT_HAUL_AIR_MILE_LIMIT;
+  const printMode = opts && opts.print;
+  const fontSize = printMode ? '10px' : '9px';
+  return `<span title="${airMi.toFixed(0)} air miles from Bensalem — short-haul limit is ${SHORT_HAUL_AIR_MILE_LIMIT}" style="font-size:${fontSize};font-weight:700;color:${over?'#fff':'#2A6B3C'};background:${over?'#C0392B':'#E8F3EA'};border:1px solid ${over?'#C0392B':'#2A6B3C'};border-radius:10px;padding:2px 7px;white-space:nowrap;display:inline-block">${over?'\u26A0 ':''}${airMi.toFixed(0)} mi${over?' — OVER 150':''}</span>`;
+}
+
 const DEFAULT_WEATHER_ZIP = '19020';
 
 function getWeatherZip(){ return state.adminConfig?.weatherZip || DEFAULT_WEATHER_ZIP; } // Default: Bensalem PA
@@ -8994,6 +9043,7 @@ function printTruck(truckId, filterDay){
 
     const stopRows = dayStops.map((s,i)=>{
       const wo = state.wos.find(w=>w.id===s.woId)||{};
+      const liveCust = wo.customer ? getCustomers().find(c=>c.name===wo.customer) : null;
       const items = (wo.items||[]);
       const itemRows = items.map(li=>{
         const spec = [li.gauge?li.gauge+' Ga':'', li.size||li.productCat||''].filter(Boolean).join(' ');
@@ -9008,7 +9058,7 @@ function printTruck(truckId, filterDay){
       return `<tr style="background:#f0f4ff;page-break-inside:avoid">
         <td style="padding:8px;font-weight:900;font-size:16px;vertical-align:top;width:28px;border-bottom:2px solid #2D6A2D">${i+1}</td>
         <td colspan="3" style="padding:8px;border-bottom:2px solid #2D6A2D;vertical-align:top">
-          <div style="font-size:15px;font-weight:900;margin-bottom:2px">${s.customer}</div>
+          <div style="font-size:15px;font-weight:900;margin-bottom:2px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">${s.customer} ${airMilesBadgeHTML(liveCust,{print:true})}</div>
           <div style="font-size:11px;color:#555;margin-bottom:2px">📍 ${[s.address,s.cityst].filter(Boolean).join(', ')||'No address'} ${s.zone?'· '+s.zone:''}</div>
           <div style="font-size:11px;color:#666">WO #${s.woNum} · ${getWOWeight(s.woId).toLocaleString()} lbs ${s.notes?'· 📝 '+s.notes:''}</div>
         </td>
@@ -9040,6 +9090,13 @@ function printTruck(truckId, filterDay){
             <div style="font-size:20px;font-weight:900">${tw.toLocaleString()} lbs</div>
             <div style="font-size:11px;opacity:.8">${dayStops.length} stops · ${pct}% capacity</div>
           </div>
+        </div>
+        <div style="border:1px solid #ddd;border-top:none;padding:10px 16px;background:#fafafa;display:flex;flex-wrap:wrap;gap:10px 28px;font-size:11px;page-break-inside:avoid">
+          <div><strong>Report Time:</strong> _______________ &nbsp;Initial:&nbsp; ______</div>
+          <div><strong>Release Time:</strong> _______________ &nbsp;Initial:&nbsp; ______</div>
+          <div><strong>Total On-Duty Hrs:</strong> _______________</div>
+          <div><strong>Odometer Start:</strong> _______________</div>
+          <div><strong>Odometer End:</strong> _______________</div>
         </div>
         <table style="width:100%;border-collapse:collapse;border:1px solid #ddd;border-top:none">
           <tbody>${stopRows}</tbody>
