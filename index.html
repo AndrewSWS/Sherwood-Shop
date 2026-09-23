@@ -4303,15 +4303,21 @@ function renderBoardView(){
         +'</div>';
     };
 
-    const truckSection = (label, color, wos, pickups=[])=>{
+    const truckSection = (label, color, wos, pickups=[], stops=null)=>{
       if(!wos.length && !pickups.length) return '';
+      // Interleave WOs and vendor pickups by their position in t.stops (the
+      // same array the Truck Planner reorders). Previously pickups were always
+      // appended after all WOs, ignoring where they'd been moved to.
+      const _pos = i => (i<0?999999:i);
+      const merged = wos.map(w=>({k:stops?_pos(stops.findIndex(s=>s.woId===w.id)):0, h:()=>renderStop(w)}))
+        .concat(pickups.map(p=>({k:stops?_pos(stops.indexOf(p)):999999, h:()=>renderPickupCard(p)})));
+      if(stops) merged.sort((a,b)=>a.k-b.k);
       return '<div class="board-truck-divider" style="color:'+color+';background:'+color+'22">'
         +'<div style="flex:1;height:1px;background:'+color+'44"></div>'
         +label
         +'<div style="flex:1;height:1px;background:'+color+'44"></div>'
         +'</div>'
-        +wos.map(renderStop).join('')
-        +pickups.map(renderPickupCard).join('');
+        +merged.map(m=>m.h()).join('');
     };
 
     const totalLbs = dayWOs.reduce((s,w)=>s+getWOWeight(w.id),0);
@@ -4349,7 +4355,7 @@ function renderBoardView(){
                 return (sa<0?999999:sa)-(sb<0?999999:sb);
               });
             const tPickups=(t.stops||[]).filter(s=>s.type==='pickup'&&s.delivery===day.iso&&!s.delivered);
-            return truckSection(icons[i%icons.length]+' '+t.name.toUpperCase(),colors[i%colors.length],tWOs,tPickups);
+            return truckSection(icons[i%icons.length]+' '+t.name.toUpperCase(),colors[i%colors.length],tWOs,tPickups,t.stops||[]);
           }).join('')
           +truckSection('⚠ UNASSIGNED','#FAC775',ntWOs)
           +truckSection('📦 STOCK','#4AA8D8',stockWOs)
@@ -7530,7 +7536,7 @@ function renderTruckMap(dayISO){
     return null;
   }
 
-  function numberedIcon(num, color, delivered){
+  function numberedIcon(num, color, delivered, isPickup){
     // Delivered stops match the Cards view's convention (green fill + ✓
     // instead of the stop number) so the map and card always agree on
     // which stops are done without needing to flip views to check.
@@ -7538,7 +7544,7 @@ function renderTruckMap(dayISO){
     const label = delivered ? '✓' : num;
     return L.divIcon({
       className: '',
-      html: `<div style="width:26px;height:26px;border-radius:50%;background:${bg};color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4)">${label}</div>`,
+      html: `<div style="width:26px;height:26px;border-radius:50%;background:${bg};color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;border:${isPickup?'3px solid #e8a000':'2px solid #fff'};box-shadow:0 1px 3px rgba(0,0,0,.4)">${label}</div>`,
       iconSize: [26,26], iconAnchor: [13,13]
     });
   }
@@ -7553,7 +7559,22 @@ function renderTruckMap(dayISO){
     const dayStops = t.stops.filter(s=>s.delivery===dayISO);
     const line = [];
     dayStops.forEach((s,i)=>{
-      if(s.type==='pickup') return; // no customer address to plot, but "i" still counted above
+      if(s.type==='pickup'){
+        // Vendor pickup — plotted at the vendor's location in its real stop
+        // position (amber ring) and included in the route line.
+        const vendor = (state.vendors||[]).find(v=>String(v.id)===String(s.vendorId));
+        const vName = vendor ? vendor.name : (s.customer||'Vendor Pickup');
+        const raw = getVendorCoords(vendor);
+        if(!raw){ skippedList.push({ truckName: t.name, woNum: null, customer: '🛻 '+vName+' (no vendor address)' }); return; }
+        const pc = jitterCoords(raw);
+        const pDone = s.delivered||false;
+        const pm = L.marker(pc, { icon: numberedIcon(i+1, color, pDone, true) }).addTo(map);
+        pm.bindPopup(`<strong>${t.name} — Stop ${i+1}${pDone?' · ✓ Picked Up':''}</strong><br>🛻 Vendor Pickup — ${escHtml(vName)}`+(s.pickupNote?`<br><em>${escHtml(s.pickupNote)}</em>`:''));
+        if(line.length===0) pm.bindTooltip(t.name,{permanent:true,direction:'top',offset:[0,-14],className:'truck-map-label'});
+        line.push(pc);
+        bounds.push(pc);
+        return;
+      }
       const wo = state.wos.find(w=>w.id===s.woId);
       const rawCoords = stopCoords(wo, s);
       if(!rawCoords){ skippedList.push({ truckName: t.name, woNum: wo?wo.woNum:'?', customer: wo?wo.customer:(s.customer||'?') }); return; }
@@ -7598,7 +7619,7 @@ function renderTruckMap(dayISO){
     const note = document.createElement('div');
     note.style.cssText='position:absolute;bottom:8px;left:8px;max-width:280px;background:#fff8e6;border:1px solid #FAC775;border-radius:4px;padding:6px 10px;font-size:11px;color:#b8860b;z-index:1000';
     note.innerHTML = `⚠ ${skippedList.length} stop${skippedList.length===1?'':'s'} not shown (no coordinates on file):<br>`+
-      skippedList.map(s=>`&nbsp;&nbsp;${s.truckName} — WO #${s.woNum} (${s.customer})`).join('<br>');
+      skippedList.map(s=>`&nbsp;&nbsp;${s.truckName} — ${s.woNum!=null?'WO #'+s.woNum+' ('+s.customer+')':s.customer}`).join('<br>');
     container.style.position='relative';
     container.appendChild(note);
   }
@@ -8615,7 +8636,13 @@ function renderDashboard(c){
             });
           const tPickups=(t.stops||[]).filter(s=>s.type==='pickup'&&s.delivery===iso&&!s.delivered);
           if(!tWOs.length && !tPickups.length) return '';
-          return divider(_tIcons[i%4]+' '+t.name,_tColors[i%4])+tWOs.map(renderChip).join('')+tPickups.map(s=>renderPickupChip(s,t.id)).join('');
+          // Interleave WOs and vendor pickups by t.stops position (matches Truck Planner order)
+          const _stops=t.stops||[];
+          const _pos=i=>(i<0?999999:i);
+          const _merged=tWOs.map(w=>({k:_pos(_stops.findIndex(s=>s.woId===w.id)),h:()=>renderChip(w)}))
+            .concat(tPickups.map(p=>({k:_pos(_stops.indexOf(p)),h:()=>renderPickupChip(p,t.id)})))
+            .sort((a,b)=>a.k-b.k);
+          return divider(_tIcons[i%4]+' '+t.name,_tColors[i%4])+_merged.map(m=>m.h()).join('');
         }).join('')
              + (nt.length?divider('⚠ No Truck','#BA7517')+nt.map(renderChip).join(''):'' )
              + (stockWOs.length?divider('📦 Stock','#4AA8D8')+stockWOs.map(renderChip).join(''):'' );
@@ -9373,12 +9400,27 @@ async function nominatimSearch(query){
 // can be honest about it instead of implying every hit is exact.
 async function geocodeCustomerAddress(cust){
   if(!cust || !cust.address || !cust.city || !cust.state) return false;
-  const addr = cust.address.trim();
-  const cityState = `${cust.city}, ${cust.state}`;
+  const g = await geocodeAddressTiers(cust.address, cust.city, cust.state, cust.zip);
+  if(!g) return false;
+  cust.lat = g.lat;
+  cust.lon = g.lon;
+  cust.geoPrecision = g.precision;
+  saveState();
+  await _sbPatch('customers', {name: cust.name}, {lat: cust.lat, lon: cust.lon, geo_precision: g.precision});
+  return g.precision;
+}
+
+// Shared 3-tier Nominatim lookup (full address+zip → address → street only).
+// Used by customers and vendors. Returns {lat, lon, precision} or null.
+// Only call from a deliberate user action, never from load/poll paths.
+async function geocodeAddressTiers(address, city, stateAbbr, zip){
+  if(!address || !city || !stateAbbr) return null;
+  const addr = address.trim();
+  const cityState = `${city}, ${stateAbbr}`;
   const pause = () => new Promise(r=>setTimeout(r, 1100)); // respect Nominatim's ~1 req/sec usage policy
 
   // Tier 1: full address with zip.
-  let hit = await nominatimSearch(`${addr}, ${cityState} ${cust.zip||''}`.trim());
+  let hit = await nominatimSearch(`${addr}, ${cityState} ${zip||''}`.trim());
   let precision = 'address';
 
   // Tier 2: full address without zip — sometimes the zip conflicts with a
@@ -9401,13 +9443,20 @@ async function geocodeCustomerAddress(cust){
     }
   }
 
-  if(!hit) return false;
-  cust.lat = parseFloat(hit.lat);
-  cust.lon = parseFloat(hit.lon);
-  cust.geoPrecision = precision;
-  saveState();
-  await _sbPatch('customers', {name: cust.name}, {lat: cust.lat, lon: cust.lon, geo_precision: precision});
-  return precision;
+  if(!hit) return null;
+  return { lat: parseFloat(hit.lat), lon: parseFloat(hit.lon), precision };
+}
+
+// Vendor pin location: precise lat/lon if geocoded, else city-level
+// fallback from CITY_COORDS / admin overrides (same order as getCustCoords).
+function getVendorCoords(v){
+  if(!v) return null;
+  if(v.lat!=null && v.lon!=null && !isNaN(v.lat) && !isNaN(v.lon)) return [Number(v.lat), Number(v.lon)];
+  const key = `${v.city||''}|${(v.state||'').toUpperCase()}`;
+  if(CITY_COORDS[key]) return CITY_COORDS[key];
+  const overrides = state.adminConfig?.cityCoordsOverride;
+  if(overrides && overrides[key]) return overrides[key];
+  return null;
 }
 
 // Manual trigger for backfilling an EXISTING customer who already has a
@@ -10366,6 +10415,19 @@ async function showAddPickupModal(editStop){
         <option value="__new__">+ Add new vendor...</option>
       </select>
 
+      <div id="vp-addr-wrap" style="display:none;margin:-4px 0 14px;padding:10px;border:1px dashed #e8a000;border-radius:var(--rad);background:#fffbf0">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <span style="font-size:11px;font-weight:700;color:#b37300;text-transform:uppercase;letter-spacing:.05em">Pickup Location</span>
+          <span id="vp-geo-status" style="font-size:10px;color:var(--text3)"></span>
+        </div>
+        <input id="vp-addr" type="text" placeholder="Street address" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:var(--rad);background:var(--page);color:var(--text);font-size:12px;box-sizing:border-box;margin-bottom:6px">
+        <div style="display:flex;gap:6px">
+          <input id="vp-city" type="text" placeholder="City" style="flex:2;min-width:0;padding:6px 8px;border:1px solid var(--border);border-radius:var(--rad);background:var(--page);color:var(--text);font-size:12px">
+          <input id="vp-state" type="text" placeholder="ST" maxlength="2" style="width:44px;padding:6px 8px;border:1px solid var(--border);border-radius:var(--rad);background:var(--page);color:var(--text);font-size:12px;text-transform:uppercase">
+          <input id="vp-zip" type="text" placeholder="Zip" maxlength="10" style="width:70px;padding:6px 8px;border:1px solid var(--border);border-radius:var(--rad);background:var(--page);color:var(--text);font-size:12px">
+        </div>
+      </div>
+
       <div id="vp-new-vendor-wrap" style="display:none;margin-bottom:14px">
         <label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px">New Vendor Name</label>
         <input id="vp-new-vendor-name" type="text" placeholder="Vendor name" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--rad);background:var(--page);color:var(--text);font-size:13px;box-sizing:border-box">
@@ -10399,10 +10461,23 @@ async function showAddPickupModal(editStop){
       </div>
     </div>`;
 
-  // Show/hide new vendor input
+  // Show/hide new vendor input + fill the location block from the vendor record
+  const fillVendorAddr = (vid)=>{
+    const wrap = modal.querySelector('#vp-addr-wrap');
+    wrap.style.display = vid ? 'block' : 'none';
+    const v = (state.vendors||[]).find(x=>String(x.id)===String(vid));
+    modal.querySelector('#vp-addr').value  = v ? (v.address||'') : '';
+    modal.querySelector('#vp-city').value  = v ? (v.city||'')    : '';
+    modal.querySelector('#vp-state').value = v ? (v.state||'')   : '';
+    modal.querySelector('#vp-zip').value   = v ? (v.zip||'')     : '';
+    const st = modal.querySelector('#vp-geo-status');
+    st.textContent = !v ? '' : (v.lat!=null ? '📍 Located ('+(v.geo_precision||'address')+')' : (getVendorCoords(v) ? '📍 City-level only' : '⚠ Not on map'));
+  };
   modal.querySelector('#vp-vendor').addEventListener('change', function(){
     document.getElementById('vp-new-vendor-wrap').style.display = this.value==='__new__' ? 'block' : 'none';
+    fillVendorAddr(this.value);
   });
+  if(editStop && editStop.vendorId) fillVendorAddr(editStop.vendorId);
 
   document.body.appendChild(modal);
   setTimeout(()=>modal.querySelector('#vp-vendor')?.focus(), 50);
@@ -10429,6 +10504,34 @@ async function saveVendorPickup(editId){
 
   if(!vendorId){ toast('⚠ Please select a vendor'); return; }
 
+  // Vendor location — saved to the vendor record (not just this stop) so
+  // every future pickup from them plots on the map. Geocode only when the
+  // address changed or a full address has never been located.
+  {
+    const vObj = (state.vendors||[]).find(v=>String(v.id)===String(vendorId));
+    const addr = (document.getElementById('vp-addr')?.value||'').trim();
+    const city = (document.getElementById('vp-city')?.value||'').trim();
+    const st   = (document.getElementById('vp-state')?.value||'').trim().toUpperCase();
+    const zip  = (document.getElementById('vp-zip')?.value||'').trim();
+    if(vObj){
+      const changed = (vObj.address||'')!==addr || (vObj.city||'')!==city || (vObj.state||'')!==st || (vObj.zip||'')!==zip;
+      const needsGeo = addr && city && st && (changed || vObj.lat==null);
+      if(changed || needsGeo){
+        const upd = { address: addr||null, city: city||null, state: st||null, zip: zip||null };
+        if(changed){ upd.lat = null; upd.lon = null; upd.geo_precision = null; }
+        if(needsGeo){
+          toast('📍 Locating vendor address…');
+          const g = await geocodeAddressTiers(addr, city, st, zip);
+          if(g){ upd.lat = g.lat; upd.lon = g.lon; upd.geo_precision = g.precision; }
+          else toast('⚠ Couldn\'t pinpoint address — using city location on the map');
+        }
+        const r = await _sbPatch('vendors', {id: vendorId}, upd);
+        if(r===null) toast('⚠ Vendor address not saved — check console');
+        else Object.assign(vObj, upd);
+      }
+    }
+  }
+
   const vendor = (state.vendors||[]).find(v=>v.id===vendorId);
 
   const payload = {
@@ -10445,6 +10548,17 @@ async function saveVendorPickup(editId){
     wo_num: null,
     notes: note
   };
+
+  // Keep the pickup's route position on edit, same as a WO. seq:9999 is only
+  // for NEW pickups (land at the end of the truck's list). On edit, drop seq
+  // from the payload unless the truck changed — then it goes to the end of
+  // the new truck, matching how a WO truck change behaves. Previously every
+  // edit reset seq to 9999, silently undoing any Truck Planner reorder.
+  if(editId){
+    const curTruck = state.trucks.find(t=>(t.stops||[]).some(s=>String(s.id)===String(editId)));
+    const curTruckId = curTruck ? String(curTruck.id) : '';
+    if(curTruckId === String(truckId||'')) delete payload.seq;
+  }
 
   try{
     let result;
