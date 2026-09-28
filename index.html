@@ -4036,6 +4036,12 @@ function enterBoardView(){
   renderBoardView();
   // Auto-refresh every 15 seconds — pulls from Supabase for live multi-user sync
   _boardTimer = setInterval(async ()=>{
+    // Off-hours (nights/weekends): share the main 90s poll's 30-min window
+    // via _lastPollFetchAt so the board and the main poll don't each fetch
+    // on their own schedule. Whichever timer fires first fetches; the other
+    // skips. During shop hours this still refreshes every 15s.
+    if (!_inShopHours() && (Date.now() - _lastPollFetchAt) < 30*60*1000) return;
+    _lastPollFetchAt = Date.now();
     const ok = await sbLoadState();
     if(ok){ try{localStorage.setItem('kzn_state',JSON.stringify(state));}catch(e){} }
     else {
