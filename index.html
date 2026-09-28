@@ -3542,13 +3542,25 @@ async function mergeDupWO(existingId){
   // line items commonly share the same qty (e.g. 500 pcs of Slip AND 500 pcs of
   // Drive), and matching on qty alone means the pre-existing Slip row permanently
   // looks like "Drive already got inserted", silently dropping Drive on every retry.
-  const _dupExtractCode = n=>{ if(!n) return null; const m=n.match(/^[A-Za-z]+:([A-Za-z0-9.]+)/); return m?m[1].toLowerCase():null; };
+  // Key = full QB item text (note segment before " | ") + qty. Code alone is NOT unique:
+  // the same QB item (e.g. GlvCoil:G90245.394coil) routinely appears on several lines
+  // with different qtys, so a code-only check skipped real additions forever.
+  // Skip only when the DB already holds as many rows with this key as QB does.
+  const _dupKey = r=>{
+    const item = String(r.notes||'').split(' | ')[0].trim().toLowerCase();
+    return item + '||' + String(r.qty).trim();
+  };
+  let addedCount = 0;
   if (newItems.length) {
     const dbRows = await _sbGet('line_items', `wo_id=eq.${existing.id}&select=id,qty,notes,status&order=id.asc`).catch(()=>null);
-    const dbCodeSet = new Set((dbRows||[]).map(r=>_dupExtractCode(r.notes)).filter(Boolean));
+    const dbCount = {}, qbCount = {};
+    (dbRows||[]).forEach(r=>{ const k=_dupKey(r); dbCount[k]=(dbCount[k]||0)+1; });
+    incoming.items.forEach(r=>{ const k=_dupKey(r); qbCount[k]=(qbCount[k]||0)+1; });
     newItems.forEach(item=>{
-      const itemCode = _dupExtractCode(item.notes);
-      if(itemCode && dbCodeSet.has(itemCode)) return; // this specific item is already in the DB — skip
+      const k = _dupKey(item);
+      if((dbCount[k]||0) >= (qbCount[k]||0)) return; // DB already has every QB line with this item+qty — skip
+      dbCount[k] = (dbCount[k]||0) + 1;
+      addedCount++;
       existing.items.push(item);
       // Use the shared row-mapping helper (same one sbCreateWO uses) instead of a
       // hand-built partial object — the manual version above omitted wt_unit, bundle,
@@ -3614,7 +3626,8 @@ async function mergeDupWO(existingId){
   window._dupIncomingWO = null;
 
   const parts = [];
-  if(newItems.length) parts.push(`${newItems.length} new item${newItems.length!==1?'s':''} added`);
+  if(addedCount) parts.push(`${addedCount} new item${addedCount!==1?'s':''} added`);
+  if(newItems.length > addedCount) parts.push(`${newItems.length-addedCount} already in DB, skipped`);
   if(qtyUpdated.length) parts.push(`${qtyUpdated.length} qty${qtyUpdated.length!==1?'s':''} updated`);
   if(notesUpdated.length) parts.push(`${notesUpdated.length} note${notesUpdated.length!==1?'s':''} updated`);
   toast(`✓ WO #${existing.woNum}: ${parts.join(', ') || 'no changes'}`);
