@@ -147,7 +147,7 @@
         <div class="field" style="grid-column:span 2"><label>Stock Sheet Used</label>
           <select id="mc5-stock" onchange="mc5Calc()"><option value="auto">Auto — best fit</option></select></div>
       </div>
-      <div style="font-size:11px;color:var(--text3);margin:-4px 0 12px">$/cwt = CRU + a fixed per-gauge add-on (from the Majestic tab) — update CRU once here and every gauge follows. 11 ga has no known add-on and needs $/cwt entered manually.<br>You're billed for the full stock sheet(s) this job comes out of, not just the piece — "Auto" picks whichever standard stock size wins under the "Rank 'best' by" setting on the Cut Yield tool above (fewest sheets, or least material/$), and any leftover stays yours for future one-offs.</div>
+      <div style="font-size:11px;color:var(--text3);margin:-4px 0 12px">$/cwt = CRU + a fixed per-gauge add-on (from the Majestic tab) — update CRU once here and every gauge follows. 11 and 12 ga have no known add-on and need $/cwt entered manually.<br>You're billed for the full stock sheet(s) this job comes out of, not just the piece — "Auto" picks whichever standard stock size wins under the "Rank 'best' by" setting on the Cut Yield tool above (fewest sheets, or least material/$), and any leftover stays yours for future one-offs.</div>
 
       <div class="mc5-label" style="margin-top:16px">Labor</div>
       <div class="mc5-mode-row">
@@ -221,7 +221,7 @@
 const GA_LBS_PER_SQFT = {
   '28': 0.6835938, '26': 0.7929688, '24': 1.0117188, '22': 1.2304688,
   '20': 1.4492188, '18': 1.8867188, '16': 2.3242188, '16CR': 2.1875,
-  '14': 2.8710938, '11': 4.5117188
+  '14': 2.8710938, '12': 3.9648438, '11': 4.5117188
 };
 
 // Standard stock sheet sizes carried per gauge — mirrors
@@ -235,7 +235,7 @@ let STOCK_SIZES = {
   '28':['24x96','30x96','36x96','48x96'],
   '26':['24x96','30x96','36x96','48x96','48x120','60x96','60x120'],
   '24':['36x96','48x96','48x120','60x120'],
-  '22':['36x95','48x96','48x120','60x120'],
+  '22':['36x96','48x96','48x120','60x120'],
   '20':['48x96','48x120','60x120'],
   '18':['48x96','48x120','60x120'],
   '16':['48x96','48x120','60x120'],'16CR':['48x96','48x120'],
