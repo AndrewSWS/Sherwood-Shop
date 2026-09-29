@@ -7307,14 +7307,46 @@ function renderTruck(c){
   const nowStats = new Date();
   const thisYear = nowStats.getFullYear();
   const thisMonth = nowStats.getMonth();
+  // All monthly stats are based on SCHEDULED delivery date, not the delivered
+  // checkbox or line-item completion (neither is reliably ticked yet). A WO
+  // counts if its delivery date falls in this month and has already passed —
+  // if it had been moved, its delivery date would have changed with it.
+  // WO count, lbs and avg INCLUDE customer pickups (total monthly output);
+  // stock WOs are excluded (nothing leaves the building). Counts through
+  // yesterday only, matching the monthly SQL report — today's stops may not
+  // have gone out yet.
+  const _monthPrefix = `${thisYear}-${String(thisMonth+1).padStart(2,'0')}-`;
+  const _todayLocal  = localISO(nowStats);
+  // Which date a WO counts on: deliveries use the scheduled delivery date.
+  // Customer pickups use ONLY the pickup date, which is set when the pickup is
+  // completed (confirmed on the board or dated in the edit form). Pickups stay
+  // on the board until completed, so that date is reliable, and a pickup that
+  // hasn't happened yet isn't counted.
+  const _woMonthDate = w => w.isPickup ? (w.pickupDate || '') : (w.delivery || '');
   const yearDelivered = state.wos.filter(w=>{
-    if(!w.delivered || !w.deliveredAt) return false;
-    const d = new Date(w.deliveredAt);
-    return d.getFullYear()===thisYear && d.getMonth()===thisMonth;
+    if(w.isStock) return false;
+    const d = _woMonthDate(w);
+    return d && d.startsWith(_monthPrefix) && d < _todayLocal;
   });
   const yearWeight = yearDelivered.reduce((s,w)=>s+getWOWeight(w.id),0);
   const yearCount  = yearDelivered.length;
   const monthLabel = nowStats.toLocaleDateString('en-US',{month:'long'});
+  // Delivery stops: same WO set minus customer pickups (no truck trip), and
+  // multiple WOs to the same customer + address on the same day count as ONE stop.
+  const _stopKeys = new Set();
+  yearDelivered.forEach(w=>{
+    if(w.isPickup) return;
+    _stopKeys.add(w.delivery+'|'+String(w.customer||'').trim().toLowerCase()+'|'+String(w.address||'').trim().toLowerCase());
+  });
+  const monthStops = _stopKeys.size;
+  // Customer pickups in the same WO set (same scheduled-date rules).
+  const monthPickups = yearDelivered.filter(w=>w.isPickup).length;
+  // Separate averages: truck lbs per delivery STOP (a stop with 2 WOs is one
+  // delivery), and pickup lbs per completed pickup.
+  const truckWeight  = yearDelivered.filter(w=>!w.isPickup).reduce((s,w)=>s+getWOWeight(w.id),0);
+  const pickupWeight = yearDelivered.filter(w=>w.isPickup).reduce((s,w)=>s+getWOWeight(w.id),0);
+  const avgPerDelivery = monthStops   ? Math.round(truckWeight/monthStops)   : 0;
+  const avgPerPickup   = monthPickups ? Math.round(pickupWeight/monthPickups) : 0;
 
   c.innerHTML=`
   <div class="card mb12" style="background:linear-gradient(135deg,#0d1f3c,#1a3a6b);border:none;color:#fff;padding:14px 20px">
@@ -7324,12 +7356,24 @@ function renderTruck(c){
         <div style="font-size:28px;font-weight:900;letter-spacing:-.5px">${yearWeight.toLocaleString()} <span style="font-size:14px;font-weight:400;opacity:.8">lbs delivered</span></div>
       </div>
       <div style="text-align:right">
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;opacity:.7;margin-bottom:4px">Work Orders</div>
-        <div style="font-size:28px;font-weight:900">${yearCount} <span style="font-size:14px;font-weight:400;opacity:.8">completed</span></div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;opacity:.7;margin-bottom:4px">Delivery Stops</div>
+        <div style="font-size:28px;font-weight:900">${monthStops} <span style="font-size:14px;font-weight:400;opacity:.8">stops</span></div>
       </div>
       <div style="text-align:right">
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;opacity:.7;margin-bottom:4px">Avg per WO</div>
-        <div style="font-size:28px;font-weight:900">${yearCount?Math.round(yearWeight/yearCount).toLocaleString():0} <span style="font-size:14px;font-weight:400;opacity:.8">lbs</span></div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;opacity:.7;margin-bottom:4px">Customer Pickups</div>
+        <div style="font-size:28px;font-weight:900">${monthPickups} <span style="font-size:14px;font-weight:400;opacity:.8">pickups</span></div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;opacity:.7;margin-bottom:4px">Work Orders</div>
+        <div style="font-size:28px;font-weight:900">${yearCount} <span style="font-size:14px;font-weight:400;opacity:.8">this month</span></div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;opacity:.7;margin-bottom:4px">Avg per Delivery</div>
+        <div style="font-size:28px;font-weight:900">${avgPerDelivery.toLocaleString()} <span style="font-size:14px;font-weight:400;opacity:.8">lbs</span></div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;opacity:.7;margin-bottom:4px">Avg per Pickup</div>
+        <div style="font-size:28px;font-weight:900">${avgPerPickup.toLocaleString()} <span style="font-size:14px;font-weight:400;opacity:.8">lbs</span></div>
       </div>
     </div>
   </div>
