@@ -1907,6 +1907,18 @@ function woStatus(wo){
   if(inprog>0||done>0)return'In Process';
   return'Pending';
 }
+// "Open" for customer-facing purposes (Open WO badge, delivery suggestions,
+// delete guard). Mirrors updateBadges(): a WO is NOT open if it's marked
+// delivered, or its delivery/pickup date is in the past. Date checks run
+// before woStatus() because WOs older than the 7-day cutoff in sbLoadState
+// have no line items in memory, and woStatus() reads that as 'Pending'.
+function isWOOpen(w, todayStr){
+  if(w.delivered) return false;
+  todayStr = todayStr || localISO(new Date());
+  if(w.isPickup && w.pickupDate){ if(w.pickupDate < todayStr) return false; }
+  else if(w.delivery && w.delivery < todayStr) return false;
+  return woStatus(w)!=='Complete';
+}
 function statusPill(s){
   const map={'Pending':'pill-pending','In Process':'pill-inprocess','Complete':'pill-complete','Ready for Truck':'pill-ready'};
   return`<span class="pill ${map[s]||'pill-pending'}">${s}</span>`;
@@ -9814,7 +9826,8 @@ function getDeliverySuggestions(){
   // For each open WO, find other customers in the same delivery group
   // that have NO open WO — flag them as "reach out" suggestions
   const suggestions=[];
-  const openWOs=state.wos.filter(w=>woStatus(w)!=='Complete');
+  const _today=localISO(new Date());
+  const openWOs=state.wos.filter(w=>isWOOpen(w,_today));
   const customersWithOpenWO=new Set(openWOs.map(w=>w.customer));
 
   const seenGroups=new Set();
@@ -9877,6 +9890,7 @@ function renderCustomers(c){
 
   const groupOpts=state.deliveryGroups.map(g=>`<option value="${g.id}">${g.name}</option>`).join('');
 
+  const _custToday=localISO(new Date());
   c.innerHTML=`
   <div class="grid2 gap16" style="margin-bottom:16px">
 
@@ -9911,7 +9925,7 @@ function renderCustomers(c){
         ${filtered.map(cu=>{
           const meta=getCustMeta(cu.name);
           const grp=getCustGroup(cu.name);
-          const hasOpenWO=state.wos.some(w=>w.customer===cu.name&&woStatus(w)!=='Complete');
+          const hasOpenWO=state.wos.some(w=>w.customer===cu.name&&isWOOpen(w,_custToday));
           return`<div class="card card-sm mb8 cust-card${custEditName===cu.name?' selected-card':''}" data-custname="${(cu.name||'').toLowerCase()}" data-custcity="${(cu.city||'').toLowerCase()}" data-custzone="${cu.zone||''}"
             style="cursor:pointer;border-color:${custEditName===cu.name?'var(--blue)':'var(--border)'}"
             onclick="selectCustEdit('${cu.name.replace(/'/g,"\'")}')">
@@ -10275,7 +10289,7 @@ function saveCustMeta(name){
 
 function deleteCustomer(name){
   // Guard: don't allow deletion if customer has any open work orders
-  const openWOs = state.wos.filter(w=>w.customer===name && woStatus(w)!=='Complete');
+  const openWOs = state.wos.filter(w=>w.customer===name && isWOOpen(w));
   if(openWOs.length){
     alert(`Cannot delete ${name} — they have ${openWOs.length} open WO${openWOs.length>1?'s':''} (WO #${openWOs.map(w=>w.woNum).join(', #')}). Complete or reassign those first.`);
     return;
