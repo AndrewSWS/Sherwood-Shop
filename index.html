@@ -9242,7 +9242,7 @@ function printTruck(truckId, filterDay){
   win.document.write(`<!DOCTYPE html><html><head><title>Load Sheet — Sherwood Steel</title>
   <style>
     body{font-family:Arial,sans-serif;font-size:12px;margin:24px;color:#1a1a2e;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-    @media print{.no-print{display:none}body{margin:12px}}
+    @media print{.no-print{display:none !important}body{margin:12px}}
     * { box-sizing: border-box; }
   </style></head><body>
   <div class="no-print" style="margin-bottom:16px;display:flex;gap:10px;align-items:center">
