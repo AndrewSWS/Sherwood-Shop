@@ -9958,7 +9958,7 @@ function renderCustomers(c){
           const hasOpenWO=state.wos.some(w=>w.customer===cu.name&&isWOOpen(w,_custToday));
           return`<div class="card card-sm mb8 cust-card${custEditName===cu.name?' selected-card':''}" data-custname="${(cu.name||'').toLowerCase()}" data-custcity="${(cu.city||'').toLowerCase()}" data-custzone="${cu.zone||''}"
             style="cursor:pointer;border-color:${custEditName===cu.name?'var(--blue)':'var(--border)'}"
-            onclick="selectCustEdit('${cu.name.replace(/'/g,"\'")}')">
+            onclick="selectCustEdit('${cu.name.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')">
             <div class="flex-between flex-wrap gap6">
               <div class="flex gap8 flex-wrap" style="align-items:center">
                 ${grp?`<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${grp.color};flex-shrink:0"></span>`:''}
@@ -10148,10 +10148,10 @@ function selectCustEdit(name){
     </div>
   </div>
   <div class="flex gap8">
-    <button class="btn btn-primary" onclick="saveCustMeta('${name.replace(/'/g,"\'")}')">Save</button>
+    <button class="btn btn-primary" onclick="saveCustMeta('${name.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')">Save</button>
       <button class="btn" onclick="custEditName=null;renderCustomers(document.getElementById('content'))">Cancel</button>
     </div>
-    <button class="btn btn-danger" style="margin-top:8px;width:100%" onclick="deleteCustomer('${name.replace(/'/g,"\'")}')">🗑 Delete Customer</button>
+    <button class="btn btn-danger" style="margin-top:8px;width:100%" onclick="deleteCustomer('${name.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')">🗑 Delete Customer</button>
   </div>`;
   loadCustomerOrderHistory(name);
 }
