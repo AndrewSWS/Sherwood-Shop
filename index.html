@@ -10548,7 +10548,7 @@ async function showAddPickupModal(editStop){
     modal.querySelector('#vp-state').value = v ? (v.state||'')   : '';
     modal.querySelector('#vp-zip').value   = v ? (v.zip||'')     : '';
     const st = modal.querySelector('#vp-geo-status');
-    st.textContent = !v ? '' : (v.lat!=null ? '📍 Located ('+(v.geo_precision||'address')+')' : (getVendorCoords(v) ? '📍 City-level only' : '⚠ Not on map'));
+    st.textContent = !v ? '' : (v.lat!=null && v.geo_precision!=='city' ? '📍 Located ('+(v.geo_precision||'address')+')' : (getVendorCoords(v) ? '📍 City-level only' : '⚠ Not on map'));
   };
   modal.querySelector('#vp-vendor').addEventListener('change', function(){
     document.getElementById('vp-new-vendor-wrap').style.display = this.value==='__new__' ? 'block' : 'none';
@@ -10600,7 +10600,20 @@ async function saveVendorPickup(editId){
           toast('📍 Locating vendor address…');
           const g = await geocodeAddressTiers(addr, city, st, zip);
           if(g){ upd.lat = g.lat; upd.lon = g.lon; upd.geo_precision = g.precision; }
-          else toast('⚠ Couldn\'t pinpoint address — using city location on the map');
+          else {
+            // Tier 4: street lookups all failed. Small towns (e.g. Mohrsville)
+            // often aren't in CITY_COORDS, so without this the vendor drops
+            // off the map entirely. Geocode the town itself and store it as
+            // city-level so the pin at least lands in the right place.
+            await new Promise(r=>setTimeout(r, 1100)); // Nominatim ~1 req/sec
+            const ch = await nominatimSearch(`${city}, ${st} ${zip}`.trim());
+            if(ch){
+              upd.lat = parseFloat(ch.lat); upd.lon = parseFloat(ch.lon); upd.geo_precision = 'city';
+              toast('⚠ Couldn\'t pinpoint address — using city location on the map');
+            } else {
+              toast('⚠ Couldn\'t locate address or city — vendor won\'t show on the map');
+            }
+          }
         }
         const r = await _sbPatch('vendors', {id: vendorId}, upd);
         if(r===null) toast('⚠ Vendor address not saved — check console');
