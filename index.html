@@ -7548,30 +7548,8 @@ function renderTruckMap(dayISO){
   // the stale snapshot here reintroduces exactly the bug that fix prevents
   // on the card view — a corrected customer address wouldn't show up on
   // the map even though the card next to it is showing the right city.
-  function findCustForWO(wo){
-    if(!wo) return null;
-    const custs = getCustomers();
-    let cust = custs.find(c=>c.name===wo.customer);
-    if(cust) return cust;
-    const candidates = custs.filter(c=>custNamesMatch(c.name, wo.customer));
-    if(candidates.length>1){
-      // Multiple locations share this root name (e.g. "Riley Sales, Inc."
-      // has 8+ suffixed records) — narrow using the WO's resolved delivery
-      // region (same groupId/zone/cityZoneMap fallback chain the route
-      // header already uses), which is more reliable than comparing raw
-      // zone strings directly.
-      const grp = getWOGroup(wo);
-      if(grp){
-        const grpMatches = candidates.filter(c=>getCustGroup(c.name)?.id===grp.id);
-        if(grpMatches.length===1) return grpMatches[0];
-      }
-      if(wo.zone){
-        const zoneMatch = candidates.find(c=>c.zone===wo.zone);
-        if(zoneMatch) return zoneMatch;
-      }
-    }
-    return candidates[0] || null;
-  }
+  // findCustForWO() now lives at top level (shared with the dashboard
+  // WO-card Map button) — same logic, just hoisted out of this function.
 
   function stopCoords(wo, stop){
     const cust = findCustForWO(wo);
@@ -10421,6 +10399,55 @@ function renderSuggestionPanel(){
   </div>`;
 }
 
+function findCustForWO(wo){
+  if(!wo) return null;
+  const custs = getCustomers();
+  let cust = custs.find(c=>c.name===wo.customer);
+  if(cust) return cust;
+  const candidates = custs.filter(c=>custNamesMatch(c.name, wo.customer));
+  if(candidates.length>1){
+    // Multiple locations share this root name (e.g. "Riley Sales, Inc."
+    // has 8+ suffixed records) — narrow using the WO's resolved delivery
+    // region (same groupId/zone/cityZoneMap fallback chain the route
+    // header already uses), which is more reliable than comparing raw
+    // zone strings directly.
+    const grp = getWOGroup(wo);
+    if(grp){
+      const grpMatches = candidates.filter(c=>getCustGroup(c.name)?.id===grp.id);
+      if(grpMatches.length===1) return grpMatches[0];
+    }
+    if(wo.zone){
+      const zoneMatch = candidates.find(c=>c.zone===wo.zone);
+      if(zoneMatch) return zoneMatch;
+    }
+  }
+  return candidates[0] || null;
+}
+
+// Dashboard WO-card "Map" button — opens the customer's location in Google
+// Maps in a new tab. Resolves the customer the same way the Truck Planner
+// map does (findCustForWO, live customer record over stale WO snapshot).
+// A manually placed pin wins (it was set on purpose); otherwise the street
+// address, then saved coordinates, then the WO's own ship-to text.
+// No Supabase or Nominatim calls.
+function openWOMap(woId){
+  const wo = state.wos.find(w=>w.id===woId);
+  if(!wo) return;
+  const cust = findCustForWO(wo);
+  let q = '';
+  if(cust){
+    const coords = getCustCoords(cust);
+    const street = [cust.address, [cust.city, [cust.state, cust.zip].filter(Boolean).join(' ')].filter(Boolean).join(', ')].filter(Boolean).join(', ');
+    if(cust.geoPrecision==='manual' && coords) q = coords[0]+','+coords[1];
+    else if(cust.address) q = street;
+    else if(coords) q = coords[0]+','+coords[1];
+    else q = street;
+  }
+  if(!q) q = [wo.address, wo.cityst].filter(Boolean).join(', ');
+  if(!q){ toast('⚠ No address or location on file for '+wo.customer); return; }
+  window.open('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(q), '_blank', 'noopener');
+}
+
 // ── UNSCHEDULED WOs GROUPED BY REGION ─────────────────────────────────
 function schedulePickup(woId, dateVal){
   const wo = state.wos.find(w=>w.id===woId);
@@ -10841,6 +10868,7 @@ function renderUnscheduledGrouped(unscheduled){
           <div style="margin-top:6px;display:flex;gap:5px" onclick="event.stopPropagation()">
             <button class="btn btn-xs btn-amber" onclick="editWO(${wo.id})" title="Edit WO">✏ Edit</button>
             <button class="btn btn-xs" onclick="openDashWOPopout(${wo.id})" title="View WO details">📋 View</button>
+            <button class="btn btn-xs" onclick="openWOMap(${wo.id})" title="Show location in Google Maps">🗺 Map</button>
           </div>
         </div>`).join('')}
       </div>
