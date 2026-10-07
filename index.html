@@ -9197,8 +9197,20 @@ function printTruck(truckId, filterDay){
             <div style="font-size:12px;opacity:.8">Driver: ${t.driver||'TBD'} &nbsp;·&nbsp; ${selDay?new Date(selDay+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'}):'All dates'}</div>
           </div>
           <div style="text-align:right">
-            <div style="font-size:20px;font-weight:900">${tw.toLocaleString()} lbs</div>
-            <div style="font-size:11px;opacity:.8">${(()=>{const np=dayStops.filter(x=>x.type==='pickup').length,nd=dayStops.length-np;return nd+' deliver'+(nd===1?'y':'ies')+(np?' · '+np+' pickup'+(np===1?'':'s'):'');})()} · ${pct}% capacity</div>
+            ${(()=>{
+              // Over 100%: the load is split across trips, so a single weight /
+              // capacity figure is misleading on the printout. Show only the
+              // total delivery count in its place.
+              const np=dayStops.filter(x=>x.type==='pickup').length, nd=dayStops.length-np;
+              const delTxt = nd+' deliver'+(nd===1?'y':'ies');
+              const pickTxt = np ? np+' pickup'+(np===1?'':'s') : '';
+              if(pct>100){
+                return `<div style="font-size:20px;font-weight:900">${delTxt}</div>`
+                  + (pickTxt?`<div style="font-size:11px;opacity:.8">${pickTxt}</div>`:'');
+              }
+              return `<div style="font-size:20px;font-weight:900">${tw.toLocaleString()} lbs</div>
+            <div style="font-size:11px;opacity:.8">${delTxt}${pickTxt?' · '+pickTxt:''} · ${pct}% capacity</div>`;
+            })()}
           </div>
         </div>
         <div style="border:1px solid #ddd;border-top:none;padding:10px 16px;background:#fafafa;display:flex;flex-wrap:wrap;gap:10px 28px;font-size:11px;page-break-inside:avoid">
