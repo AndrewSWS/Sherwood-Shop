@@ -402,6 +402,9 @@ select{cursor:pointer}
 .board-stop-cust{font-size:16px;font-weight:800;color:#fff;line-height:1.2}
 .board-stop-wo{font-size:10px;color:#666;margin-top:1px}
 .board-stop-done{font-size:10px;color:#4CAF7D;font-weight:700;margin-top:2px}
+/* WO with open line items flagged "Waiting on Material" — inset outline so card size doesn't change */
+.board-stop.board-stop-waiting{background:#2a1010;box-shadow:inset 0 0 0 2px #e05555}
+.board-stop-wait{font-size:10px;color:#ff6b6b;font-weight:800;margin-top:2px;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* ── OFFICE BOARD ── */
 #ob-overlay{display:none;position:fixed;inset:0;z-index:9998;background:#f4f6f4;color:#111;flex-direction:column;font-family:inherit;overflow:hidden}
 #ob-overlay.ob-active{display:flex}
@@ -2468,7 +2471,7 @@ function addLI(data){
   </div>
   <div class="field" style="margin-top:6px">
     <label class="lbl" style="display:flex;align-items:center;gap:6px;cursor:pointer">
-      <input type="checkbox" class="li-waiting-chk" style="width:14px;height:14px;accent-color:#e05555" ${data&&data.waitingVendor?'checked':''} onchange="liWaitingChange('${n}',this);if(!this.checked)liSaveWaiting('${n}','')">
+      <input type="checkbox" class="li-waiting-chk" style="width:14px;height:14px;accent-color:#e05555" ${data&&data.waitingVendor?'checked':''} onchange="liWaitingChange('${n}',this);liSaveWaiting('${n}',this.checked?this.closest('.li-block').querySelector('.li-waiting-vendor').value:'')">
       <span style="color:#e05555;font-weight:700">&#x23F3; Waiting on Material</span>
     </label>
     <input class="li-waiting-vendor" type="text" placeholder="Vendor name..." value="${data&&data.waitingVendor?data.waitingVendor:''}" onblur="liSaveWaiting('${n}',this.value)" onchange="liSaveWaiting('${n}',this.value)"
@@ -2502,9 +2505,12 @@ function liSaveWaiting(n, vendor) {
   if (!wo) return;
   const item = wo.items.find(i=>String(i.id)===String(itemId));
   if (!item) return;
-  item.waitingVendor = vendor || '';
+  const chk = el.querySelector('.li-waiting-chk');
+  vendor = String(vendor||'').trim();
+  if (!vendor && chk && chk.checked) vendor = 'TBD'; // box checked, no vendor typed yet — still waiting
+  item.waitingVendor = vendor;
   saveState(); updateBadges();
-  sbUpdateLI(woId, item.id, {waitingVendor: vendor || ''}).catch(e=>console.warn('saveWaiting error',e));
+  sbUpdateLI(woId, item.id, {waitingVendor: vendor}).catch(e=>console.warn('saveWaiting error',e));
 }
 
 function liWaitingChange(n, chk) {
@@ -2843,7 +2849,8 @@ function getLIs(){
       step2Status:'Pending',
       step2CompletedBy:'',
       notes:el.querySelector('.li-notes').value,
-      waitingVendor:(el.querySelector('.li-waiting-chk')&&el.querySelector('.li-waiting-chk').checked)?el.querySelector('.li-waiting-vendor').value.trim():'',
+      // The vendor text doubles as the waiting flag — a checked box with no vendor typed still has to mean "waiting"
+      waitingVendor:(el.querySelector('.li-waiting-chk')&&el.querySelector('.li-waiting-chk').checked)?(el.querySelector('.li-waiting-vendor').value.trim()||'TBD'):'',
       assignee:'',status:'Pending',completedBy:'',completedAt:'',
       _stockFill: el.dataset.stockFill ? JSON.parse(el.dataset.stockFill) : null
     });
@@ -4257,6 +4264,14 @@ function showBoardWODetail(woId){
   document.body.appendChild(modal);
 }
 
+// Open (not Complete) line items on a WO flagged "Waiting on Material".
+// Returns {count, label} — label is the distinct vendor names, comma-joined.
+function woWaitingMaterial(wo){
+  const open=(wo.items||[]).filter(i=>i.waitingVendor&&i.status!=='Complete');
+  const vendors=[...new Set(open.map(i=>String(i.waitingVendor).trim()).filter(Boolean))];
+  return {count:open.length, label:vendors.join(', ')};
+}
+
 function renderBoardView(){
   // getWeekDays returns Date objects — convert to {iso, label}
   const rawDays = getWeekDays();
@@ -4313,13 +4328,15 @@ function renderBoardView(){
           ? '<span onclick="event.stopPropagation();toggleBolCheck('+wo.id+')" style="cursor:pointer;color:'+(bolChecked?'#4CAF7D':'#fff')+'" title="'+(bolChecked?'BOL checked \u2014 tap to clear':'Tap to confirm BOL check')+'">\u2713</span> '
           : '\u2713 ';
 
-      return '<div class="board-stop'+(delivered?' done':'')+'" style="border-left-color:'+color+';cursor:pointer" onclick="showBoardWODetail('+wo.id+')">'
+      const wait = delivered ? {count:0} : woWaitingMaterial(wo);
+      return '<div class="board-stop'+(delivered?' done':'')+(wait.count?' board-stop-waiting':'')+'" style="border-left-color:'+color+';cursor:pointer" onclick="showBoardWODetail('+wo.id+')">'
         +'<div class="board-stop-cust">'+checkMark+wo.customer+'</div>'
         +'<div class="board-stop-wo">'
           +'<span style="white-space:nowrap;flex-shrink:0">WO #'+wo.woNum+(getWOWeight(wo.id)?' · '+getWOWeight(wo.id).toLocaleString()+' lbs':'')+'</span>'
           +(itemSnippet?'<span style="font-size:9px;color:#aaa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;max-width:120px">'+itemSnippet+moreItems+'</span>':'')
           +(completionStr?'<span style="font-size:10px;font-weight:700;color:'+completionColor+';flex-shrink:0;margin-left:auto">'+completionStr+'</span>':'')
         +'</div>'
+        +(wait.count?'<div class="board-stop-wait">⏳ Waiting on material'+(wait.label?' · '+escHtml(wait.label):'')+(wait.count>1?' ('+wait.count+' items)':'')+'</div>':'')
         +(delivered?'<div class="board-stop-done">🚚 Delivered</div>':complete?'<div class="board-stop-done" style="color:#f0a500">✓ Ready to Ship</div>':'')
         +'</div>';
     };
@@ -4453,7 +4470,8 @@ function renderBoardView(){
         // Missing these caused the scale to go stale mid-day as WOs were
         // completed or reassigned, letting content drift off the bottom
         // of the board on the 85in TV.
-        return `${w.id}:${items.length}:${w.notes?1:0}:${items.filter(i=>i.waitingVendor).length}:${w.delivered?1:0}:${woStatus(w)}:${getWOTruckId(w.id)||''}`;
+        const _wm = woWaitingMaterial(w);
+        return `${w.id}:${items.length}:${w.notes?1:0}:${_wm.count}~${_wm.label}:${w.delivered?1:0}:${woStatus(w)}:${getWOTruckId(w.id)||''}`;
       }).join(',')).join('|'),
       overlay.offsetWidth,
       overlay.offsetHeight,
@@ -4546,7 +4564,8 @@ function renderBoardPickups(){
     const color = grp ? grp.color : '#888';
     const statusColor = wo.readyForPickup ? '#4CAF7D' : status==='In Process' ? '#f0a500' : '#888';
     const statusLabel = wo.readyForPickup ? '✓ READY' : status==='In Process' ? '⚡ In Process' : '⏳ Pending';
-    const borderColor = wo.readyForPickup ? '#4CAF7D' : (grp ? grp.color : '#888');
+    const wait = woWaitingMaterial(wo);
+    const borderColor = wait.count ? '#e05555' : wo.readyForPickup ? '#4CAF7D' : (grp ? grp.color : '#888');
 
     // Expected pickup date badge — amber if today/overdue, muted otherwise
     let expBadge = '';
@@ -4557,7 +4576,7 @@ function renderBoardPickups(){
     }
 
     return `<div onclick="showPickupModal(${wo.id})" style="
-      background:${wo.readyForPickup?'#1a2e1a':'#222'};
+      background:${wait.count?'#2a1010':wo.readyForPickup?'#1a2e1a':'#222'};
       border:1px solid ${borderColor};
       border-left:3px solid ${borderColor};
       border-radius:4px;
@@ -4570,6 +4589,7 @@ function renderBoardPickups(){
         <span style="color:#888">WO #${wo.woNum}</span>
         <span style="font-weight:700;color:${statusColor};margin-left:6px">${statusLabel}</span>
         ${!wo.readyForPickup?'<span style="color:#555;margin-left:4px">not ready</span>':'<span style="color:#4CAF7D;margin-left:4px">tap to clear</span>'}
+        ${wait.count?'<span style="font-weight:800;color:#ff6b6b;margin-left:6px">⏳ MATERIAL'+(wait.label?': '+escHtml(wait.label):'')+'</span>':''}
         ${expBadge}
       </div>
     </div>`;
@@ -5177,7 +5197,8 @@ function saveEditWO(id){
         notes:item.notes||null, status:item.status||'Pending',
         delivery:item.delivery||wo.delivery||null,
         assignee:item.assignee||null, priority:item.priority||null,
-        wt_unit:item.wtUnit||null
+        wt_unit:item.wtUnit||null,
+        waiting_vendor:item.waitingVendor||null
       }).then(rows=>{
         // Store the new DB id so future patches work
         if(rows&&rows[0]){
@@ -5205,7 +5226,8 @@ function saveEditWO(id){
         type:       item.type||null,
         gauge:      item.gauge||null,
         size:       item.size||null,
-        wtUnit:     item.wtUnit||null
+        wtUnit:     item.wtUnit||null,
+        waitingVendor: item.waitingVendor||null
       }).catch(e=>console.warn('saveEditWO sbUpdateLI error',e));
       if(item._stockFill) applyPendingStockFill(wo,item).catch(e=>console.warn('applyPendingStockFill error',e));
     }
@@ -8615,7 +8637,9 @@ function renderDashboard(c){
           const chipGrp=getWOGroup(wo);
           const grpColor=chipGrp?chipGrp.color:null;
           const chipWt=getWOWeight(wo.id);
-          const miniStyle=grpColor?`border-left-color:${grpColor};background:${grpColor}22`:'';
+          const wait=st==='Complete'?{count:0}:woWaitingMaterial(wo);
+          const miniStyle=(grpColor?`border-left-color:${grpColor};background:${grpColor}22;`:'')
+            +(wait.count?'background:#fdecec;box-shadow:inset 0 0 0 2px #e05555;':'');
           return`<div class="mini-wo ${sc}" draggable="true"
             style="${miniStyle}"
             ondragstart="calDragStart(event,${wo.id})"
@@ -8626,6 +8650,7 @@ function renderDashboard(c){
                 <div class="mini-wo-cust" style="${woStatus(wo)==='Complete'?'text-decoration:line-through;opacity:0.6;':''}">${wo.customer} <span style="font-size:9px;color:var(--text3)">▸</span></div>
                 <div class="mini-wo-num" style="color:var(--text3)">WO #${wo.woNum}</div>
                 <div style="font-size:9px;color:var(--text3);margin-top:1px">${chipWt?chipWt.toLocaleString()+' lbs':''}${chipWt&&chipGrp?' · ':''}${chipGrp?chipGrp.name:''}</div>
+                ${wait.count?`<div style="font-size:10px;font-weight:800;color:#c0392b;margin-top:2px">⏳ Waiting on material${wait.label?': '+escHtml(wait.label):''}${wait.count>1?' ('+wait.count+')':''}</div>`:''}
               </div>
               <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0">
                 ${wo.isStock
