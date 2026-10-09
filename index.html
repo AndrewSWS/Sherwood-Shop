@@ -10443,6 +10443,16 @@ function findCustForWO(wo){
   if(cust) return cust;
   const candidates = custs.filter(c=>custNamesMatch(c.name, wo.customer));
   if(candidates.length>1){
+    // Multi-branch customer (e.g. "United Supply Company" with Dayton,
+    // Perth Amboy, North Plainfield... records). The WO's own ship-to city
+    // is the most specific signal we have — match on it FIRST. Group/zone
+    // can't tell branches apart when they all sit in the same region, and
+    // falling through to them pinned every branch's stop on one location.
+    const woCity = String(wo.cityst||'').split(',')[0].trim().toLowerCase();
+    if(woCity){
+      const cityMatches = candidates.filter(c=>String(c.city||'').trim().toLowerCase()===woCity);
+      if(cityMatches.length===1) return cityMatches[0];
+    }
     // Multiple locations share this root name (e.g. "Riley Sales, Inc."
     // has 8+ suffixed records) — narrow using the WO's resolved delivery
     // region (same groupId/zone/cityZoneMap fallback chain the route
@@ -10453,6 +10463,9 @@ function findCustForWO(wo){
       const grpMatches = candidates.filter(c=>getCustGroup(c.name)?.id===grp.id);
       if(grpMatches.length===1) return grpMatches[0];
     }
+    // Still ambiguous and the WO has its own ship-to city — return no match
+    // so callers fall back to that city rather than guessing a branch.
+    if(woCity) return null;
     if(wo.zone){
       const zoneMatch = candidates.find(c=>c.zone===wo.zone);
       if(zoneMatch) return zoneMatch;
