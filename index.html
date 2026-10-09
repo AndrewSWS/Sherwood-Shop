@@ -7782,7 +7782,7 @@ function renderTruckCard(t, filterDay){
       // on this stop row when it was created — those can go stale (e.g. an
       // old ship-to address from a past import) even though the section
       // header above already correctly reflects the live customer profile.
-      const liveCust = wo ? getCustomers().find(c=>c.name===wo.customer) : null;
+      const liveCust = wo ? findCustForWO(wo) : null; // branch-aware (multi-location customers)
       const liveCityst = liveCust && (liveCust.city||liveCust.state)
         ? [liveCust.city, liveCust.state].filter(Boolean).join(', ')
         : (s.cityst||s.address||'');
@@ -7798,7 +7798,7 @@ function renderTruckCard(t, filterDay){
       <div style="flex:1;min-width:0;cursor:pointer" onclick="toggleStopDetail('${t.id}-${s.woId}')">
         <div style="font-weight:600;font-size:13px;${woDelivered?'text-decoration:line-through;color:var(--text2);':''}cursor:pointer;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
           ${s.customer}
-          ${airMilesBadgeHTML(liveCust)}
+          ${airMilesBadgeHTML(milesCustForStop(liveCust, s, wo))}
           <span id="stop-pill-${t.id}-${s.woId}" style="font-size:9px;font-weight:700;color:var(--blue);background:var(--blue-l);border:1px solid #b5d4f4;border-radius:10px;padding:2px 7px;letter-spacing:.02em;text-transform:uppercase;white-space:nowrap">🚚 Move / Reschedule ▾</span>
         </div>
         <div style="font-size:11px;color:var(--text2)">WO #${s.woNum}</div>
@@ -8341,6 +8341,24 @@ function airMilesFromBensalem(cust){
 // own), and switches to a red warning once it crosses the short-haul
 // exception's 150-air-mile limit, since that's the day this customer's
 // stop would knock the driver out of short-haul eligibility.
+// When no customer record resolves (or it has no coords), build a city-only
+// stand-in from the stop's own ship-to so the miles badge still shows.
+// Pure lookup against CITY_COORDS/overrides — no network calls.
+function milesCustForStop(liveCust, s, wo){
+  if(liveCust && getCustCoords(liveCust)) return liveCust;
+  const cityst = String((s&&s.cityst)||(wo&&wo.cityst)||'').trim();
+  if(!cityst) return liveCust;
+  const parts = cityst.split(',');
+  const city = parts[0].trim();
+  let st = parts[1] ? (parts[1].trim().match(/^([A-Za-z]{2})\b/)||[])[1] : '';
+  if(!st){
+    const zone = String((s&&s.zone)||(wo&&wo.zone)||'').trim();
+    const m = zone.match(/^(NJ|PA|NY|DE|MD)\b/i);
+    st = m ? m[1] : ({delaware:'DE',maryland:'MD','new york':'NY'})[zone.toLowerCase()]||'';
+  }
+  return st ? { city, state: st.toUpperCase() } : liveCust;
+}
+
 function airMilesBadgeHTML(cust, opts){
   const airMi = airMilesFromBensalem(cust);
   if(airMi == null) return '';
@@ -9178,7 +9196,7 @@ function printTruck(truckId, filterDay){
       </tr>`;
       }
       const wo = state.wos.find(w=>w.id===s.woId)||{};
-      const liveCust = wo.customer ? getCustomers().find(c=>c.name===wo.customer) : null;
+      const liveCust = wo.customer ? findCustForWO(wo) : null; // branch-aware (multi-location customers)
       const items = (wo.items||[]);
       const itemRows = items.map(li=>{
         const spec = [li.gauge?li.gauge+' Ga':'', li.size||li.productCat||''].filter(Boolean).join(' ');
@@ -9193,7 +9211,7 @@ function printTruck(truckId, filterDay){
       return `<tr style="background:#f0f4ff;page-break-inside:avoid">
         <td style="padding:8px;font-weight:900;font-size:16px;vertical-align:top;width:28px;border-bottom:2px solid #2D6A2D">${i+1}</td>
         <td colspan="3" style="padding:8px;border-bottom:2px solid #2D6A2D;vertical-align:top">
-          <div style="font-size:15px;font-weight:900;margin-bottom:2px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">${s.customer} ${airMilesBadgeHTML(liveCust,{print:true})}</div>
+          <div style="font-size:15px;font-weight:900;margin-bottom:2px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">${s.customer} ${airMilesBadgeHTML(milesCustForStop(liveCust, s, wo),{print:true})}</div>
           <div style="font-size:11px;color:#555;margin-bottom:2px">📍 ${[s.address,s.cityst].filter(Boolean).join(', ')||'No address'} ${s.zone?'· '+s.zone:''}</div>
           <div style="font-size:11px;color:#666">WO #${s.woNum} · ${getWOWeight(s.woId).toLocaleString()} lbs ${s.notes?'· 📝 '+s.notes:''}</div>
         </td>
@@ -10452,6 +10470,12 @@ function findCustForWO(wo){
     if(woCity){
       const cityMatches = candidates.filter(c=>String(c.city||'').trim().toLowerCase()===woCity);
       if(cityMatches.length===1) return cityMatches[0];
+      // Loose match for naming variants: "Egg Harbor" vs "Egg Harbor Township".
+      const looseMatches = candidates.filter(c=>{
+        const cc = String(c.city||'').trim().toLowerCase();
+        return cc && (cc.startsWith(woCity) || woCity.startsWith(cc));
+      });
+      if(looseMatches.length===1) return looseMatches[0];
     }
     // Multiple locations share this root name (e.g. "Riley Sales, Inc."
     // has 8+ suffixed records) — narrow using the WO's resolved delivery
