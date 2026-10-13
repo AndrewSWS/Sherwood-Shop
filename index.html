@@ -4864,18 +4864,24 @@ function toggleWOComplete(woId){
 }
 
 function quickTruckAssign(woId, truckId){
-  const wo=state.wos.find(w=>w.id===woId);if(!wo)return;
-  // Remove from all trucks first
-  state.trucks.forEach(t=>{t.stops=t.stops.filter(s=>s.woId!==woId)});
-  if(truckId){
-    const t=state.trucks.find(t=>String(t.id)===String(truckId));
-    if(t) t.stops.push({woId:wo.id,woNum:wo.woNum,customer:wo.customer,address:wo.address,cityst:wo.cityst,zone:wo.zone,delivery:wo.delivery,notes:wo.notes});
-  }
-  wo.truck=truckId;
-  saveState();
-  sbUpdateWO(wo).catch(e=>console.warn('sbUpdateWO quickTruck error',e));
-  toast(truckId?`WO #${wo.woNum} → Truck ${truckId}`:`WO #${wo.woNum} unassigned`);
-  renderDashboard(document.getElementById('content'));
+  if(!state.wos.find(w=>w.id===woId)) return;
+  // Drop focus from the dropdown so it doesn't hold the 90s poll's
+  // "input focused" skip open until someone clicks elsewhere.
+  if(document.activeElement && document.activeElement.tagName==='SELECT') document.activeElement.blur();
+  _guardedWOMove(woId, wo=>{
+    // Remove from all trucks first
+    state.trucks.forEach(t=>{t.stops=t.stops.filter(s=>s.woId!==woId)});
+    if(truckId){
+      const t=state.trucks.find(t=>String(t.id)===String(truckId));
+      if(t) t.stops.push({woId:wo.id,woNum:wo.woNum,customer:wo.customer,address:wo.address,cityst:wo.cityst,zone:wo.zone,delivery:wo.delivery,notes:wo.notes});
+    }
+    wo.truck=truckId;
+    saveState();
+    const p = sbUpdateWO(wo).catch(e=>console.warn('sbUpdateWO quickTruck error',e));
+    toast(truckId?`WO #${wo.woNum} → Truck ${truckId}`:`WO #${wo.woNum} unassigned`);
+    renderDashboard(document.getElementById('content'));
+    return p;
+  });
 }
 
 function quickPickupTruckAssign(stopId, truckId){
@@ -8185,6 +8191,86 @@ function calDragLeave(e){
   }
 }
 
+// ── STALE-WRITE GUARD FOR DASHBOARD CARD MOVES ───────────────────────────
+// Card moves (drag to a day, truck dropdown, unschedule ↩, drop on Pick Up)
+// save through sbUpdateWO, which writes the WHOLE work_orders row and
+// rebuilds the WO's truck_stops from this screen's copy. If another user
+// changed that WO since our last poll, the move would silently put their
+// change back. Before applying a move we fetch just this one WO + its stops
+// (a few hundred bytes) and compare to what's on screen. If it differs, we
+// refresh instead of saving and ask the user to redo the move.
+const _woMoveWrites = {}; // woId → in-flight sbUpdateWO promise from a guarded move
+const _woMoveBusy = {};   // woId → true while a guarded move is checking/applying
+const _WO_GUARD_FIELDS = ['wo_num','po','customer','address','cityst','zone','date',
+  'delivery','truck','notes','is_pickup','is_stock','pickup_date','delivered',
+  'ready_for_pickup','pickup_expected_date','pickup_time_window','pickup_time','bol_checked'];
+function _guardNorm(v){
+  // null / '' / false all mean "not set" — the DB may hold null where the screen holds false
+  if(v===null || v===undefined || v==='' || v===false) return '';
+  if(v===true) return 'true';
+  let t = String(v).trim();
+  // Dates can come back from Postgres with a time part ("2026-10-13T00:00:00+00:00")
+  // while the screen holds "2026-10-13"; times can come back as "14:00:00" vs "14:00".
+  if(/^\d{4}-\d{2}-\d{2}[T ]/.test(t)) t = t.slice(0,10);
+  if(/^\d{1,2}:\d{2}:00$/.test(t)) t = t.slice(0,-3);
+  return t;
+}
+// Returns 'ok', 'changed', or 'unknown' (couldn't reach Supabase).
+async function _woFreshCheck(wo){
+  const [rows, stops] = await Promise.all([
+    _sbGet('work_orders', `id=eq.${wo.id}&select=${_WO_GUARD_FIELDS.join(',')}`),
+    _sbGet('truck_stops', `wo_id=eq.${wo.id}&select=truck_id`)
+  ]);
+  if(!rows || !stops) return 'unknown';
+  if(!rows.length) return 'changed'; // deleted by someone else
+  const db = rows[0];
+  const local = _woToRow(wo);
+  for(const f of _WO_GUARD_FIELDS){
+    if(_guardNorm(db[f]) !== _guardNorm(local[f])){
+      console.log('[WO guard] WO', wo.woNum, 'field', f, 'screen:', local[f], 'db:', db[f]);
+      return 'changed';
+    }
+  }
+  const dbTrucks = stops.map(r=>String(r.truck_id)).sort().join(',');
+  const localTrucks = state.trucks.filter(t=>t.stops.some(s=>s.woId===wo.id)).map(t=>String(t.id)).sort().join(',');
+  if(dbTrucks !== localTrucks){
+    console.log('[WO guard] WO', wo.woNum, 'truck stops differ — screen:', localTrucks, 'db:', dbTrucks);
+    return 'changed';
+  }
+  return 'ok';
+}
+// Runs applyFn(wo) only if this WO hasn't been changed by someone else.
+// applyFn must return the sbUpdateWO promise so back-to-back moves on the
+// same WO wait for our own save to land before re-checking.
+async function _guardedWOMove(woId, applyFn){
+  const wo = state.wos.find(w=>w.id===woId);
+  if(!wo) return;
+  if(_woMoveBusy[woId]) return; // ignore double-fires while a check is running
+  _woMoveBusy[woId] = true;
+  try{
+    if(_woMoveWrites[woId]) { try{ await _woMoveWrites[woId]; }catch(e){} }
+    const result = await _woFreshCheck(wo);
+    if(result==='changed'){
+      toast(`⚠ WO #${wo.woNum} was just changed by someone else — board refreshed, please redo your move`, 6000);
+      _lastPollFetchAt = Date.now();
+      const ok = await sbLoadState();
+      if(ok){ try{ localStorage.setItem('kzn_state', JSON.stringify(state)); }catch(e){} }
+      renderDashboard(document.getElementById('content'));
+      return;
+    }
+    if(result==='unknown') console.warn('[WO guard] could not verify WO', wo.woNum, '— saving without check');
+    const freshWo = state.wos.find(w=>w.id===woId);
+    if(!freshWo) return;
+    const p = applyFn(freshWo);
+    if(p && typeof p.then==='function'){
+      const tracked = p.finally(()=>{ if(_woMoveWrites[woId]===tracked) delete _woMoveWrites[woId]; });
+      _woMoveWrites[woId] = tracked;
+    }
+  } finally {
+    _woMoveBusy[woId] = false;
+  }
+}
+
 function calDrop(e, iso){
   e.preventDefault();
   e.stopPropagation();
@@ -8194,15 +8280,17 @@ function calDrop(e, iso){
   const wo = state.wos.find(w=>w.id===woId);
   if(!wo) return;
   if(wo.delivery === iso) return;
-  wo.delivery = iso;
-  state.trucks.forEach(t=>{
-    const stop = t.stops.find(s=>s.woId===woId);
-    if(stop) stop.delivery = iso;
+  _guardedWOMove(woId, wo=>{
+    wo.delivery = iso;
+    state.trucks.forEach(t=>{
+      const stop = t.stops.find(s=>s.woId===woId);
+      if(stop) stop.delivery = iso;
+    });
+    saveState();
+    toast(`WO #${wo.woNum} → ${fmtDate(iso)}`);
+    renderDashboard(document.getElementById('content'));
+    return sbUpdateWO(wo).catch(e=>console.warn('sbUpdateWO drag schedule error',e));
   });
-  saveState();
-  toast(`WO #${wo.woNum} → ${fmtDate(iso)}`);
-  renderDashboard(document.getElementById('content'));
-  sbUpdateWO(wo).catch(e=>console.warn('sbUpdateWO drag schedule error',e));
 }
 
 // ── PICKUP DROP ZONE ──────────────────────────────────────────────────────
@@ -8224,29 +8312,33 @@ function pickupDrop(e){
   if(zone) zone.style.background='#EEF4FB';
   const woId=parseInt(e.dataTransfer.getData('text/plain'));
   if(!woId) return;
-  const wo=state.wos.find(w=>w.id===woId);
-  if(!wo) return;
-  wo.isPickup=true;
-  wo.delivery='';
-  wo.truck='';
-  // Remove from truck stops
-  state.trucks.forEach(t=>{t.stops=t.stops.filter(s=>s.woId!==woId)});
-  saveState();
-  sbUpdateWO(wo).catch(e=>console.warn('sbUpdateWO pickup drop error',e));
-  toast(`WO #${wo.woNum} moved to Pick Up`);
-  renderDashboard(document.getElementById('content'));
+  if(!state.wos.find(w=>w.id===woId)) return;
+  _guardedWOMove(woId, wo=>{
+    wo.isPickup=true;
+    wo.delivery='';
+    wo.truck='';
+    // Remove from truck stops
+    state.trucks.forEach(t=>{t.stops=t.stops.filter(s=>s.woId!==woId)});
+    saveState();
+    const p = sbUpdateWO(wo).catch(e=>console.warn('sbUpdateWO pickup drop error',e));
+    toast(`WO #${wo.woNum} moved to Pick Up`);
+    renderDashboard(document.getElementById('content'));
+    return p;
+  });
 }
 
 function unscheduleFromChip(woId){
-  const wo=state.wos.find(w=>w.id===woId);
-  if(!wo) return;
-  wo.delivery='';
-  wo.truck='';
-  state.trucks.forEach(t=>{t.stops=t.stops.filter(s=>s.woId!==woId)});
-  saveState();
-  sbUpdateWO(wo).catch(e=>console.warn('sbUpdateWO unscheduleFromChip error',e));
-  toast(`WO #${wo.woNum} moved to unscheduled`);
-  renderDashboard(document.getElementById('content'));
+  if(!state.wos.find(w=>w.id===woId)) return;
+  _guardedWOMove(woId, wo=>{
+    wo.delivery='';
+    wo.truck='';
+    state.trucks.forEach(t=>{t.stops=t.stops.filter(s=>s.woId!==woId)});
+    saveState();
+    const p = sbUpdateWO(wo).catch(e=>console.warn('sbUpdateWO unscheduleFromChip error',e));
+    toast(`WO #${wo.woNum} moved to unscheduled`);
+    renderDashboard(document.getElementById('content'));
+    return p;
+  });
 }
 
 function movePickupToUnscheduled(woId){
