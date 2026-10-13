@@ -10478,6 +10478,23 @@ function saveCustMeta(name){
       if(zone) cust.zone = zone;
     }
   }
+  // A WO's zone is a copy taken when the WO was created. When the customer's
+  // zone is set/changed here, bring that customer's undelivered WOs (and their
+  // truck stops) in line so Edit WO doesn't keep showing a stale zone.
+  // Delivered WOs are left as history. Patches only the zone column — never
+  // sbUpdateWO, which would rewrite the whole row and the truck stops.
+  let zoneWOsUpdated = 0;
+  if(zone){
+    state.wos.filter(w=>w.customer===name && !w.delivered && (w.zone||'')!==zone).forEach(w=>{
+      w.zone = zone;
+      state.trucks.forEach(t=>t.stops.forEach(st=>{ if(st.woId===w.id) st.zone = zone; }));
+      _sbPatch('work_orders', {id: w.id}, {zone})
+        .catch(e=>console.warn('saveCustMeta WO zone patch error', e));
+      _sbPatch('truck_stops', {wo_id: w.id}, {zone})
+        .catch(e=>console.warn('saveCustMeta stop zone patch error', e));
+      zoneWOsUpdated++;
+    });
+  }
   saveState();
   // Sync to Supabase
   _sbPatch('customers', {name}, { address: address||null, city: city||null, state: custState||null, zip: zip||null, zone: zone||null, contact: contact||null, phone: phone||null, email: email||null, notes: notes||null, group_id: groupId||null, notify })
@@ -10491,7 +10508,7 @@ function saveCustMeta(name){
       if(ok && custView==='map') renderCustomerMap(getCustomers());
     });
   }
-  toast('\u2713 '+name+' updated');
+  toast('\u2713 '+name+' updated'+(zoneWOsUpdated?(' — zone updated on '+zoneWOsUpdated+' open WO'+(zoneWOsUpdated>1?'s':'')):''), zoneWOsUpdated?4000:2500);
   renderCustomers(document.getElementById('content'));
 }
 
@@ -13262,7 +13279,12 @@ function importQBInvoice(invNum){
           if(alreadyExists){
             cust = alreadyExists;
           } else {
-            const newCust = { name: newName, address:'', city: qbCity, state: qbState, zip:'', zone: lookupZoneByCity(qbCity, qbState) || _exactMatch.zone||'' };
+            const newCust = { name: newName, address:'', city: qbCity, state: qbState, zip:'', zone: lookupZoneByCity(qbCity, qbState) || '' };
+            // NOTE: deliberately NOT falling back to _exactMatch.zone — a new
+            // ship-to location is by definition somewhere else, so the parent
+            // account's zone is usually wrong (e.g. a Smyrna location inheriting
+            // PA Lehigh Valley). Leave it blank so the warning below prompts
+            // someone to set it; backfillZoneIfMissing fills it when QB gave a state.
             getCustomers().push(newCust);
             if(!state.customerMeta) state.customerMeta={};
             state.customerMeta[newName] = { contact:'', phone:'', email:'', groupId:'', notify:false, notes:'' };
