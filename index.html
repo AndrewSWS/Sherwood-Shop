@@ -1404,6 +1404,40 @@ async function sbLoadState() {
   }
 }
 
+// ── CHANGE CHECK (sync_state) ───────────────────────────────────────────────
+// Supabase triggers bump a per-table counter in `sync_state` on every insert,
+// update or delete to the tables sbLoadState reads (plus stock_needs). Pollers
+// fetch just those counters (a few hundred bytes) and only do the full
+// sbLoadState reload when one has moved. A full reload still happens at least
+// every 30 min as a safety net. If sync_state isn't there (SQL not run yet, or
+// an error), this falls back to the old behavior: always do the full reload.
+let _syncSig = null;            // counters seen at the last successful full reload
+let _syncFullLoadAt = 0;        // when that full reload happened
+let _syncUnavailableAt = 0;     // last time sync_state couldn't be read
+const _SYNC_SAFETY_MS = 30*60*1000;
+async function _sbSyncSig(){
+  // After a failure, don't retry the counter table for 30 min — avoids a
+  // console warning every tick if the SQL hasn't been run.
+  if (_syncUnavailableAt && Date.now() - _syncUnavailableAt < _SYNC_SAFETY_MS) return null;
+  try {
+    const r = await fetch(`${_SB_URL}/rest/v1/sync_state?select=tbl,ver`, { headers: _SB_HDR });
+    if (!r.ok) { _syncUnavailableAt = Date.now(); console.warn('[sync] sync_state unavailable (' + r.status + ') — using full reloads'); return null; }
+    const rows = await r.json();
+    if (!rows || !rows.length) { _syncUnavailableAt = Date.now(); return null; }
+    _syncUnavailableAt = 0;
+    return rows.map(x => x.tbl + ':' + x.ver).sort().join('|');
+  } catch(e) { return null; }
+}
+// Returns 'unchanged' (nothing fetched beyond the counters), true (full reload
+// done), or false (full reload failed / offline).
+async function sbLoadStateIfChanged(){
+  const sig = await _sbSyncSig();
+  if (sig && sig === _syncSig && (Date.now() - _syncFullLoadAt) < _SYNC_SAFETY_MS) return 'unchanged';
+  const ok = await sbLoadState();
+  if (ok) { _syncFullLoadAt = Date.now(); _syncSig = sig; }
+  return ok;
+}
+
 // ── Shop hours helper (Mon–Fri, 5am–8pm local) ──────────────────────────────
 // Used to throttle background polling outside actual working hours — nobody's
 // watching the boards at 2am on a Saturday, so there's no reason to keep
@@ -1416,9 +1450,12 @@ function _inShopHours() {
   return hour >= 5 && hour < 20;
 }
 
-// ── Poll Supabase every 15s for changes (for board view & multi-user sync) ──
+// ── Poll Supabase every 20s for changes (for board view & multi-user sync) ──
+// Each tick only reads the sync_state counters; the full reload runs only when
+// something actually changed (see sbLoadStateIfChanged).
 let _sbPollTimer = null;
 let _lastPollFetchAt = 0; // last time this timer actually hit the DB (not just ticked)
+let _pollNeedsRender = false; // fresh data loaded but the view render was skipped (modal open, etc.)
 // Pause polling when tab is hidden to save bandwidth
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
@@ -1426,11 +1463,14 @@ document.addEventListener('visibilitychange', () => {
     _sbPollTimer = null;
   } else {
     startSBPoll();
+    _sbPollTick(); // check right away on return instead of waiting for the next tick
   }
 });
 function startSBPoll() {
   if (_sbPollTimer) return;
-  _sbPollTimer = setInterval(async () => {
+  _sbPollTimer = setInterval(_sbPollTick, 20000);
+}
+async function _sbPollTick() {
     // Skip entire poll cycle if user is actively editing — don't overwrite state
     const editingNow = !!window._editingWOId || !!document.querySelector('#e-wonum') || !!document.querySelector('.wo-edit-form');
     if(editingNow){ updateBadges(); return; }
@@ -1443,10 +1483,16 @@ function startSBPoll() {
       return;
     }
     _lastPollFetchAt = Date.now();
-    const ok = await sbLoadState();
+    const res = await sbLoadStateIfChanged();
+    // Nothing changed and nothing waiting to be drawn — done for this tick.
+    if (res === 'unchanged' && !_pollNeedsRender) { updateBadges(); return; }
+    const ok = res === 'unchanged' ? true : res;
     if (ok) {
-      // Save fresh state to localStorage as backup
-      try { localStorage.setItem('kzn_state', JSON.stringify(state)); } catch(e){}
+      if (res !== 'unchanged') {
+        _pollNeedsRender = true;
+        // Save fresh state to localStorage as backup
+        try { localStorage.setItem('kzn_state', JSON.stringify(state)); } catch(e){}
+      }
       const c = document.getElementById('content');
       const overlay = document.getElementById('board-overlay');
       // Refresh board view if active
@@ -1458,6 +1504,7 @@ function startSBPoll() {
         // (last-cycle) pickup content and drifts out of sync over time.
         renderBoardPickups();
         renderBoardView();
+        _pollNeedsRender = false;
         return;
       }
       // Refresh whichever regular view is currently showing
@@ -1525,10 +1572,10 @@ function startSBPoll() {
             if (custEditName) selectCustEdit(custEditName);
           }
         } catch(e) { console.warn('poll render error', e); }
+        _pollNeedsRender = false;
       }
       updateBadges();
     }
-  }, 90000);
 }
 
 // ══════════════════════════════════════════════════════
@@ -4074,11 +4121,16 @@ function enterBoardView(){
     // skips. During shop hours this still refreshes every 15s.
     if (!_inShopHours() && (Date.now() - _lastPollFetchAt) < 30*60*1000) return;
     _lastPollFetchAt = Date.now();
-    const ok = await sbLoadState();
-    if(ok){ try{localStorage.setItem('kzn_state',JSON.stringify(state));}catch(e){} }
+    const res = await sbLoadStateIfChanged();
+    if(res==='unchanged'){
+      // No data change — still redraw every 5 min so anything time-based
+      // (today's column, late pickups) keeps moving. No Supabase traffic.
+      if(Date.now() - (window._boardLastRenderAt||0) < 5*60*1000) return;
+    } else if(res){ try{localStorage.setItem('kzn_state',JSON.stringify(state));}catch(e){} }
     else {
       try{ const s=localStorage.getItem('kzn_state'); if(s){const p=JSON.parse(s);state.wos=p.wos||state.wos;state.trucks=p.trucks||state.trucks;} }catch(e){}
     }
+    window._boardLastRenderAt = Date.now();
     // Update pickup bar content BEFORE renderBoardView measures its height
     // for the fit-to-screen calculation — same ordering fix as the main
     // 90-second poll, so this independent timer can't drift out of sync
