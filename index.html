@@ -13674,29 +13674,37 @@ function enterOfficeBoardView(){
   if(document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(()=>{});
   _obRender();
   _obSetSync(true); // show initial sync time immediately on entry
-  // Slowed from 10s to 60min in an earlier pass, now reduced further and
-  // paused entirely outside shop hours (nights + weekends), since this
-  // screen isn't being watched then. During Mon–Fri 5am–8pm it still checks
-  // in every 4hrs; the rest of the time it does nothing automatically. The
-  // ✓/⚠ sync timestamp (_obSetSync) and the ↻ manual refresh button
-  // (obManualRefresh) still let anyone force a fresh pull anytime, and the
-  // wake/visibility handler below still refreshes immediately when the TV
-  // comes back from sleep during shop hours.
+  // Office board refresh — same approach as the shop board. Every 15s during
+  // shop hours it reads only the sync_state counters (a few hundred bytes)
+  // and does the full sbLoadState reload only when something actually
+  // changed (see sbLoadStateIfChanged). With no data change it still redraws
+  // every 5 min (no Supabase traffic) so anything time-based keeps moving.
+  // Outside shop hours it shares the main poll's 30-min window via
+  // _lastPollFetchAt, same as the shop board. The ✓/⚠ sync timestamp shows
+  // the last successful check; ↻ (obManualRefresh) still forces a full pull.
   _obTimer=setInterval(async()=>{
-    if (!_inShopHours()) return; // outside shop hours — leave the sync timestamp as-is, don't fake a fresh sync
-    const ok = await sbLoadState();
-    if(ok){try{localStorage.setItem('kzn_state',JSON.stringify(state));}catch(e){}}else{try{const s=localStorage.getItem('kzn_state');if(s){const p=JSON.parse(s);state.wos=p.wos||state.wos;state.trucks=p.trucks||state.trucks;}}catch(e){}}
+    if (!_inShopHours() && (Date.now() - _lastPollFetchAt) < 30*60*1000) return;
+    _lastPollFetchAt = Date.now();
+    const res = await sbLoadStateIfChanged();
+    if(res==='unchanged'){
+      _obSetSync(true); // confirmed current — keep the ✓ timestamp moving
+      if(Date.now() - (window._obLastRenderAt||0) < 5*60*1000) return;
+    } else if(res){ try{localStorage.setItem('kzn_state',JSON.stringify(state));}catch(e){} }
+    else { try{const s=localStorage.getItem('kzn_state');if(s){const p=JSON.parse(s);state.wos=p.wos||state.wos;state.trucks=p.trucks||state.trucks;}}catch(e){} }
+    window._obLastRenderAt = Date.now();
     _obRender();
-    _obSetSync(ok);
-  },4*3600000);
+    _obSetSync(!!res);
+  },15000);
   _obClockTimer=setInterval(()=>{const el=document.getElementById('ob-clock');if(el)el.textContent=new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});},1000);
   const cl=document.getElementById('ob-clock');if(cl)cl.textContent=new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
   // Force refresh when TV screen wakes from sleep / tab becomes visible again
   // Browsers throttle setInterval when hidden, so this ensures fresh data on wake
   _obVisHandler = async()=>{
     if(document.visibilityState==='visible' && document.getElementById('ob-overlay')?.classList.contains('ob-active')){
-      const ok=await sbLoadState();
-      if(ok){try{localStorage.setItem('kzn_state',JSON.stringify(state));}catch(e){}}
+      const res=await sbLoadStateIfChanged(); // cheap counter check first; full reload only if something changed
+      const ok=!!res;
+      if(res===true){try{localStorage.setItem('kzn_state',JSON.stringify(state));}catch(e){}}
+      window._obLastRenderAt = Date.now();
       fetchWeather().then(_obRender); // throttled setInterval means weather can be stale on wake too
       _obRender();
       _obSetSync(ok);
