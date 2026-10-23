@@ -1173,7 +1173,7 @@ async function sbLoadState() {
   try {
     const [wosRaw, trucksRaw, stopsRaw, coilsRaw, configRaw, custsRaw, vendorsRaw, cityZoneRaw, groupsRaw, stockUsageRaw] = await Promise.all([
       _sbGetAll('work_orders', 'order=created_at.asc'),
-      _sbGet('trucks', 'order=id.asc'),
+      _sbGet('trucks', 'order=sort_order.asc.nullslast,id.asc'),
       _sbGetAll('truck_stops', 'order=seq.asc'),
       _sbGet('coil_records', 'order=priority.asc&limit=500'),
       _sbGet('admin_config', 'select=key,value'),
@@ -1264,7 +1264,8 @@ async function sbLoadState() {
 
     const trucks = (trucksRaw||[]).map(t => ({
       id: t.id, name: t.name, driver: t.driver||'', max: t.max_lbs||20000,
-      shipDate: t.ship_date||'', stops: stopsByTruck[t.id]||[], active: t.active!==false
+      shipDate: t.ship_date||'', stops: stopsByTruck[t.id]||[], active: t.active!==false,
+      sortOrder: t.sort_order
     }));
 
     // Apply WOs and trucks to state
@@ -11334,6 +11335,10 @@ function renderSettingsTrucks(){
           <input type="text" value="${t.driver||''}" style="width:120px" placeholder="Driver name" ${isArchived?'disabled':''}
             onchange="setTruckDriver(${t.id},this.value)">
         </div>
+        ${isArchived ? '' : `<div style="display:flex;gap:4px">
+          <button class="btn btn-xs" title="Move up" onclick="moveTruckSetting(${t.id},-1)" ${activeTrucks[0]===t?'disabled':''}>▲</button>
+          <button class="btn btn-xs" title="Move down" onclick="moveTruckSetting(${t.id},1)" ${activeTrucks[activeTrucks.length-1]===t?'disabled':''}>▼</button>
+        </div>`}
         ${isArchived
           ? `<button class="btn btn-xs btn-primary" onclick="unarchiveTruckSetting(${t.id})">↩ Restore</button>`
           : (activeTrucks.length>1?`<button class="btn btn-xs btn-danger" onclick="archiveTruckSetting(${t.id})">Archive</button>`:'')}
@@ -11391,6 +11396,28 @@ function setTruckDriver(id,val){
   t.driver=val.trim();
   _sbPatch('trucks',{id},{driver:t.driver||null}).catch(e=>console.warn(e));
   saveState();
+}
+
+// Reorder trucks. Order is stored in trucks.sort_order and drives every
+// truck list (planner, dropdowns, driver app). Moves swap within the
+// active list; then every truck gets a fresh sequential sort_order so the
+// saved order always matches what's on screen. Archived trucks go last.
+async function moveTruckSetting(id, dir){
+  const active = state.trucks.filter(t=>t.active!==false);
+  const archived = state.trucks.filter(t=>t.active===false);
+  const i = active.findIndex(t=>t.id===id);
+  const j = i + dir;
+  if(i<0 || j<0 || j>=active.length) return;
+  [active[i], active[j]] = [active[j], active[i]];
+  state.trucks = [...active, ...archived];
+  saveState();
+  renderSettings(document.getElementById('content'));
+  const changed = state.trucks.map((t,idx)=>({t, idx:idx+1})).filter(x=>x.t.sortOrder!==x.idx);
+  // _sbPatch returns null on failure instead of throwing, so check results.
+  const results = await Promise.all(changed.map(x=>_sbPatch('trucks',{id:x.t.id},{sort_order:x.idx})));
+  let failed = 0;
+  results.forEach((r,k)=>{ if(r===null) failed++; else changed[k].t.sortOrder = changed[k].idx; });
+  if(failed) toast('⚠ Truck order not saved — check that trucks.sort_order exists');
 }
 
 async function archiveTruckSetting(id){

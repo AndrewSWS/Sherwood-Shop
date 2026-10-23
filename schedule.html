@@ -306,7 +306,7 @@ async function init() {
 
   // Load trucks from Supabase
   try {
-    const r = await fetch(`${SB_URL}/rest/v1/trucks?order=id`, { headers: HDR });
+    const r = await fetch(`${SB_URL}/rest/v1/trucks?order=sort_order.asc.nullslast,id.asc`, { headers: HDR });
     if (!r.ok) {
       const err = await r.text();
       showToast('⚠ Trucks error: ' + r.status);
