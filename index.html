@@ -12523,7 +12523,11 @@ function parseQBWorkbook(wb, filename){
     const C_SHIP_STATE = ci('Ship To State') >= 0 ? ci('Ship To State')
                        : ci('Shipping State') >= 0 ? ci('Shipping State')
                        : ci('Ship State') >= 0 ? ci('Ship State') : -1;
-    console.log('QB cols — TYPE:',C_TYPE,'DATE:',C_DATE,'NUM:',C_NUM,'NAME:',C_NAME,'ITEM:',C_ITEM,'SHIP_CITY:',C_SHIP_CITY,'SHIP_STATE:',C_SHIP_STATE);
+    // Ship To street — QB's Address 1 is usually the company name, so the
+    // street lives on Address 2. Used to tell apart two locations in one city.
+    const C_SHIP_ADDR  = ci('Ship To Address 2') >= 0 ? ci('Ship To Address 2')
+                       : ci('Ship To Street') >= 0 ? ci('Ship To Street') : -1;
+    console.log('QB cols — TYPE:',C_TYPE,'DATE:',C_DATE,'NUM:',C_NUM,'NAME:',C_NAME,'ITEM:',C_ITEM,'SHIP_CITY:',C_SHIP_CITY,'SHIP_STATE:',C_SHIP_STATE,'SHIP_ADDR:',C_SHIP_ADDR);
 
     // Parse invoices
     const invoices = {};
@@ -12595,8 +12599,9 @@ function parseQBWorkbook(wb, filename){
       if(!invoices[invNum]){
         const qbCity  = C_SHIP_CITY  >= 0 ? String(row[C_SHIP_CITY]  ||'').trim() : '';
         const qbState = C_SHIP_STATE >= 0 ? String(row[C_SHIP_STATE] ||'').trim() : '';
-        console.log('QB ship-to — inv:',invNum,'city:',qbCity,'state:',qbState);
-        invoices[invNum] = { invNum, customer, date: dateStr, items: [], qbCity, qbState };
+        const qbAddr  = C_SHIP_ADDR  >= 0 ? String(row[C_SHIP_ADDR]  ||'').trim().replace(/\s+/g,' ') : '';
+        console.log('QB ship-to — inv:',invNum,'city:',qbCity,'state:',qbState,'addr:',qbAddr);
+        invoices[invNum] = { invNum, customer, date: dateStr, items: [], qbCity, qbState, qbAddr };
       }
 
       // If no item code and no memo, this is a QB continuation row —
@@ -12830,6 +12835,12 @@ function renderQBList(invoices){
               📍 <strong>Ship-to city differs:</strong> QB says <strong>${inv.qbCity}${inv.qbState?' '+inv.qbState:''}</strong>, this WO is assigned to <strong>${existing.customer}</strong> (${sysCity}).
               Use the customer field to pick or create the right location.
             </div>`;
+          } else if(inv.qbAddr && sysCust && _qbSameStreet(sysCust.address, inv.qbAddr)===false){
+            // Same city, different street — e.g. two Philadelphia branches
+            diffHtml += `<div style="font-size:11px;margin-bottom:8px;padding:6px 10px;background:#FFF0E8;border:1px solid #E07020;border-radius:4px;color:#8B4500">
+              📍 <strong>Ship-to street differs:</strong> QB says <strong>${inv.qbAddr}, ${inv.qbCity}</strong>, this WO is assigned to <strong>${existing.customer}</strong> (${sysCust.address}).
+              Use the customer field to pick or create the right location.
+            </div>`;
           }
         }
 
@@ -13008,6 +13019,8 @@ function renderQBList(invoices){
       const qbCityL = inv.qbCity.trim().toLowerCase();
       const cityDiffers = sysCity && !(sysCity===qbCityL || qbCityL.includes(sysCity) || sysCity.includes(qbCityL));
       if(cityDiffers) return true; // existing customer has a DIFFERENT city → needs new location
+      // Same city but a different street on file → different branch
+      if(inv.qbAddr && sysCust && _qbSameStreet(sysCust.address, inv.qbAddr)===false) return true;
       // No city on file → silently add it (don't flag for review)
       if(!sysCity && sysCust){
         sysCust.city  = inv.qbCity.trim();
@@ -13197,6 +13210,26 @@ function filterQBList(q){
   if(el) el.innerHTML = renderQBList(list);
 }
 
+// Street-level key for telling same-city locations apart: house number plus
+// the first real street word. "4700 B Wissahickon Ave" → 4700 / "wiss".
+// Only the first 4 letters of the word are compared so spelling variants
+// ("Southhampton" vs "Southampton") still match.
+function _qbStreetKey(addr){
+  const s = String(addr||'').toLowerCase().replace(/[.,#]/g,' ');
+  const m = s.match(/^\s*(\d+)[a-z]?\b(.*)$/);
+  if(!m) return null;
+  const skip = ['north','south','east','west','no','so'];
+  const word = m[2].split(/\s+/).find(w => /^[a-z]{2,}/.test(w) && !skip.includes(w)) || '';
+  return { num: m[1], word: word.slice(0,4) };
+}
+// true = same street, false = different street, null = can't tell
+// (one side has no address on file / no house number).
+function _qbSameStreet(a, b){
+  const ka = _qbStreetKey(a), kb = _qbStreetKey(b);
+  if(!ka || !kb) return null;
+  return ka.num === kb.num && (!ka.word || !kb.word || ka.word === kb.word);
+}
+
 function pickQBLocation(btn, idx){
   const picker = btn.parentElement;
   const locs = picker._locations;
@@ -13284,6 +13317,9 @@ function importQBInvoice(invNum){
       // Step 1: exact name match — but still check city if QB provides one
       let _exactMatch = getCustomers().find(c=>c.name.toLowerCase()===inv.customer.toLowerCase());
       let cust = null;
+      // Set when a location picker is shown — the user is choosing, so don't
+      // fall through to "brand new customer" creation below.
+      let _qbPickerShown = false;
       if(_exactMatch){
         const qbCity  = (inv.qbCity  ||'').trim();
         const qbState = (inv.qbState ||'').trim();
@@ -13306,7 +13342,7 @@ function importQBInvoice(invNum){
           if(alreadyExists){
             cust = alreadyExists;
           } else {
-            const newCust = { name: newName, address:'', city: qbCity, state: qbState, zip:'', zone: lookupZoneByCity(qbCity, qbState) || '' };
+            const newCust = { name: newName, address: inv.qbAddr||'', city: qbCity, state: qbState, zip:'', zone: lookupZoneByCity(qbCity, qbState) || '' };
             // NOTE: deliberately NOT falling back to _exactMatch.zone — a new
             // ship-to location is by definition somewhere else, so the parent
             // account's zone is usually wrong (e.g. a Smyrna location inheriting
@@ -13316,7 +13352,7 @@ function importQBInvoice(invNum){
             if(!state.customerMeta) state.customerMeta={};
             state.customerMeta[newName] = { contact:'', phone:'', email:'', groupId:'', notify:false, notes:'' };
             saveState();
-            _sbPost('customers', { name: newName, address:null, city: qbCity||null, state: qbState||null, zip:null, zone: newCust.zone||null })
+            _sbPost('customers', { name: newName, address: inv.qbAddr||null, city: qbCity||null, state: qbState||null, zip:null, zone: newCust.zone||null })
               .catch(e=>console.warn('sbPost new customer error',e));
             cust = newCust;
             backfillZoneIfMissing(newCust);
@@ -13362,12 +13398,12 @@ function importQBInvoice(invNum){
             if(alreadyExists){
               cust = alreadyExists;
             } else {
-              const newCust = { name: newName, address:'', city: qbCity, state: qbState, zip:'', zone: lookupZoneByCity(qbCity, qbState) };
+              const newCust = { name: newName, address: inv.qbAddr||'', city: qbCity, state: qbState, zip:'', zone: lookupZoneByCity(qbCity, qbState) };
               getCustomers().push(newCust);
               if(!state.customerMeta) state.customerMeta={};
               state.customerMeta[newName] = { contact:'', phone:'', email:'', groupId:'', notify:false, notes:'' };
               saveState();
-              _sbPost('customers', { name: newName, address:null, city: qbCity||null, state: qbState||null, zip:null, zone: newCust.zone||null })
+              _sbPost('customers', { name: newName, address: inv.qbAddr||null, city: qbCity||null, state: qbState||null, zip:null, zone: newCust.zone||null })
                 .catch(e=>console.warn('sbPost new customer error',e));
               cust = newCust;
               backfillZoneIfMissing(newCust);
@@ -13391,13 +13427,32 @@ function importQBInvoice(invNum){
               const qLow  = qbCity.toLowerCase();
               return cCity && (cCity === qLow || qLow.includes(cCity) || cCity.includes(qLow));
             });
-            if(cityMatch.length === 1){
-              // Auto-matched by city — silent green confirmation
-              cust = cityMatch[0];
+            // Several locations in the same city (e.g. two Philadelphia
+            // branches) — narrow by ship-to street.
+            const qbAddr = (inv.qbAddr||'').trim();
+            const byStreet = (cityMatch.length > 1 && qbAddr)
+              ? cityMatch.filter(c=>_qbSameStreet(c.address, qbAddr)===true) : [];
+            if(cityMatch.length === 1 || byStreet.length === 1){
+              // Auto-matched by city (or city + street) — green confirmation
+              cust = byStreet.length === 1 ? byStreet[0] : cityMatch[0];
               const info = document.createElement('div');
               info.style.cssText='background:#f0faf0;border:1px solid #4CAF7D;border-radius:var(--rad);padding:6px 12px;margin-top:6px;font-size:12px;color:#2D6A2D';
-              info.textContent='✓ Auto-matched to '+cust.name+' by ship-to city ('+qbCity+(qbState?' '+qbState:'')+')';
+              info.textContent = byStreet.length === 1
+                ? '✓ Auto-matched to '+cust.name+' by ship-to street ('+qbAddr+', '+qbCity+')'
+                : '✓ Auto-matched to '+cust.name+' by ship-to city ('+qbCity+(qbState?' '+qbState:'')+')';
               setTimeout(()=>custInp.parentElement.appendChild(info),50);
+            } else if(cityMatch.length > 1){
+              // Same city, street doesn't settle it — never guess, ask.
+              _qbPickerShown = true;
+              custInp.value = inv.customer;
+              const locPicker = document.createElement('div');
+              locPicker.style.cssText='background:var(--amber-l);border:1px solid var(--amber);border-radius:var(--rad);padding:10px 12px;margin-top:8px;font-size:13px';
+              locPicker.innerHTML='<div style="font-weight:600;margin-bottom:4px">⚠ '+cityMatch.length+' locations for <em>'+inv.customer+'</em> in '+qbCity+'</div>'
+                +'<div style="font-size:11px;color:var(--text2);margin-bottom:8px">QB ship-to: <strong>'+(qbAddr||'no street in QB report')+'</strong>. No location on file matches that street — pick the right one, or add the new location in Customer Admin:</div>'
+                + cityMatch.map((c,i)=>'<button class="btn btn-sm" style="margin:3px" onclick="pickQBLocation(this,'+i+')">'
+                  +c.name+' <span style="font-size:10px;color:var(--text3)">· '+(c.address||'no address on file')+'</span></button>').join('');
+              locPicker._locations = cityMatch;
+              custInp.parentElement.appendChild(locPicker);
             } else {
               // City not in system — auto-create "Customer Name — City ST"
               const newName = inv.customer+' — '+qbCity+(qbState?' '+qbState:'');
@@ -13405,12 +13460,12 @@ function importQBInvoice(invNum){
               if(existing){
                 cust = existing;
               } else {
-                const newCust = { name: newName, address:'', city: qbCity, state: qbState, zip:'', zone: lookupZoneByCity(qbCity, qbState) };
+                const newCust = { name: newName, address: inv.qbAddr||'', city: qbCity, state: qbState, zip:'', zone: lookupZoneByCity(qbCity, qbState) };
                 getCustomers().push(newCust);
                 if(!state.customerMeta) state.customerMeta={};
                 state.customerMeta[newName] = { contact:'', phone:'', email:'', groupId:'', notify:false, notes:'' };
                 saveState();
-                _sbPost('customers', { name: newName, address:null, city: qbCity||null, state: qbState||null, zip:null, zone: newCust.zone||null })
+                _sbPost('customers', { name: newName, address: inv.qbAddr||null, city: qbCity||null, state: qbState||null, zip:null, zone: newCust.zone||null })
                   .catch(e=>console.warn('sbPost new customer error',e));
                 cust = newCust;
                 backfillZoneIfMissing(newCust);
@@ -13422,6 +13477,7 @@ function importQBInvoice(invNum){
             }
           } else {
             // No Ship To City in QB export — show picker so user can choose
+            _qbPickerShown = true;
             custInp.value = inv.customer;
             const locPicker = document.createElement('div');
             locPicker.style.cssText='background:var(--amber-l);border:1px solid var(--amber);border-radius:var(--rad);padding:10px 12px;margin-top:8px;font-size:13px';
@@ -13444,15 +13500,24 @@ function importQBInvoice(invNum){
           const citystEl = document.getElementById('f-cityst');
           if(citystEl) citystEl.value = qbCityFinal + (qbStateFinal ? ', ' + qbStateFinal : '');
         }
-      } else {
+        // Matched location's street on file differs from the QB ship-to
+        // street → probably a different branch in the same city. Warn.
+        const qbAddrFinal = (inv.qbAddr||'').trim();
+        if(qbAddrFinal && _qbSameStreet(cust.address, qbAddrFinal)===false){
+          const warn = document.createElement('div');
+          warn.style.cssText='background:#fff3cd;border:1px solid #f0ad4e;border-radius:var(--rad);padding:8px 12px;margin-top:6px;font-size:12px;color:#856404';
+          warn.innerHTML='⚠️ QB ship-to street <strong>'+qbAddrFinal+'</strong> doesn\'t match <strong>'+cust.name+'</strong> ('+cust.address+'). If this is a different location, add it in <a href="#" onclick="nav(\'customers\');return false">Customer Admin</a> with that address and re-pick the customer.';
+          setTimeout(()=>custInp.parentElement.appendChild(warn),60);
+        }
+      } else if(!_qbPickerShown){
         // Brand new customer not in system at all — auto-assign zone from
         // ship-to city if we have one on file, blank otherwise.
-        const newCust = { name: inv.customer, address:'', city: inv.qbCity||'', state: inv.qbState||'', zip:'', zone: lookupZoneByCity(inv.qbCity, inv.qbState) };
+        const newCust = { name: inv.customer, address: inv.qbAddr||'', city: inv.qbCity||'', state: inv.qbState||'', zip:'', zone: lookupZoneByCity(inv.qbCity, inv.qbState) };
         getCustomers().push(newCust);
         if(!state.customerMeta) state.customerMeta={};
         state.customerMeta[inv.customer] = { contact:'', phone:'', email:'', groupId:'', notify:false, notes:'' };
         saveState();
-        _sbPost('customers', { name: newCust.name, address:null, city: newCust.city||null, state: newCust.state||null, zip:null, zone: newCust.zone||null })
+        _sbPost('customers', { name: newCust.name, address: newCust.address||null, city: newCust.city||null, state: newCust.state||null, zip:null, zone: newCust.zone||null })
           .catch(e=>console.warn('sbPost new customer error',e));
         selectCust(newCust);
         backfillZoneIfMissing(newCust);
