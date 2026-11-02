@@ -5118,6 +5118,14 @@ function editWO(id){
     +'<div class="field"><label class="lbl">Delivery Date</label><div style="display:flex;align-items:center;gap:10px"><input type="date" id="e-delivery" value="'+(wo.isStock?'':(wo.delivery||''))+'"'+((wo.isPickup||wo.isStock)?' disabled':'')+' style="flex:1"><label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;cursor:pointer"><input type="checkbox" id="e-pickup" '+(wo.isPickup?'checked':'')+' onchange="if(this.checked){var d=document.getElementById(\'e-delivery\');d.value=\'\';d.disabled=true;document.getElementById(\'e-pickup-date-wrap\').style.display=\'flex\';}else{document.getElementById(\'e-delivery\').disabled=false;document.getElementById(\'e-pickup-date-wrap\').style.display=\'none\';}"> &#x1F3EA; Pick Up</label></div><div id="e-pickup-date-wrap" style="display:'+(wo.isPickup?'flex':'none')+';flex-direction:column;gap:6px;margin-top:6px">'
     +'<div style="display:flex;align-items:center;gap:8px"><label class="lbl" style="margin:0;white-space:nowrap;width:110px">Expected Pick Up</label><input type="date" id="e-pickup-date" value="'+(wo.pickupExpectedDate||'')+'" style="flex:1"></div>'
     +'<div style="display:flex;align-items:center;gap:8px"><label class="lbl" style="margin:0;white-space:nowrap;width:110px">Time</label><select id="e-pickup-window" style="flex:1"><option value=""'+(wo.pickupTimeWindow?'':' selected')+'>Any time</option><option value="Morning"'+(wo.pickupTimeWindow==='Morning'?' selected':'')+'>Morning</option><option value="Afternoon"'+(wo.pickupTimeWindow==='Afternoon'?' selected':'')+'>Afternoon</option></select><input type="time" id="e-pickup-time" value="'+(wo.pickupTime||'')+'" style="flex:1" title="Exact time (optional)"></div>'
+    +(wo.pickupDate
+      ?'<div style="display:flex;align-items:center;gap:8px"><label class="lbl" style="margin:0;white-space:nowrap;width:110px;color:#c0392b">Actual Pick Up</label><input type="date" id="e-pickup-actual" value="'+wo.pickupDate+'" max="'+localISO(new Date())+'" style="flex:1" oninput="pickupActualChanged()" onchange="pickupActualChanged()"><button type="button" class="btn btn-sm" onclick="clearPickupActual()">✕ Clear</button></div>'
+       +'<div id="e-pickup-undo" style="display:none;padding:8px 10px;background:var(--amber-l);border-radius:var(--rad);font-size:12px">'
+       +'<div style="font-weight:700;margin-bottom:4px">Not picked up — back to open when you save. Line items:</div>'
+       +'<label style="display:block;cursor:pointer"><input type="radio" name="e-pickup-items" value="keep" checked> Keep Complete (material is staged)</label>'
+       +'<label style="display:block;cursor:pointer"><input type="radio" name="e-pickup-items" value="reopen"> Reopen as Pending (still needs to be pulled)</label>'
+       +'</div>'
+      :'')
     +'</div></div>'
     +'</div>'
     +'<div class="grid3 mb12">'
@@ -5166,8 +5174,26 @@ function toggleStockModeEdit(checked){
   }
 }
 
+function pickupActualChanged(){
+  const inp=document.getElementById('e-pickup-actual');
+  const box=document.getElementById('e-pickup-undo');
+  if(inp&&box) box.style.display=inp.value?'none':'block';
+}
+function clearPickupActual(){
+  const inp=document.getElementById('e-pickup-actual');
+  if(inp){inp.value='';pickupActualChanged();}
+}
+
 function saveEditWO(id){
   const wo=state.wos.find(w=>w.id===id);if(!wo)return;
+  // Checked before anything on the WO is changed, so a rejected date
+  // leaves the order untouched and the form open.
+  const _actualEl=document.getElementById('e-pickup-actual');
+  const _actualVal=_actualEl?_actualEl.value:'';
+  if(_actualEl && _actualVal && _actualVal>localISO(new Date())){
+    toast('⚠ Actual pick up date can\'t be in the future — use Expected Pick Up');
+    return;
+  }
   wo.woNum=document.getElementById('e-wonum').value.trim()||wo.woNum;
   wo.po=document.getElementById('e-po').value.trim();
   wo.date=document.getElementById('e-date').value;
@@ -5180,6 +5206,27 @@ function saveEditWO(id){
     wo.pickupExpectedDate = document.getElementById('e-pickup-date')?.value||'';
     wo.pickupTimeWindow = document.getElementById('e-pickup-window')?.value||'';
     wo.pickupTime = document.getElementById('e-pickup-time')?.value||'';
+    if(_actualEl){
+      if(_actualVal){
+        // Correcting the date of a real pick up — nothing else changes.
+        wo.pickupDate = _actualVal;
+      } else {
+        // Undo a pick up marked by mistake: back to open. Item statuses are
+        // reset here on wo.items because the save loop below copies status
+        // and completion fields from wo.items onto the rebuilt line items.
+        const _reopen = document.querySelector('input[name="e-pickup-items"]:checked')?.value==='reopen';
+        wo.pickupDate = '';
+        wo.delivered = false;
+        wo.deliveredAt = '';
+        wo.deliveredBy = '';
+        wo.readyForPickup = !_reopen;
+        if(_reopen) wo.items.forEach(item=>{
+          item.status='Pending';
+          item.completedBy='';
+          item.completedAt='';
+        });
+      }
+    }
   }
   if(pickupChecked && editDelivery){
     // Pickup with date = customer picked up, mark all items complete
@@ -10686,9 +10733,21 @@ function openWOMap(woId){
 }
 
 // ── UNSCHEDULED WOs GROUPED BY REGION ─────────────────────────────────
-function schedulePickup(woId, dateVal){
+function schedulePickup(woId, dateVal, inputEl){
   const wo = state.wos.find(w=>w.id===woId);
   if(!wo || !dateVal) return;
+  // A date input fires change on every keystroke while the year is being
+  // typed (0002, 0020, 0202...) — wait until it's a real year.
+  if(dateVal < '2000-01-01') return;
+  if(dateVal > localISO(new Date())){
+    toast('⚠ Actual pick up date can\'t be in the future — use Expected Pick Up Date');
+    if(inputEl) inputEl.value='';
+    return;
+  }
+  if(!confirm('Mark WO #'+wo.woNum+' ('+wo.customer+') as PICKED UP on '+fmtDate(dateVal)+'?\n\nThis completes all line items and removes it from the Pick Up list.')){
+    if(inputEl) inputEl.value='';
+    return;
+  }
   // Mark all items complete — customer picked up
   wo.items.forEach(item=>{
     item.status='Complete';
@@ -11031,7 +11090,7 @@ function renderPickupSection(pickups){
       +'<div style="margin-top:8px;">'
       +'<label style="font-size:10px;font-weight:700;color:#c0392b;text-transform:uppercase;display:block;margin-bottom:3px">✓ Actual Pick Up Date — marks complete</label>'
       +'<input type="date" style="width:100%;font-size:11px;padding:4px 6px;border:1px solid #c0392b;border-radius:4px;background:#fff" '
-      +'onchange="schedulePickup('+wo.id+',this.value)">'
+      +'onchange="schedulePickup('+wo.id+',this.value,this)">'
       +'</div>'
       +'</div>';
   }).join('');
