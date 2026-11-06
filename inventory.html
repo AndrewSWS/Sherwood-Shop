@@ -92,6 +92,18 @@
   .toast.error{background:var(--rust);}
   .toast.success{background:var(--forest-mid);}
   #file-input{display:none;}
+
+/* LAST IMPORT STRIP */
+.import-strip{background:var(--white);border-bottom:1px solid var(--border);padding:8px 24px;display:flex;align-items:center;gap:10px 18px;font-size:13px;flex-wrap:wrap;box-shadow:0 1px 3px var(--shadow);}
+.li-item{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.li-label{font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-muted);}
+.li-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 11px;border-radius:14px;font-weight:700;font-size:13px;}
+.li-chip::before{content:'';width:8px;height:8px;border-radius:50%;background:currentColor;}
+.li-fresh{background:#D4EDDA;color:#155724;}
+.li-aging{background:#FFF3CD;color:#856404;}
+.li-stale{background:#F8D7DA;color:#721C24;}
+.li-none{background:#eee;color:#666;}
+.li-meta{color:var(--text-secondary);font-size:12px;}
 </style>
 </head>
 <body>
@@ -128,6 +140,10 @@
   <button class="tab-btn" onclick="switchTab('elgen')" id="tab-elgen">Elgen <span class="tab-badge" id="badge-elgen">0</span></button>
   <button class="tab-btn" onclick="switchTab('mjs')" id="tab-mjs">MJS Consignment <span class="tab-badge" id="badge-mjs">0</span></button>
 </nav>
+
+<div class="import-strip" id="import-strip" style="display:none">
+  <div class="li-item"><span class="li-label">Last Inventory Import</span><span id="li-inventory"></span></div>
+</div>
 
 <main class="main" id="app-main" style="display:none">
   <div id="tab-content-inv-sheets"></div>
@@ -171,7 +187,7 @@ async function doLogin(){
   }
 }
 function logout(){localStorage.removeItem(SESSION_KEY);location.reload();}
-function showApp(){['app-header','tab-bar','app-main'].forEach(id=>document.getElementById(id).style.display='');init();}
+function showApp(){['app-header','tab-bar','import-strip','app-main'].forEach(id=>document.getElementById(id).style.display='');init();setInterval(renderLastImport,60000);}
 
 // ── SUPABASE ──
 async function sbGet(table,params=''){
@@ -224,7 +240,7 @@ let state={invSheets:[],slipDrive:[],alumStain:[],elgen:[],mjsConsignment:[],cur
 // ── INIT ──
 async function init(){
   setSyncStatus('loading');
-  await loadFromSupabase();
+  await Promise.all([loadFromSupabase(),loadLastImports()]);
   renderAll();
 }
 
@@ -327,6 +343,7 @@ async function reconcileImport(parsedData, fname){
   updateBadges();
   renderTab(state.currentTab);
   const msg=`Reconciled: +${added} new · ${updated} updated · ${archived} archived`;
+  await saveLastImport(IMPORT_KEYS.inventory,{at:new Date().toISOString(),file:fname||'',added,updated,archived});
   setLabel(msg);
   showToast(msg,'success');
 }
@@ -904,6 +921,54 @@ function exportTab(tabId){
   const keys=Object.keys(rows[0]);
   const csv=[keys.join(','),...rows.map(r=>keys.map(k=>{const v=r[k]??'';return typeof v==='string'&&(v.includes(',')||v.includes('"'))?`"${v.replace(/"/g,'""')}"`:v;}).join(','))].join('\n');
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=`sherwood-${tabId}-${new Date().toISOString().slice(0,10)}.csv`;a.click();
+}
+
+// ── LAST IMPORT ──
+// Stored in admin_config (key/value) so every viewer sees the same timestamp.
+// One small fetch on load; one write per import.
+const IMPORT_KEYS={inventory:'inventory_last_import',forecast:'forecast_last_import'};
+const IMPORT_AGE_DAYS={aging:2,stale:7}; // green ≤2 days, amber ≤7 days, red beyond
+let lastImports={};
+function _escH(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function _parseCfgVal(v){if(typeof v==='string'){try{return JSON.parse(v);}catch(e){return null;}}return v||null;}
+async function loadLastImports(){
+  const rows=await sbGet('admin_config',`key=in.(${Object.values(IMPORT_KEYS).join(',')})&select=key,value`);
+  lastImports={};
+  (rows||[]).forEach(r=>{const v=_parseCfgVal(r.value);if(v&&v.at)lastImports[r.key]=v;});
+  renderLastImport();
+}
+async function saveLastImport(key,info){
+  lastImports[key]=info;
+  renderLastImport();
+  const value=JSON.stringify(info);
+  try{
+    // PATCH first; if no row exists yet, insert one
+    const r=await fetch(`${SB_URL}/rest/v1/admin_config?key=eq.${key}`,{method:'PATCH',headers:{...SB_HDR,'Prefer':'return=representation'},body:JSON.stringify({value})});
+    if(!r.ok){console.error('[saveLastImport] patch',r.status,await r.text());showToast('Import done — but last-import time not saved','error');return;}
+    const upd=await r.json();
+    if(!upd.length){
+      const ins=await fetch(`${SB_URL}/rest/v1/admin_config`,{method:'POST',headers:{...SB_HDR,'Prefer':'return=minimal'},body:JSON.stringify({key,value})});
+      if(!ins.ok){console.error('[saveLastImport] insert',ins.status,await ins.text());showToast('Import done — but last-import time not saved','error');}
+    }
+  }catch(e){console.error('[saveLastImport]',e);showToast('Import done — but last-import time not saved','error');}
+}
+function _fmtImportTime(iso){return new Date(iso).toLocaleString('en-US',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});}
+function _relAge(iso){
+  const m=Math.floor((Date.now()-new Date(iso).getTime())/60000);
+  if(m<1)return'just now';if(m<60)return m+' min ago';
+  const h=Math.floor(m/60);if(h<24)return h+' hr ago';
+  const d=Math.floor(h/24);return d+(d===1?' day ago':' days ago');
+}
+function _ageClass(iso){const d=(Date.now()-new Date(iso).getTime())/86400000;return d<=IMPORT_AGE_DAYS.aging?'li-fresh':d<=IMPORT_AGE_DAYS.stale?'li-aging':'li-stale';}
+function _liChip(info,extraMeta){
+  if(!info)return`<span class="li-chip li-none">Not recorded yet</span>`;
+  const meta=[info.file?_escH(info.file):'',extraMeta||''].filter(Boolean).join(' · ');
+  return`<span class="li-chip ${_ageClass(info.at)}" title="${_escH(new Date(info.at).toLocaleString())}">${_fmtImportTime(info.at)} · ${_relAge(info.at)}</span>${meta?`<span class="li-meta">${meta}</span>`:''}`;
+}
+function renderLastImport(){
+  const el=document.getElementById('li-inventory');if(!el)return;
+  const info=lastImports[IMPORT_KEYS.inventory];
+  el.innerHTML=_liChip(info,info?`+${info.added||0} new · ${info.updated||0} updated · ${info.archived||0} archived`:'');
 }
 
 // ── SYNC STATUS ──
