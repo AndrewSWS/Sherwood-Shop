@@ -191,6 +191,7 @@ select{cursor:pointer}
 .week-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
 .day-col{background:var(--surface);border:1px solid var(--border);border-radius:var(--rad2);padding:12px}
 .day-col.today{border-color:var(--blue);background:#f8fbff}
+.day-col-holiday{background:#f4f4f4;border-style:dashed;padding:10px 6px;text-align:center}
 .day-col.drag-over{border-color:var(--blue);border-width:2px;background:var(--blue-l);transform:scale(1.01);transition:all .1s}
 .mini-wo[draggable]{cursor:grab}
 .mini-wo[draggable]:active{cursor:grabbing;opacity:.6}
@@ -374,6 +375,14 @@ select{cursor:pointer}
   0%{background-position:0 -80px;}
   100%{background-position:-8px 80px;}
 }
+.board-day-holiday{
+  align-self:stretch;background:#141414;border:1px dashed #555;
+  align-items:center;padding:8px 2px;gap:6px;min-height:200px;
+}
+.board-day-holiday .bdh-dow{font-size:12px;font-weight:800;color:#888;letter-spacing:.05em}
+.board-day-holiday .bdh-date{font-size:11px;color:#666}
+.board-day-holiday .bdh-vert{writing-mode:vertical-rl;transform:rotate(180deg);font-size:15px;font-weight:800;letter-spacing:.18em;color:#c0392b;white-space:nowrap;margin-top:10px}
+.board-day-holiday .bdh-warn{font-size:10px;font-weight:800;color:#FAC775;text-align:center;margin-top:auto}
 .board-day-header{
   padding:8px 10px;font-weight:800;font-size:13px;
   text-transform:uppercase;letter-spacing:.06em;
@@ -1335,6 +1344,7 @@ async function sbLoadState() {
             case 'zones':            state.adminConfig.zones = val; break;
             case 'station_defaults': state.adminConfig.stationDefaults = val; break;
             case 'wrap_overrides':   state.adminConfig.wrapOverrides = val; break;
+            case 'no_delivery_days': state.adminConfig.noDeliveryDays = val; break;
             case 'mgmt_users':       state.adminConfig.mgmtUsers = val; break;
             case 'rain_start_hour':  state.adminConfig.rainStartHour = val; break;
             case 'acknowledged_gaps': state.adminConfig.acknowledgedGaps = val; break;
@@ -4327,23 +4337,36 @@ function woWaitingMaterial(wo){
 
 function renderBoardView(){
   // getWeekDays returns Date objects — convert to {iso, label}
-  const rawDays = getWeekDays();
+  const rawDays = getWeekDays(undefined, true);
   const days = rawDays.map(d=>({
     iso: localISO(d),
     label: d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})
   }));
   const todayISO = localISO(new Date());
   const subtitle = document.getElementById('board-subtitle');
-  if(subtitle) subtitle.textContent = 'Today: '+fmtDate(days[0].iso)+' — '+fmtDate(days[4].iso);
+  if(subtitle) subtitle.textContent = 'Today: '+fmtDate(days[0].iso)+' — '+fmtDate(days[days.length-1].iso);
 
   const grid = document.getElementById('board-grid');
   if(!grid) return;
+  // Holiday columns collapse to a thin strip; delivery days share the rest
+  grid.style.gridTemplateColumns = days.map(d=>isNoDeliveryDay(d.iso)?'64px':'minmax(0,1fr)').join(' ');
 
   grid.innerHTML = days.map(day=>{
     const dayWOs = state.wos.filter(w=>w.delivery===day.iso);
     const stockWOs = dayWOs.filter(w=>w.isStock);
     const ntWOs = dayWOs.filter(w=>!getWOTruckId(w.id) && !w.isStock);
     const isToday = day.iso===todayISO;
+
+    if(isNoDeliveryDay(day.iso)){
+      const _d = new Date(day.iso+'T12:00:00');
+      const n = dayWOs.length;
+      return '<div class="board-day board-day-holiday">'
+        +'<div class="bdh-dow">'+_d.toLocaleDateString('en-US',{weekday:'short'}).toUpperCase()+'</div>'
+        +'<div class="bdh-date">'+_d.toLocaleDateString('en-US',{month:'numeric',day:'numeric'})+'</div>'
+        +'<div class="bdh-vert">NO DELIVERIES · '+escHtml(noDeliveryLabel(day.iso)).toUpperCase()+'</div>'
+        +(n?'<div class="bdh-warn">⚠ '+n+' WO'+(n>1?'s':'')+'</div>':'')
+        +'</div>';
+    }
     // July 3 observed holiday (fireworks eve)
     const isJuly4Eve = day.iso && day.iso.slice(5) === '07-03';
 
@@ -4513,7 +4536,7 @@ function renderBoardView(){
     const pickupFp = state.wos.filter(w=>w.isPickup && !w.pickupDate && !w.delivered)
       .map(w=>`${w.id}:${w.readyForPickup?1:0}`).sort().join(',');
     const fp = [
-      days.map(d=>d.iso).join(','),
+      days.map(d=>d.iso+(isNoDeliveryDay(d.iso)?'~H:'+noDeliveryLabel(d.iso):'')).join(','),
       days.map(d => state.wos.filter(w=>w.delivery===d.iso).map(w=>{
         const items = w.items||[];
         // woStatus(w) and getWOTruckId(w.id) are included because both
@@ -8208,8 +8231,12 @@ let _queueCustomerFilter = null; // active customer filter — persists across s
 let _queueDateFilter = null; // active delivery/pickup date filter — persists across station tab switches
 let weekOffset = 0; // 0=current week, -1=last week, +1=next week, etc.
 
-function getWeekDays(offset){
-  // Always anchor to today, roll forward 5 business days skipping Sat/Sun
+function getWeekDays(offset, includeNoDelivery){
+  // Always anchor to today, roll forward 5 business days skipping Sat/Sun.
+  // includeNoDelivery=true (shop board + master schedule): no-delivery days
+  // (holidays) are still returned so they can render as a collapsed column,
+  // but they don't count toward the 5 — so the view always shows 5 real
+  // delivery days. Other callers are unchanged.
   const days = [];
   const start = new Date();
   // If offset is used (prev/next week nav), shift start by offset weeks
@@ -8220,9 +8247,14 @@ function getWeekDays(offset){
   if(dow===6) start.setDate(start.getDate()+2);
   else if(dow===0) start.setDate(start.getDate()+1);
   let cursor = new Date(start);
-  while(days.length < 5){
+  let counted = 0, guard = 0;
+  while(counted < 5 && guard++ < 60){
     const d = cursor.getDay();
-    if(d!==0 && d!==6) days.push(new Date(cursor));
+    if(d!==0 && d!==6){
+      const hol = includeNoDelivery && isNoDeliveryDay(localISO(cursor));
+      days.push(new Date(cursor));
+      if(!hol) counted++;
+    }
     cursor.setDate(cursor.getDate()+1);
   }
   return days;
@@ -8676,6 +8708,38 @@ function setWrapOverride(iso, val){
   renderDashboard();
 }
 
+// ── No-delivery days (holidays) ──
+// Stored in admin_config under 'no_delivery_days' as {iso: label}. Loaded with
+// the rest of admin_config on the normal poll — no extra fetch.
+function getNoDeliveryDays(){ return (state.adminConfig && state.adminConfig.noDeliveryDays) || {}; }
+function isNoDeliveryDay(iso){ return !!getNoDeliveryDays()[iso]; }
+function noDeliveryLabel(iso){
+  const v = getNoDeliveryDays()[iso];
+  return (typeof v==='string' && v.trim()) ? v.trim() : 'Holiday';
+}
+function toggleNoDeliveryDay(iso){
+  if(!state.adminConfig) state.adminConfig = {};
+  const map = {...getNoDeliveryDays()};
+  if(map[iso]){
+    if(!confirm('Re-open '+fmtDate(iso)+' for deliveries?')) return;
+    delete map[iso];
+  } else {
+    const label = prompt('Mark '+fmtDate(iso)+' as NO DELIVERIES.\nHoliday name (optional):', 'Holiday');
+    if(label === null) return;
+    map[iso] = label.trim() || 'Holiday';
+  }
+  // Drop entries more than 30 days old so the config row stays small
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate()-30);
+  const cutISO = localISO(cutoff);
+  Object.keys(map).forEach(k=>{ if(k < cutISO) delete map[k]; });
+  state.adminConfig.noDeliveryDays = map;
+  saveState();
+  sbSaveAdminConfig('no_delivery_days', map).then(ok=>{
+    if(ok===false) alert('Could not save the no-delivery day to the database — other screens will not see it. Try again.');
+  });
+  renderDashboard();
+}
+
 function shouldWrap(iso){
   const override = getWrapOverride(iso);
   if(override === true) return {wrap:true, reason:'manual', prob:null};
@@ -8803,7 +8867,7 @@ function renderDashboard(c){
   const inproc=activeWOs.filter(w=>woStatus(w)==='In Process').length;
   const done=state.wos.filter(w=>woStatus(w)==='Complete').length;
   const unassigned=state.wos.flatMap(w=>w.items||[]).filter(i=>!i.assignee&&i.status!=='Complete').length;
-  const days=getWeekDays();
+  const days=getWeekDays(undefined, true);
   const now=new Date();
   const todayISOf=now.toISOString().split('T')[0];
   // Truck weights for TODAY only — active trucks only, archived ones
@@ -8828,6 +8892,22 @@ function renderDashboard(c){
     const isToday=iso===todayISOf;
     const dayWOs=state.wos.filter(w=>w.delivery===iso);
     const dayW=dayWOs.reduce((s,wo)=>s+getWOWeight(wo.id),0);
+    if(isNoDeliveryDay(iso)){
+      // Collapsed holiday column — no drop target. Any WOs still dated this
+      // day are listed so they can be opened and moved.
+      return`<div class="day-col day-col-holiday${isToday?' today':''}">
+        <div class="day-header" style="margin-bottom:6px">
+          ${d.toLocaleDateString('en-US',{weekday:'short'})}<br>
+          <span style="font-weight:400;font-size:11px">${d.toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>
+        </div>
+        <div style="font-size:11px;font-weight:800;color:#c0392b;text-transform:uppercase;letter-spacing:.04em;line-height:1.3">🚫 No<br>Deliveries</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:3px;word-break:break-word">${escHtml(noDeliveryLabel(iso))}</div>
+        ${dayWOs.length?`<div style="margin-top:8px;font-size:10px;font-weight:700;color:#b8860b">⚠ ${dayWOs.length} WO${dayWOs.length>1?'s':''} still on this day</div>`
+          +dayWOs.map(wo=>`<div onclick="event.stopPropagation();openDashWOPopout(${wo.id})" style="font-size:10px;cursor:pointer;color:var(--blue);margin-top:3px;word-break:break-word" title="Open WO #${wo.woNum}">${escHtml(wo.customer)} ▸</div>`).join(''):''}
+        <button onclick="event.stopPropagation();toggleNoDeliveryDay('${iso}')" title="Re-open this day for deliveries"
+          style="margin-top:10px;font-size:10px;padding:2px 6px;border-radius:3px;border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;font-weight:600">↩ Re-open</button>
+      </div>`;
+    }
     return`<div class="day-col${isToday?' today':''}"
       ondragover="calDragOver(event,'${iso}')"
       ondragleave="calDragLeave(event)"
@@ -8837,7 +8917,8 @@ function renderDashboard(c){
         ${d.toLocaleDateString('en-US',{weekday:'short'})}<br>
         <span style="font-weight:400;font-size:11px">${d.toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>
         ${getWeatherBadge(iso)}
-        <div style="margin-top:3px">${getWrapToggleBtn(iso)}</div>
+        <div style="margin-top:3px">${getWrapToggleBtn(iso)}<span onclick="event.stopPropagation();toggleNoDeliveryDay('${iso}')" title="Mark this day as a holiday — no deliveries"
+          style="margin-left:4px;cursor:pointer;font-size:10px;padding:1px 5px;background:#fdecec;border:1px solid #e0a0a0;border-radius:3px;color:#c0392b;font-weight:700">🚫 Holiday</span></div>
       </div>
       ${dayWOs.length?`<div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:6px">${dayWOs.length} WO · ${dayW.toLocaleString()} lbs</div>`:''}
       ${dayWOs.length?(()=>{
@@ -9053,7 +9134,7 @@ function renderDashboard(c){
       📍 Weather source: Bensalem, PA (zip ${DEFAULT_WEATHER_ZIP}) · service area ~110mi N (NY) to ~70mi S/W (DE) · single forecast point used for the whole board, not per-region
     </div>
   </div>
-  <div class="week-grid mb8">${weekCols}</div>
+  <div class="week-grid mb8" style="grid-template-columns:${days.map(d=>isNoDeliveryDay(localISO(d))?'96px':'minmax(0,1fr)').join(' ')}">${weekCols}</div>
   <div id="day-detail-panel" style="margin-bottom:20px"></div>
 
   <div class="grid2 gap16">
